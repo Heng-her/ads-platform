@@ -59,42 +59,68 @@ function onDecryptCustom() {
     <UCard>
       <template #header>
         <div class="flex items-center justify-between">
-          <h2 class="text-xl font-bold">1. User Login & Response Payload Encryption</h2>
+          <h2 class="text-xl font-bold">
+            1. User Login & Response Payload Encryption
+          </h2>
           <UBadge :color="authStore.isAuthenticated ? 'success' : 'neutral'">
             {{ authStore.isAuthenticated ? 'Authenticated' : 'Not Logged In' }}
           </UBadge>
         </div>
       </template>
 
-      <div v-if="!authStore.isAuthenticated" class="space-y-4 max-w-md">
+      <div
+        v-if="!authStore.isAuthenticated"
+        class="space-y-4 max-w-md"
+      >
         <div>
           <label class="block text-sm font-medium mb-1">Email</label>
-          <UInput v-model="email" type="email" placeholder="Email" />
+          <UInput
+            v-model="email"
+            type="email"
+            placeholder="Email"
+          />
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">Password</label>
-          <UInput v-model="password" type="password" placeholder="Password" />
+          <UInput
+            v-model="password"
+            type="password"
+            placeholder="Password"
+          />
         </div>
-        <UButton color="primary" @click="onSimulateLogin">
+        <UButton
+          color="primary"
+          @click="onSimulateLogin"
+        >
           Simulate Login & Encrypt Response
         </UButton>
       </div>
 
-      <div v-else class="space-y-6">
+      <div
+        v-else
+        class="space-y-6"
+      >
         <div class="bg-green-500/10 p-4 rounded-lg border border-green-500/20">
-          <h3 class="font-semibold text-green-500">Decrypted Active User Session (Memory State):</h3>
+          <h3 class="font-semibold text-green-500">
+            Decrypted Active User Session (Memory State):
+          </h3>
           <pre class="mt-2 text-xs overflow-x-auto p-2 bg-black/20 rounded">{{ authStore.user }}</pre>
         </div>
 
         <div>
-          <h3 class="font-semibold text-amber-500">Encrypted Payload Stored in localStorage ('auth_data_encrypted'):
+          <h3 class="font-semibold text-amber-500">
+            Encrypted Payload Stored in localStorage ('auth_data_encrypted'):
           </h3>
           <p class="text-xs break-all font-mono p-3 bg-neutral-900 rounded border border-neutral-800 mt-2">
             {{ authStore.encryptedPayload }}
           </p>
         </div>
 
-        <UButton color="error" variant="soft" @click="authStore.logout">
+        <UButton
+          color="error"
+          variant="soft"
+          @click="authStore.logout"
+        >
           Logout & Clear Encrypted Store
         </UButton>
       </div>
@@ -102,23 +128,41 @@ function onDecryptCustom() {
 
     <UCard>
       <template #header>
-        <h2 class="text-xl font-bold">2. Quick Test: Encrypt / Decrypt Any Data</h2>
+        <h2 class="text-xl font-bold">
+          2. Quick Test: Encrypt / Decrypt Any Data
+        </h2>
       </template>
 
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-1">Input Text / Payload</label>
-          <UInput v-model="customInput" placeholder="Enter text to encrypt..." />
+          <UInput
+            v-model="customInput"
+            placeholder="Enter text to encrypt..."
+          />
         </div>
 
         <div class="flex gap-2">
-          <UButton color="neutral" @click="onEncryptCustom">Encrypt Text</UButton>
-          <UButton color="neutral" variant="outline" :disabled="!customEncrypted" @click="onDecryptCustom">
+          <UButton
+            color="neutral"
+            @click="onEncryptCustom"
+          >
+            Encrypt Text
+          </UButton>
+          <UButton
+            color="neutral"
+            variant="outline"
+            :disabled="!customEncrypted"
+            @click="onDecryptCustom"
+          >
             Decrypt Text
           </UButton>
         </div>
 
-        <div v-if="customEncrypted" class="space-y-2 pt-2">
+        <div
+          v-if="customEncrypted"
+          class="space-y-2 pt-2"
+        >
           <div>
             <span class="text-xs text-neutral-400">Ciphertext (Encrypted):</span>
             <div class="text-xs font-mono break-all p-2 bg-neutral-900 rounded border border-neutral-800">

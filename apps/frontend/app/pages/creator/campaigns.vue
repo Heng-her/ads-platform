@@ -1,8 +1,9 @@
 <script setup lang="ts">
 definePageMeta({
-    layout: 'creator'
+  layout: 'creator'
 })
 </script>
+
 <template>
-    <p>Lorem ipsum</p>
+  <p>Lorem ipsum</p>
 </template>

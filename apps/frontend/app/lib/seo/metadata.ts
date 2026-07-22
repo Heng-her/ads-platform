@@ -1,11 +1,11 @@
-import { seoConfig } from "./config";
+import { seoConfig } from './config'
 
 interface MetadataOptions {
-  title?: string;
-  description?: string;
-  path?: string;
-  image?: string;
-  noIndex?: boolean;
+  title?: string
+  description?: string
+  path?: string
+  image?: string
+  noIndex?: boolean
 }
 
 /**
@@ -15,16 +15,16 @@ interface MetadataOptions {
 export function useCustomSeoMeta({
   title,
   description = seoConfig.defaultDescription,
-  path = "",
+  path = '',
   image = seoConfig.defaultImage,
-  noIndex = false,
+  noIndex = false
 }: MetadataOptions = {}) {
-  const site = useSiteConfig();
-  const siteName = site.name || seoConfig.siteName;
-  const siteUrl = site.url || seoConfig.siteUrl;
+  const site = useSiteConfig()
+  const siteName = site.name || seoConfig.siteName
+  const siteUrl = site.url || seoConfig.siteUrl
 
-  const fullTitle = title ? `${title} | ${siteName}` : seoConfig.defaultTitle;
-  const url = `${siteUrl}${path}`;
+  const fullTitle = title ? `${title} | ${siteName}` : seoConfig.defaultTitle
+  const url = `${siteUrl}${path}`
 
   useSeoMeta({
     title: fullTitle,
@@ -34,10 +34,10 @@ export function useCustomSeoMeta({
     ogUrl: url,
     ogSiteName: siteName,
     ogImage: image,
-    twitterCard: "summary_large_image",
+    twitterCard: 'summary_large_image',
     twitterTitle: fullTitle,
     twitterDescription: description,
     twitterImage: image,
-    robots: noIndex ? "noindex, nofollow" : "index, follow",
-  });
+    robots: noIndex ? 'noindex, nofollow' : 'index, follow'
+  })
 }
