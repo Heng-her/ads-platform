@@ -7,6 +7,7 @@ export default defineNuxtConfig({
     "@nuxt/scripts",
     "@nuxtjs/seo",
     "@nuxtjs/robots",
+    "@pinia/nuxt",
   ],
 
   devtools: {
@@ -17,6 +18,20 @@ export default defineNuxtConfig({
 
   routeRules: {
     "/": { prerender: true },
+  },
+
+  site: {
+    url: process.env.NUXT_PUBLIC_SITE_URL || "http://localhost:3000",
+    name: "Ads Platform",
+    description:
+      "Ads Platform is a modern advertising network connecting advertisers and publishers with smart targeting and real-time analytics.",
+    defaultLocale: "en",
+  },
+
+  robots: {
+    allow: "/",
+    disallow: ["/api/", "/admin/"],
+    sitemap: "/sitemap.xml",
   },
 
   compatibilityDate: "2026-06-30",

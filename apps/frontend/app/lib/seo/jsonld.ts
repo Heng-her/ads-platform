@@ -5,9 +5,12 @@ interface BreadcrumbItem {
   item: string;
 }
 
-/** Schema.org BreadcrumbList — drop into a page via <JsonLd data={...} /> */
+/**
+ * Returns Schema.org BreadcrumbList payload for useJsonld() or useHead()
+ */
 export function generateBreadcrumbsJsonLd(items: BreadcrumbItem[]) {
   return {
+    "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: items.map((item, index) => ({
       "@type": "ListItem",
@@ -18,7 +21,9 @@ export function generateBreadcrumbsJsonLd(items: BreadcrumbItem[]) {
   };
 }
 
-/** Schema.org NewsArticle for /article/[slug] pages */
+/**
+ * Schema.org Article / NewsArticle for blog/article pages
+ */
 export function generateArticleJsonLd(article: {
   slug: string;
   title: string;
@@ -46,20 +51,20 @@ export function generateArticleJsonLd(article: {
   };
 }
 
-/** Schema.org SoftwareApplication for /tools directory entries */
-export function generateToolJsonLd(tool: {
+/**
+ * Schema.org SoftwareApplication / Service entry
+ */
+export function generateServiceJsonLd(service: {
   id: string;
   name: string;
   description: string;
   category: string;
-  pricing: string;
 }) {
   return {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: tool.name,
-    description: tool.description,
-    applicationCategory: tool.category,
-    offers: { "@type": "Offer", price: tool.pricing === "Free" ? "0" : undefined, priceCurrency: "USD" },
+    name: service.name,
+    description: service.description,
+    applicationCategory: service.category,
   };
 }
