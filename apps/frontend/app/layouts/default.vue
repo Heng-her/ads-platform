@@ -3,16 +3,18 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const publicNavLinks = [
   { label: 'Home', to: '/' },
-  { label: 'News', to: '/news' },
-  { label: 'Finance', to: '/finance' },
-  { label: 'AI', to: '/ai' }
+  { label: 'Advertisers', to: '/advertisers' },
+  { label: 'Publishers', to: '/publishers' },
+  { label: 'Ad Formats', to: '/formats' },
+  { label: 'Pricing', to: '/pricing' },
+  { label: 'News', to: '/news' }
 ]
 
 const mobileNavItems = [
   { label: 'Home', icon: 'i-heroicons-home', to: '/' },
-  { label: 'News', icon: 'i-heroicons-newspaper', to: '/news' },
-  { label: 'Finance', icon: 'i-heroicons-banknotes', to: '/finance' },
-  { label: 'AI', icon: 'i-heroicons-sparkles', to: '/ai' }
+  { label: 'Publishers', icon: 'i-heroicons-globe-alt', to: '/publishers' },
+  { label: 'AI Insights', icon: 'i-heroicons-sparkles', to: '/ai' },
+  { label: 'Wallet', icon: 'i-heroicons-credit-card', to: '/finance' }
 ]
 
 const publicDrawerLinks = [
@@ -82,13 +84,13 @@ onUnmounted(() => {
 
       <!-- Desktop Navigation (Center) -->
       <template #center>
-        <nav class="hidden md:flex items-center gap-6">
+        <nav class="hidden md:flex items-center gap-1 bg-gray-100/70 dark:bg-gray-800 p-1 rounded-full border border-gray-200/50 dark:border-gray-800/50 shadow-inner">
           <NuxtLink
             v-for="link in publicNavLinks"
             :key="link.to"
             :to="link.to"
-            class="text-sm font-medium hover:text-primary transition-colors"
-            active-class="text-primary font-semibold"
+            class="px-4 py-1.5 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-all duration-300 transform active:scale-95"
+            active-class="bg-white dark:bg-gray-900 text-primary dark:text-primary font-bold shadow-sm border border-gray-200/60 dark:border-gray-800/60"
           >
             {{ link.label }}
           </NuxtLink>
@@ -214,21 +216,81 @@ onUnmounted(() => {
     <!-- Mobile Search Overlay -->
     <div
       v-if="showMobileSearch"
-      class="absolute inset-x-0 top-0 h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center px-4 gap-2 z-50"
+      class="absolute inset-x-0 top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-50 flex flex-col shadow-lg"
     >
-      <UInput
-        v-model="searchQuery"
-        icon="i-heroicons-magnifying-glass"
-        placeholder="Search..."
-        class="flex-1 animate-[fade-in_150ms_ease-out]"
-        autofocus
-      />
-      <UButton
-        label="Cancel"
-        color="neutral"
-        variant="ghost"
-        @click="showMobileSearch = false"
-      />
+      <div class="h-16 flex items-center px-4 gap-2 shrink-0">
+        <UInput
+          v-model="searchQuery"
+          icon="i-heroicons-magnifying-glass"
+          placeholder="Search..."
+          class="flex-1"
+          autofocus
+        />
+        <UButton
+          label="Cancel"
+          color="neutral"
+          variant="ghost"
+          @click="showMobileSearch = false"
+        />
+      </div>
+
+      <!-- Mobile Suggestions Dropdown -->
+      <div class="p-4 border-t border-gray-100 dark:border-gray-850 space-y-4 bg-white dark:bg-gray-900 max-h-[calc(100vh-4rem)] overflow-y-auto">
+        <!-- If search is empty, show quick navigation suggestions -->
+        <div
+          v-if="searchQuery.trim().length === 0"
+          class="space-y-3"
+        >
+          <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Try searching for...</span>
+          <div class="flex flex-wrap gap-1.5">
+            <UButton
+              v-for="sug in ['AI', 'Finance', 'News', 'Creator', 'Admin']"
+              :key="sug"
+              size="xs"
+              color="neutral"
+              variant="subtle"
+              @click="searchQuery = sug"
+            >
+              {{ sug }}
+            </UButton>
+          </div>
+        </div>
+
+        <!-- If search has input, show filtered matches -->
+        <div
+          v-else
+          class="space-y-3"
+        >
+          <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Search Results</span>
+          
+          <div
+            v-if="filteredResults.length === 0"
+            class="text-xs text-gray-500 dark:text-gray-400"
+          >
+            No matches found for "{{ searchQuery }}"
+          </div>
+          
+          <div
+            v-else
+            class="space-y-1"
+          >
+            <div
+              v-for="res in filteredResults"
+              :key="res.label"
+              class="flex items-center gap-3 p-2 rounded-lg bg-gray-50/50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800/50 text-sm font-medium"
+            >
+              <UIcon
+                :name="res.icon"
+                class="w-5 h-5 text-primary shrink-0"
+              />
+              <div class="flex-1 min-w-0">
+                <div class="text-gray-900 dark:text-gray-100 text-xs font-semibold truncate">{{ res.label }}</div>
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 font-normal truncate mt-0.5">{{ res.desc }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Mobile Menu Drawer -->
@@ -263,8 +325,12 @@ onUnmounted(() => {
         v-for="item in mobileNavItems"
         :key="item.to"
         :to="item.to"
-        class="flex flex-col items-center justify-center flex-1 h-full text-gray-500 dark:text-gray-400 hover:text-primary transition-colors py-1"
-        active-class="text-primary font-semibold"
+        class="flex flex-col items-center justify-center flex-1 h-full transition-colors py-1"
+        :class="[
+          $route.path === item.to
+            ? 'text-primary dark:text-primary font-bold'
+            : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary'
+        ]"
       >
         <UIcon
           :name="item.icon"
