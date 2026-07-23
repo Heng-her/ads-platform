@@ -1,49 +1,49 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-import { defineNuxtConfig } from 'nuxt/config'
+import { defineNuxtConfig } from "nuxt/config";
 
 export default defineNuxtConfig({
   modules: [
-    '@nuxt/eslint',
-    '@nuxt/ui',
-    '@nuxt/image',
-    '@nuxt/scripts',
-    '@nuxtjs/seo',
-    '@nuxtjs/robots',
-    '@pinia/nuxt'
+    "@nuxt/eslint",
+    "@nuxt/ui",
+    "@nuxt/image",
+    "@nuxt/scripts",
+    "@nuxtjs/seo",
+    "@nuxtjs/robots",
+    "@pinia/nuxt",
   ],
 
   devtools: {
-    enabled: true
+    enabled: true,
   },
 
-  css: ['~/assets/css/main.css'],
+  css: ["~/assets/css/main.css"],
 
   site: {
-    url: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-    name: 'Ads Platform',
+    url: process.env.NUXT_PUBLIC_SITE_URL || "http://localhost:3000",
+    name: "Ads Platform",
     description:
-      'Ads Platform is a modern advertising network connecting advertisers and publishers with smart targeting and real-time analytics.',
-    defaultLocale: 'en'
+      "Ads Platform is a modern advertising network connecting advertisers and publishers with smart targeting and real-time analytics.",
+    defaultLocale: "en",
   },
 
   routeRules: {
-    '/': { prerender: true }
+    "/": { prerender: true },
   },
 
-  compatibilityDate: '2026-06-30',
+  compatibilityDate: "2026-06-30",
 
   eslint: {
     config: {
       stylistic: {
-        commaDangle: 'never',
-        braceStyle: '1tbs'
-      }
-    }
+        commaDangle: "never",
+        braceStyle: "1tbs",
+      },
+    },
   },
 
   robots: {
-    allow: '/',
-    disallow: ['/api/', '/admin/'],
-    sitemap: '/sitemap.xml'
-  }
-})
+    allow: "/",
+    disallow: ["/api/", "/admin/"],
+    sitemap: "/sitemap.xml",
+  },
+});
