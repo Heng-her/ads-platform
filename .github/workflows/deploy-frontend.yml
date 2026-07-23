@@ -40,4 +40,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy apps/frontend/.output/public --project-name=ads-platform-frontend
+          workingDirectory: apps/frontend
+          command: pages deploy dist --project-name=ads-platform-frontend
