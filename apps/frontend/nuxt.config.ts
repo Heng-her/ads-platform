@@ -16,6 +16,10 @@ export default defineNuxtConfig({
     preset: "cloudflare_pages"
   },
 
+  ogImage: {
+    enabled: false
+  },
+
   devtools: {
     enabled: true,
   },
