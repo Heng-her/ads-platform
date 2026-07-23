@@ -36,8 +36,6 @@ export default defineNuxtConfig({
     defaultLocale: "en",
   },
 
-  routeRules: {
-  },
 
   compatibilityDate: "2026-06-30",
 
