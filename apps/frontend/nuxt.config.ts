@@ -11,18 +11,21 @@ export default defineNuxtConfig({
     "@nuxtjs/seo",
     "@nuxtjs/robots",
   ],
+  routeRules: {
+    "/": { prerender: false },
+  },
 
   nitro: {
     preset: "cloudflare_pages",
     prerender: {
       crawlLinks: false,
       routes: [],
-      failOnError: false
-    }
+      failOnError: false,
+    },
   },
 
   ogImage: {
-    enabled: false
+    enabled: false,
   },
 
   devtools: {
@@ -40,7 +43,6 @@ export default defineNuxtConfig({
       "Ads Platform is a modern advertising network connecting advertisers and publishers with smart targeting and real-time analytics.",
     defaultLocale: "en",
   },
-
 
   compatibilityDate: "2026-06-30",
 
