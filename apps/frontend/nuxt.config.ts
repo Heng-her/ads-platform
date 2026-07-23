@@ -3,17 +3,22 @@ import { defineNuxtConfig } from "nuxt/config";
 
 export default defineNuxtConfig({
   modules: [
+    "@pinia/nuxt",
     "@nuxt/eslint",
     "@nuxt/ui",
     "@nuxt/image",
     "@nuxt/scripts",
     "@nuxtjs/seo",
     "@nuxtjs/robots",
-    "@pinia/nuxt",
   ],
 
   nitro: {
-    preset: "cloudflare_pages"
+    preset: "cloudflare_pages",
+    prerender: {
+      crawlLinks: false,
+      routes: [],
+      failOnError: false
+    }
   },
 
   ogImage: {
