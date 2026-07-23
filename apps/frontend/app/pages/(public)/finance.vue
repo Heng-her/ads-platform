@@ -34,23 +34,14 @@ const recentTransactions = [
 
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <UCard v-for="(stat, idx) in stats" :key="idx" class="relative overflow-hidden">
-        <div class="flex items-center justify-between">
-          <div class="space-y-1">
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ stat.label }}</span>
-            <div class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {{ stat.value }}
-            </div>
-          </div>
-          <div class="p-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-primary">
-            <UIcon :name="stat.icon" class="w-6 h-6" />
-          </div>
-        </div>
-        <div class="mt-4 flex items-center gap-1.5 text-xs text-green-500 font-medium">
-          <UIcon name="i-heroicons-arrow-trending-up" class="w-4 h-4" />
-          <span>{{ stat.change }} from last month</span>
-        </div>
-      </UCard>
+      <AppStatCard
+        v-for="(stat, idx) in stats"
+        :key="idx"
+        :title="stat.label"
+        :value="stat.value"
+        :change="stat.change"
+        :icon="stat.icon"
+      />
     </div>
 
     <!-- Transactions Table -->

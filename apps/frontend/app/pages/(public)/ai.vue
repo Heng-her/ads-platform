@@ -42,7 +42,8 @@ const recommendations = [
     </div>
 
     <!-- AI Banner -->
-    <div class="rounded-2xl border border-primary-500/30 bg-primary-50/50 dark:bg-primary-950/20 p-6 flex flex-col md:flex-row gap-6 items-center">
+    <div
+      class="rounded-2xl border border-primary-500/30 bg-primary-50/50 dark:bg-primary-950/20 p-6 flex flex-col md:flex-row gap-6 items-center">
       <div class="flex-1 space-y-3">
         <div class="flex items-center gap-2">
           <UBadge color="primary" variant="subtle" size="sm">Smart Mode Active</UBadge>
@@ -52,10 +53,12 @@ const recommendations = [
           Optimization score is 88/100
         </h2>
         <p class="text-sm text-gray-600 dark:text-gray-400">
-          Your campaigns are performing well, but we detected 3 new optimization suggestions that could increase your click-through rates.
+          Your campaigns are performing well, but we detected 3 new optimization suggestions that could increase your
+          click-through rates.
         </p>
       </div>
-      <div class="flex items-center justify-center shrink-0 w-24 h-24 bg-primary/10 rounded-xl relative border border-primary/20">
+      <div
+        class="flex items-center justify-center shrink-0 w-24 h-24 bg-primary/10 rounded-xl relative border border-primary/20">
         <span class="text-3xl font-extrabold text-primary">88</span>
       </div>
     </div>
