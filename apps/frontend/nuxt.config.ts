@@ -12,6 +12,10 @@ export default defineNuxtConfig({
     "@pinia/nuxt",
   ],
 
+  nitro: {
+    preset: "cloudflare_pages"
+  },
+
   devtools: {
     enabled: true,
   },
@@ -19,7 +23,9 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
 
   site: {
-    url: process.env.NUXT_PUBLIC_SITE_URL || "http://localhost:3000",
+    url:
+      process.env.NUXT_PUBLIC_SITE_URL ||
+      "https://ads-platform.crypten.workers.dev",
     name: "Ads Platform",
     description:
       "Ads Platform is a modern advertising network connecting advertisers and publishers with smart targeting and real-time analytics.",
