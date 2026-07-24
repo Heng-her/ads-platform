@@ -35,9 +35,6 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
 
   site: {
-    url:
-      process.env.NUXT_PUBLIC_SITE_URL ||
-      "https://ads-platform.crypten.workers.dev",
     name: "Ads Platform",
     description:
       "Ads Platform is a modern advertising network connecting advertisers and publishers with smart targeting and real-time analytics.",
