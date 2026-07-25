@@ -11,8 +11,8 @@ useHead({
   }
 })
 
-const title = 'AdsPlatform - Modern Ad Management'
-const description = 'Multi-role Ads Platform supporting Public browsing, Creator Studio, and Admin Control.'
+const title = 'NewPlatform - Modern Ad Management'
+const description = 'Multi-role New Platform supporting Public browsing, Creator Studio, and Admin Control.'
 
 useSeoMeta({
   title,

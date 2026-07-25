@@ -66,7 +66,7 @@ watch(() => route.fullPath, () => {
             class="bg-gray-50 dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-800/80 space-y-3"
           >
             <div class="space-y-1">
-              <h4 class="font-bold text-sm text-gray-900 dark:text-gray-100">Welcome to AdsPlatform</h4>
+              <h4 class="font-bold text-sm text-gray-900 dark:text-gray-100">Welcome to NewPlatform</h4>
               <p class="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">Launch premium advertising campaigns or monetize your channel traffic today.</p>
             </div>
             <UButton

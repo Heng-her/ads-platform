@@ -5,7 +5,7 @@ import { useCustomSeoMeta } from '~/lib/seo/metadata'
 
 useCustomSeoMeta({
   title: 'Home',
-  description: 'Welcome to Ads Platform - Modern advertising network connecting advertisers and publishers.',
+  description: 'Welcome to New Platform - Modern advertising network connecting advertisers and publishers.',
   path: '/'
 })
 
@@ -29,9 +29,13 @@ function onSimulateLogin() {
   const mockResponse = {
     user: {
       id: 'usr_1029',
+      username: 'jane_admin',
       email: email.value,
       name: 'Jane Doe',
-      role: 'Administrator'
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane',
+      role: 'admin' as const,
+      balance: 12500.50,
+      status: 'active'
     },
     token: 'jwt_mock_token_xyz987654321',
     expiresAt: new Date(Date.now() + 86400000).toISOString()
@@ -68,38 +72,21 @@ function onDecryptCustom() {
         </div>
       </template>
 
-      <div
-        v-if="!authStore.isAuthenticated"
-        class="space-y-4 max-w-md"
-      >
+      <div v-if="!authStore.isAuthenticated" class="space-y-4 max-w-md">
         <div>
           <label class="block text-sm font-medium mb-1">Email</label>
-          <UInput
-            v-model="email"
-            type="email"
-            placeholder="Email"
-          />
+          <UInput v-model="email" type="email" placeholder="Email" />
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">Password</label>
-          <UInput
-            v-model="password"
-            type="password"
-            placeholder="Password"
-          />
+          <UInput v-model="password" type="password" placeholder="Password" />
         </div>
-        <UButton
-          color="primary"
-          @click="onSimulateLogin"
-        >
+        <UButton color="primary" @click="onSimulateLogin">
           Simulate Login & Encrypt Response
         </UButton>
       </div>
 
-      <div
-        v-else
-        class="space-y-6"
-      >
+      <div v-else class="space-y-6">
         <div class="bg-green-500/10 p-4 rounded-lg border border-green-500/20">
           <h3 class="font-semibold text-green-500">
             Decrypted Active User Session (Memory State):
@@ -116,11 +103,7 @@ function onDecryptCustom() {
           </p>
         </div>
 
-        <UButton
-          color="error"
-          variant="soft"
-          @click="authStore.logout"
-        >
+        <UButton color="error" variant="soft" @click="authStore.logout">
           Logout & Clear Encrypted Store
         </UButton>
       </div>
@@ -136,33 +119,19 @@ function onDecryptCustom() {
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-1">Input Text / Payload</label>
-          <UInput
-            v-model="customInput"
-            placeholder="Enter text to encrypt..."
-          />
+          <UInput v-model="customInput" placeholder="Enter text to encrypt..." />
         </div>
 
         <div class="flex gap-2">
-          <UButton
-            color="neutral"
-            @click="onEncryptCustom"
-          >
+          <UButton color="neutral" @click="onEncryptCustom">
             Encrypt Text
           </UButton>
-          <UButton
-            color="neutral"
-            variant="outline"
-            :disabled="!customEncrypted"
-            @click="onDecryptCustom"
-          >
+          <UButton color="neutral" variant="outline" :disabled="!customEncrypted" @click="onDecryptCustom">
             Decrypt Text
           </UButton>
         </div>
 
-        <div
-          v-if="customEncrypted"
-          class="space-y-2 pt-2"
-        >
+        <div v-if="customEncrypted" class="space-y-2 pt-2">
           <div>
             <span class="text-xs text-neutral-400">Ciphertext (Encrypted):</span>
             <div class="text-xs font-mono break-all p-2 bg-neutral-900 rounded border border-neutral-800">

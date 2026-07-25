@@ -2,8 +2,8 @@
 import { useCustomSeoMeta } from '~/lib/seo/metadata'
 
 useCustomSeoMeta({
-  title: 'Finance Dashboard',
-  description: 'Manage payments, invoices, and analytics on AdsPlatform.',
+  title: 'Finance & Billing Portal',
+  description: 'Manage payments, invoices, and analytics on NewPlatform.',
   path: '/finance'
 })
 

@@ -2,8 +2,8 @@
 import { useCustomSeoMeta } from '~/lib/seo/metadata'
 
 useCustomSeoMeta({
-  title: 'Advertisers - Build Campaigns',
-  description: 'Drive high-converting traffic and grow your brand with AdsPlatform.',
+  title: 'Advertiser Solutions',
+  description: 'Drive high-converting traffic and grow your brand with NewPlatform.',
   path: '/advertisers'
 })
 

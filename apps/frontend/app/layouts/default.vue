@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useAuthStore, type UserRole } from '~/stores/auth'
+
+const authStore = useAuthStore()
 
 const publicNavLinks = [
   { label: 'Home', to: '/' },
@@ -55,7 +58,53 @@ const handleOutsideClick = (event: MouseEvent) => {
   }
 }
 
+const userDropdownItems = computed(() => {
+  const role = authStore.user?.role
+  const dashboardPath = role === 'admin' ? '/admin' : (role === 'advertiser' ? '/advertiser' : '/creator')
+
+  return [
+    [
+      {
+        label: authStore.user?.name || 'User Account',
+        slot: 'account',
+        disabled: true
+      }
+    ],
+    [
+      {
+        label: 'Dashboard',
+        icon: 'i-heroicons-squares-2x2',
+        to: dashboardPath
+      },
+      {
+        label: 'Profile Settings',
+        icon: 'i-heroicons-user',
+        to: '/settings'
+      }
+    ],
+    [
+      {
+        label: 'Switch Role (Mock)',
+        icon: 'i-heroicons-arrows-right-left',
+        children: [
+          { label: 'Switch to Admin', icon: 'i-heroicons-shield-check', onSelect: () => authStore.loginWithMock('admin') },
+          { label: 'Switch to Creator', icon: 'i-heroicons-sparkles', onSelect: () => authStore.loginWithMock('creator') },
+          { label: 'Switch to Advertiser', icon: 'i-heroicons-megaphone', onSelect: () => authStore.loginWithMock('advertiser') }
+        ]
+      }
+    ],
+    [
+      {
+        label: 'Logout',
+        icon: 'i-heroicons-arrow-right-start-on-rectangle',
+        onSelect: () => authStore.logout()
+      }
+    ]
+  ]
+})
+
 onMounted(() => {
+  authStore.initAuth()
   document.addEventListener('click', handleOutsideClick)
 })
 
@@ -71,7 +120,7 @@ onUnmounted(() => {
       <template #left>
         <NuxtLink to="/" class="flex items-center gap-2 text-xl font-bold text-primary">
           <UIcon name="i-heroicons-globe-alt" class="w-6 h-6" />
-          <span>AdsPlatform</span>
+          <span>NewPlatform</span>
         </NuxtLink>
       </template>
 
@@ -137,13 +186,51 @@ onUnmounted(() => {
 
           <UColorModeButton />
 
-          <UButton to="/login" color="neutral" variant="ghost">
-            Login
-          </UButton>
+          <!-- Logged In User Controls -->
+          <template v-if="authStore.isAuthenticated && authStore.user">
+            <!-- Balance Pill -->
+            <div class="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-semibold">
+              <UIcon name="i-heroicons-banknotes" class="w-4 h-4" />
+              <span>${{ authStore.user.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00' }}</span>
+            </div>
 
-          <UButton to="/register" color="primary">
-            Get Started
-          </UButton>
+            <!-- Role Badge -->
+            <UBadge color="primary" variant="subtle" size="sm" class="capitalize font-bold text-[10px]">
+              {{ authStore.user.role }}
+            </UBadge>
+
+            <!-- User Menu Dropdown -->
+            <UDropdownMenu :items="userDropdownItems">
+              <button class="flex items-center gap-2 focus:outline-none rounded-full p-0.5 hover:ring-2 hover:ring-primary/50 transition-all">
+                <UAvatar :src="authStore.user.avatar" :alt="authStore.user.name" size="sm" class="cursor-pointer" />
+              </button>
+            </UDropdownMenu>
+          </template>
+
+          <!-- Guest Controls (Logged Out) -->
+          <template v-else>
+            <!-- Quick Demo Login Button for convenient dev testing -->
+            <UDropdownMenu :items="[
+              [{ label: 'Mock Login as...', disabled: true }],
+              [
+                { label: 'Creator Role', icon: 'i-heroicons-sparkles', onSelect: () => authStore.loginWithMock('creator') },
+                { label: 'Admin Role', icon: 'i-heroicons-shield-check', onSelect: () => authStore.loginWithMock('admin') },
+                { label: 'Advertiser Role', icon: 'i-heroicons-megaphone', onSelect: () => authStore.loginWithMock('advertiser') }
+              ]
+            ]">
+              <UButton color="neutral" variant="subtle" size="sm" icon="i-heroicons-beaker">
+                Demo User
+              </UButton>
+            </UDropdownMenu>
+
+            <UButton to="/login" color="neutral" variant="ghost">
+              Login
+            </UButton>
+
+            <UButton to="/register" color="primary">
+              Get Started
+            </UButton>
+          </template>
         </div>
 
         <!-- Mobile Actions -->
@@ -208,7 +295,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Mobile Menu Drawer -->
-    <MobileDrawer v-model:open="mobileMenuOpen" side="right" title="AdsPlatform" icon="i-heroicons-globe-alt"
+    <MobileDrawer v-model:open="mobileMenuOpen" side="right" title="NewPlatform" icon="i-heroicons-globe-alt"
       :links="publicDrawerLinks" role="public" />
 
     <!-- Main Content -->
@@ -220,7 +307,7 @@ onUnmounted(() => {
     <footer
       class="border-t border-gray-200 dark:border-gray-800 py-6 bg-gray-50/50 dark:bg-gray-900/50 hidden md:block">
       <div class="container mx-auto px-4 text-center text-sm text-gray-500">
-        © {{ new Date().getFullYear() }} AdsPlatform. Public Portal Layout.
+        © {{ new Date().getFullYear() }} NewPlatform. Public Portal Layout.
       </div>
     </footer>
 

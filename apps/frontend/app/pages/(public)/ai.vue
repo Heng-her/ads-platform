@@ -2,8 +2,8 @@
 import { useCustomSeoMeta } from '~/lib/seo/metadata'
 
 useCustomSeoMeta({
-  title: 'AI Optimizations',
-  description: 'AI-driven ad campaigns optimization suggestions on AdsPlatform.',
+  title: 'AI Campaign Optimizer',
+  description: 'AI-driven ad campaigns optimization suggestions on NewPlatform.',
   path: '/ai'
 })
 

@@ -4,7 +4,7 @@ import { useCustomSeoMeta } from '~/lib/seo/metadata'
 
 useCustomSeoMeta({
   title: 'Pricing & Earnings Calculator',
-  description: 'Calculate your advertising CPC cost and publisher monetization payouts on AdsPlatform.',
+  description: 'Calculate your advertising CPC cost and publisher monetization payouts on NewPlatform.',
   path: '/pricing'
 })
 

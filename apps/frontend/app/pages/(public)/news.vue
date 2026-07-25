@@ -3,7 +3,7 @@ import { useCustomSeoMeta } from '~/lib/seo/metadata'
 
 useCustomSeoMeta({
   title: 'News Hub',
-  description: 'Stay updated with the latest trends and announcements on AdsPlatform.',
+  description: 'Stay updated with the latest trends and announcements on NewPlatform.',
   path: '/news'
 })
 
@@ -43,7 +43,7 @@ const articles = [
         News Hub
       </h1>
       <p class="text-gray-500 dark:text-gray-400 text-lg">
-        The latest insights, articles, and product releases from AdsPlatform.
+        The latest insights, articles, and product releases from NewPlatform.
       </p>
     </div>
 
@@ -52,7 +52,7 @@ const articles = [
       <div class="flex-1 space-y-3">
         <UBadge color="primary" variant="solid">Featured Announcement</UBadge>
         <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          AdsPlatform goes multi-chain & global
+          NewPlatform goes multi-chain & global
         </h2>
         <p class="text-gray-600 dark:text-gray-400">
           We have expanded our payment rails to support automated international settlements, paying out publisher earnings in local currencies and popular stablecoins.

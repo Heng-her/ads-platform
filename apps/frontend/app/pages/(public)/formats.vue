@@ -2,8 +2,8 @@
 import { useCustomSeoMeta } from '~/lib/seo/metadata'
 
 useCustomSeoMeta({
-  title: 'Ad Formats Showcase',
-  description: 'Explore the high-converting ad styles and native integrations available on AdsPlatform.',
+  title: 'High-Converting Ad Formats',
+  description: 'Explore the high-converting ad styles and native integrations available on NewPlatform.',
   path: '/formats'
 })
 

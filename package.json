@@ -1,9 +1,11 @@
 {
-  "name": "hotel-platform",
+  "name": "new-platform",
   "private": true,
   "packageManager": "pnpm@10.27.0",
   "scripts": {
     "dev": "pnpm -r dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint"
   }

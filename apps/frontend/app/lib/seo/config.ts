@@ -1,13 +1,13 @@
 export const seoConfig = {
-  siteName: 'Ads Platform',
-  siteUrl: 'https://ads-platform.example.com',
-  defaultTitle: 'Ads Platform | Powerful Advertising & Publisher Network',
+  siteName: 'New Platform',
+  siteUrl: 'https://new-platform.example.com',
+  defaultTitle: 'New Platform | Powerful Advertising & Publisher Network',
   defaultDescription:
-    'Ads Platform is a modern advertising network connecting advertisers and publishers with smart targeting and real-time analytics.',
+    'New Platform is a modern advertising network connecting advertisers and publishers with smart targeting and real-time analytics.',
   defaultImage: '/og-image.png',
-  twitterHandle: '@adsplatform',
+  twitterHandle: '@newplatform',
   keywords: [
-    'ads platform',
+    'new platform',
     'advertising network',
     'publisher monetization',
     'digital marketing',
