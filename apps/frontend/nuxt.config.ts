@@ -1,7 +1,11 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { fileURLToPath } from "node:url";
 import { defineNuxtConfig } from "nuxt/config";
 
 export default defineNuxtConfig({
+  alias: {
+    "@backend": fileURLToPath(new URL("../backend/src", import.meta.url)),
+  },
   modules: [
     "@pinia/nuxt",
     "@nuxt/eslint",

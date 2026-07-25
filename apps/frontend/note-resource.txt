@@ -1,9 +1,0 @@
-https://icones.js.org
-https://icon-sets.iconify.design
-
-
-# Run only frontend
-pnpm --filter frontend dev
-
-# Run only backend
-pnpm --filter backend dev

@@ -1,0 +1,28 @@
+https://icones.js.org
+https://icon-sets.iconify.design
+
+
+# Run only frontend
+pnpm --filter frontend dev
+
+# Run only backend
+pnpm --filter backend dev
+
+
+
+# Run backend dev server with Wrangler:
+pnpm --filter backend dev
+
+# Generate D1 database migrations:
+pnpm --filter backend db:generate
+
+# Apply migrations locally:
+pnpm --filter backend db:migrate:local
+
+# Typecheck workspace packages:
+pnpm --filter backend typecheck
+pnpm --filter shared typecheck
+
+
+
+pnpm --filter backend exec drizzle-kit generate --name rename_name_to_username

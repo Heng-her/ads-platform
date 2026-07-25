@@ -1,0 +1,239 @@
+import { Hono } from "hono";
+import type { HonoEnv, UserJwtPayload } from "../types/env";
+import { getDb } from "../db/index";
+import { AuthService } from "../services/authService";
+import { UserService } from "../services/userService";
+import { CampaignService } from "../services/campaignService";
+import { AuditLogService } from "../services/auditLogService";
+import { jwtVerify } from "jose";
+import { registerSchema, loginSchema } from "./authRoutes";
+import { createCampaignSchema, updateCampaignStatusSchema } from "./campaignRoutes";
+import { updateUserStatusSchema } from "./userRoutes";
+import { sendSuccess, sendError } from "../utils/response";
+
+export const actionRoutes = new Hono<HonoEnv>();
+
+/**
+ * Helper to verify JWT token dynamically for actions requiring authentication
+ */
+async function authenticate(c: any): Promise<UserJwtPayload> {
+  const authHeader = c.req.header("Authorization");
+
+  // Dev Mode Bypass
+  if (!authHeader && c.env?.ENVIRONMENT === "development") {
+    return {
+      id: "dev-admin-id",
+      email: "dev@admin.local",
+      role: "ADMIN"
+    };
+  }
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    throw new Error("Unauthorized. Authorization token required.");
+  }
+  const token = authHeader.substring(7);
+  const secret = new TextEncoder().encode(c.env.JWT_SECRET || "fallback-secret-key");
+  const { payload } = await jwtVerify(token, secret);
+  return {
+    id: payload.id as string,
+    email: payload.email as string,
+    role: payload.role as "ADMIN" | "CREATOR"
+  };
+}
+
+/**
+ * Unified POST Method Gateway: Handles all Create/Read/Update action dispatches
+ */
+actionRoutes.post("/", async (c) => {
+  try {
+    const body = await c.req.json();
+    const action = body?.action;
+    const payloadData = body?.data || {};
+
+    if (!action || typeof action !== "string") {
+      return sendError(c, "Missing or invalid 'action' field in request body.");
+    }
+
+    const db = getDb(c.env.DB);
+
+    switch (action) {
+      // -------------------------------------------------------------
+      // Auth Actions
+      // -------------------------------------------------------------
+      case "auth/register": {
+        const parseResult = registerSchema.safeParse(payloadData);
+        if (!parseResult.success) {
+          return sendError(c, parseResult.error.errors[0]?.message || "Validation error", parseResult.error.format());
+        }
+        const { username, email, password, role } = parseResult.data;
+        const authService = new AuthService(db);
+        const res = await authService.register(username, email, password, role, c.env.JWT_SECRET || "fallback-secret");
+        return sendSuccess(c, res, "User registered successfully");
+      }
+
+      case "auth/login": {
+        const parseResult = loginSchema.safeParse(payloadData);
+        if (!parseResult.success) {
+          return sendError(c, parseResult.error.errors[0]?.message || "Validation error", parseResult.error.format());
+        }
+        const { email, password } = parseResult.data;
+        const authService = new AuthService(db);
+        const res = await authService.login(email, password, c.env.JWT_SECRET || "fallback-secret");
+        return sendSuccess(c, res, "Login successful");
+      }
+
+      // -------------------------------------------------------------
+      // User Actions
+      // -------------------------------------------------------------
+      case "users/me": {
+        const currentUser = await authenticate(c);
+        const userService = new UserService(db);
+        const user = await userService.getUserById(currentUser.id);
+        if (!user) return sendError(c, "User not found", null, 404);
+        return sendSuccess(c, user);
+      }
+
+      case "users/list": {
+        const currentUser = await authenticate(c);
+        if (currentUser.role !== "ADMIN") return sendError(c, "Forbidden", null, 403);
+        const userService = new UserService(db);
+        const usersList = await userService.getAllUsers();
+        return sendSuccess(c, usersList);
+      }
+
+      case "users/update-status": {
+        const currentUser = await authenticate(c);
+        if (currentUser.role !== "ADMIN") return sendError(c, "Forbidden", null, 403);
+        const parseResult = updateUserStatusSchema.safeParse(payloadData);
+        if (!parseResult.success) {
+          return sendError(c, parseResult.error.errors[0]?.message || "Validation error", parseResult.error.format());
+        }
+        const userId = payloadData?.id;
+        if (!userId) return sendError(c, "User ID is required");
+        const userService = new UserService(db);
+        const updated = await userService.updateUserStatus(userId, parseResult.data.status);
+        return sendSuccess(c, updated);
+      }
+
+      // -------------------------------------------------------------
+      // Campaign Actions
+      // -------------------------------------------------------------
+      case "campaigns/list": {
+        const currentUser = await authenticate(c);
+        const campaignService = new CampaignService(db);
+        if (currentUser.role === "ADMIN") {
+          const allCampaigns = await campaignService.getAllCampaigns();
+          return sendSuccess(c, allCampaigns);
+        }
+        const myCampaigns = await campaignService.getUserCampaigns(currentUser.id);
+        return sendSuccess(c, myCampaigns);
+      }
+
+      case "campaigns/create": {
+        const currentUser = await authenticate(c);
+        const parseResult = createCampaignSchema.safeParse(payloadData);
+        if (!parseResult.success) {
+          return sendError(c, parseResult.error.errors[0]?.message || "Validation error", parseResult.error.format());
+        }
+        const { title, description, budget, dailyBudget } = parseResult.data;
+        const campaignService = new CampaignService(db);
+        const newCampaign = await campaignService.createCampaign(currentUser.id, title, budget, description, dailyBudget);
+        return sendSuccess(c, newCampaign, "Campaign created successfully");
+      }
+
+      case "campaigns/get": {
+        const currentUser = await authenticate(c);
+        const campaignId = payloadData?.id;
+        if (!campaignId) return sendError(c, "Campaign ID is required");
+        const campaignService = new CampaignService(db);
+        const campaign = await campaignService.getCampaignById(campaignId);
+        if (!campaign) return sendError(c, "Campaign not found", null, 404);
+        if (currentUser.role !== "ADMIN" && campaign.userId !== currentUser.id) {
+          return sendError(c, "Forbidden", null, 403);
+        }
+        return sendSuccess(c, campaign);
+      }
+
+      case "campaigns/update-status": {
+        const currentUser = await authenticate(c);
+        const parseResult = updateCampaignStatusSchema.safeParse(payloadData);
+        if (!parseResult.success) {
+          return sendError(c, parseResult.error.errors[0]?.message || "Validation error", parseResult.error.format());
+        }
+        const campaignId = payloadData?.id;
+        if (!campaignId) return sendError(c, "Campaign ID is required");
+        const campaignService = new CampaignService(db);
+        const campaign = await campaignService.getCampaignById(campaignId);
+        if (!campaign) return sendError(c, "Campaign not found", null, 404);
+        if (currentUser.role !== "ADMIN" && campaign.userId !== currentUser.id) {
+          return sendError(c, "Forbidden", null, 403);
+        }
+        const updated = await campaignService.updateCampaignStatus(campaignId, parseResult.data.status);
+        return sendSuccess(c, updated);
+      }
+
+      // -------------------------------------------------------------
+      // Audit Log Actions (ADMIN Only)
+      // -------------------------------------------------------------
+      case "audit-logs/list": {
+        const currentUser = await authenticate(c);
+        if (currentUser.role !== "ADMIN") return sendError(c, "Forbidden", null, 403);
+        const auditLogService = new AuditLogService(db);
+        const logs = await auditLogService.getAllLogs();
+        return sendSuccess(c, logs);
+      }
+
+      default:
+        return sendError(c, `Unknown action: '${action}'`, null, 400);
+    }
+  } catch (err: any) {
+    if (err.message?.startsWith("Unauthorized")) {
+      return sendError(c, err.message, null, 401);
+    }
+    return sendError(c, err.message || "Failed to process request");
+  }
+});
+
+/**
+ * Unified DELETE Method Gateway: Handles all Delete action dispatches
+ */
+actionRoutes.delete("/", async (c) => {
+  try {
+    const currentUser = await authenticate(c);
+    const body = await c.req.json();
+    const action = body?.action;
+    const payloadData = body?.data || {};
+
+    if (!action || typeof action !== "string") {
+      return sendError(c, "Missing or invalid 'action' field in request body.");
+    }
+
+    const db = getDb(c.env.DB);
+
+    switch (action) {
+      case "campaigns/delete": {
+        const campaignId = payloadData?.id;
+        if (!campaignId) return sendError(c, "Campaign ID is required");
+        const campaignService = new CampaignService(db);
+        const campaign = await campaignService.getCampaignById(campaignId);
+        if (!campaign) return sendError(c, "Campaign not found", null, 404);
+
+        if (currentUser.role !== "ADMIN" && campaign.userId !== currentUser.id) {
+          return sendError(c, "Forbidden", null, 403);
+        }
+
+        // Delete action logic
+        await campaignService.updateCampaignStatus(campaignId, "REJECTED");
+        return sendSuccess(c, { deleted: true, id: campaignId }, "Campaign deleted successfully");
+      }
+
+      default:
+        return sendError(c, `Unknown delete action: '${action}'`, null, 400);
+    }
+  } catch (err: any) {
+    if (err.message?.startsWith("Unauthorized")) {
+      return sendError(c, err.message, null, 401);
+    }
+    return sendError(c, err.message || "Failed to process delete action");
+  }
+});
