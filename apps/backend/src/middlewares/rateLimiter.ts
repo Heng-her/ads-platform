@@ -1,46 +1,86 @@
-import type { MiddlewareHandler } from "hono";
+import type { MiddlewareHandler, Context } from "hono";
 import type { HonoEnv } from "../types/env";
 import { sendError } from "../utils/response";
+import { getClientIp } from "../utils/ip";
 
-interface RateLimitOptions {
+export interface RateLimitOptions {
   limit?: number;
   windowSeconds?: number;
+  keyPrefix?: string;
+  message?: string;
+}
+
+/**
+ * Core rate limit checker helper using Cloudflare KV Cache
+ */
+export async function checkRateLimit(c: Context<HonoEnv>, options: RateLimitOptions = {}): Promise<string | null> {
+  const limit = options.limit ?? 60;
+  const windowSeconds = options.windowSeconds ?? 60;
+  const keyPrefix = options.keyPrefix ?? "global";
+  const customMessage = options.message;
+
+  const clientIp = getClientIp(c);
+  const kv = c.env.CACHE_KV;
+
+  if (!kv) {
+    return null; // Bypass rate limit if KV is not bound
+  }
+
+  const currentWindow = Math.floor(Date.now() / 1000 / windowSeconds);
+  const key = `ratelimit:${keyPrefix}:${clientIp}:${currentWindow}`;
+
+  const currentCountStr = await kv.get(key);
+  const currentCount = currentCountStr ? parseInt(currentCountStr, 10) : 0;
+
+  if (currentCount >= limit) {
+    c.header("Retry-After", windowSeconds.toString());
+    const windowText = windowSeconds >= 86400 ? `${Math.round(windowSeconds / 86400)} day(s)` : `${windowSeconds}s`;
+    return customMessage || `Rate limit exceeded. Maximum ${limit} requests allowed per ${windowText} from your IP.`;
+  }
+
+  await kv.put(key, (currentCount + 1).toString(), {
+    expirationTtl: windowSeconds + 10,
+  });
+
+  c.header("X-RateLimit-Limit", limit.toString());
+  c.header(
+    "X-RateLimit-Remaining",
+    Math.max(0, limit - (currentCount + 1)).toString()
+  );
+
+  return null;
 }
 
 export const rateLimiter = (options: RateLimitOptions = {}): MiddlewareHandler<HonoEnv> => {
-  const limit = options.limit ?? 60;
-  const windowSeconds = options.windowSeconds ?? 60;
-
   return async (c, next) => {
-    const clientIp = c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for") || "127.0.0.1";
-    const kv = c.env.CACHE_KV;
-
-    if (!kv) {
-      await next();
-      return;
+    const errorMsg = await checkRateLimit(c, options);
+    if (errorMsg) {
+      return sendError(c, errorMsg, null, 429);
     }
-
-    const currentMinute = Math.floor(Date.now() / 1000 / windowSeconds);
-    const key = `ratelimit:${clientIp}:${currentMinute}`;
-
-    const currentCountStr = await kv.get(key);
-    const currentCount = currentCountStr ? parseInt(currentCountStr, 10) : 0;
-
-    if (currentCount >= limit) {
-      c.header("Retry-After", windowSeconds.toString());
-      return sendError(
-        c,
-        `Too many requests. Rate limit exceeded. Maximum ${limit} requests per ${windowSeconds}s allowed.`,
-        null,
-        429
-      );
-    }
-
-    await kv.put(key, (currentCount + 1).toString(), { expirationTtl: windowSeconds + 10 });
-
-    c.header("X-RateLimit-Limit", limit.toString());
-    c.header("X-RateLimit-Remaining", Math.max(0, limit - (currentCount + 1)).toString());
-
     await next();
   };
+};
+
+/**
+ * Strict User Registration Rate Limiter: Maximum 2 account registrations per 24 hours per IP
+ */
+export const registerRateLimiter = (): MiddlewareHandler<HonoEnv> => {
+  return rateLimiter({
+    limit: 2,
+    windowSeconds: 86400, // 24 hours
+    keyPrefix: "register",
+    message: "Registration limit reached. You can only create a maximum of 2 accounts per day from your IP address."
+  });
+};
+
+/**
+ * Post Creation Rate Limiter: Maximum 5 article/campaign posts per 24 hours per IP
+ */
+export const createCampaignRateLimiter = (): MiddlewareHandler<HonoEnv> => {
+  return rateLimiter({
+    limit: 5,
+    windowSeconds: 86400, // 24 hours
+    keyPrefix: "campaign_create",
+    message: "Post limit reached. You can only publish a maximum of 5 posts per day from your IP address."
+  });
 };

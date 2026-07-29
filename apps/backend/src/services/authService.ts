@@ -12,7 +12,8 @@ export class AuthService {
     email: string,
     password: string,
     role: "ADMIN" | "CREATOR" = "CREATOR",
-    jwtSecret: string,
+    avatar?: string,
+    jwtSecret: string = "fallback-secret",
   ) {
     const existing = await this.db
       .select()
@@ -36,13 +37,14 @@ export class AuthService {
       username,
       email,
       passwordHash,
+      avatar,
       role,
       status: "ACTIVE",
     });
 
     const token = await generateToken({ id: userId, email, role }, jwtSecret);
     return {
-      user: { id: userId, username, email, role, status: "ACTIVE" },
+      user: { id: userId, username, email, avatar, role, status: "ACTIVE" },
       token,
     };
   }
@@ -75,6 +77,7 @@ export class AuthService {
         id: user.id,
         username: user.username,
         email: user.email,
+        avatar: user.avatar,
         role: user.role,
         status: user.status,
       },

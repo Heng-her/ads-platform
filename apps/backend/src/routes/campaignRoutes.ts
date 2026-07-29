@@ -1,50 +1,82 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import type { HonoEnv } from "../types/env";
+import type { HonoEnv, UserJwtPayload } from "../types/env";
 import { getDb } from "../db/index";
 import { CampaignService } from "../services/campaignService";
+import { AuditLogService } from "../services/auditLogService";
 import { authMiddleware, requireRole } from "../middlewares/auth";
 import { sendSuccess, sendError } from "../utils/response";
+import { getClientIp } from "../utils/ip";
+import { jwtVerify } from "jose";
+import { createCampaignRateLimiter } from "../middlewares/rateLimiter";
 
 export const createCampaignSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().optional(),
-  budget: z.number().positive("Budget must be a positive number"),
-  dailyBudget: z.number().positive().optional()
+  category: z.string().optional(),
+  contentType: z.string().optional().default("ARTICLE"),
+  content: z.string().optional(),
+  imageUrl: z.string().optional(),
+  imageTitle: z.string().optional(),
+  imageDescription: z.string().optional(),
+  adNetwork: z.string().optional(),
+  adUnitCode: z.string().optional(),
+  status: z.enum(["DRAFT", "PUBLIC"]).optional().default("PUBLIC"),
 });
 
 export const updateCampaignStatusSchema = z.object({
-  status: z.enum(["DRAFT", "PENDING_APPROVAL", "ACTIVE", "PAUSED", "REJECTED", "COMPLETED"])
+  status: z.enum(["DRAFT", "PUBLIC"]),
 });
 
+/**
+ * Helper to optionally extract authenticated user from Bearer token if provided
+ */
+async function getOptionalUser(c: any): Promise<UserJwtPayload | null> {
+  const authHeader = c.req.header("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  try {
+    const token = authHeader.substring(7);
+    const secret = new TextEncoder().encode(c.env.JWT_SECRET || "fallback-secret-key");
+    const { payload } = await jwtVerify(token, secret);
+    return {
+      id: payload.id as string,
+      email: payload.email as string,
+      role: payload.role as "ADMIN" | "CREATOR",
+    };
+  } catch {
+    return null;
+  }
+}
+
 export const campaignRoutes = new Hono<HonoEnv>()
-  .use("*", authMiddleware())
   .get("/", async (c) => {
-    const userPayload = c.get("user")!;
     const db = getDb(c.env.DB);
     const campaignService = new CampaignService(db);
 
-    if (userPayload.role === "ADMIN") {
-      const allCampaigns = await campaignService.getAllCampaigns();
-      return sendSuccess(c, allCampaigns);
-    }
+    const user = await getOptionalUser(c);
+    const query = c.req.query();
 
-    const myCampaigns = await campaignService.getUserCampaigns(userPayload.id);
-    return sendSuccess(c, myCampaigns);
-  })
-  .post("/", requireRole(["ADMIN", "CREATOR"]), zValidator("json", createCampaignSchema, (result, c) => {
-    if (!result.success) {
-      return sendError(c, result.error.errors[0]?.message || "Validation error", result.error.format());
-    }
-  }), async (c) => {
-    const userPayload = c.get("user")!;
-    const { title, description, budget, dailyBudget } = c.req.valid("json");
-    const db = getDb(c.env.DB);
-    const campaignService = new CampaignService(db);
+    const page = query.page ? parseInt(query.page, 10) : 1;
+    const limit = query.limit ? parseInt(query.limit, 10) : 10;
+    const category = query.category || undefined;
+    const contentType = query.contentType || undefined;
+    const search = query.search || undefined;
+    const status = query.status === "DRAFT" || query.status === "PUBLIC" ? query.status : undefined;
 
-    const campaign = await campaignService.createCampaign(userPayload.id, title, budget, description, dailyBudget);
-    return sendSuccess(c, campaign, "Campaign created successfully");
+    const result = await campaignService.getCampaignsList({
+      user,
+      category,
+      contentType,
+      search,
+      status,
+      page,
+      limit,
+    });
+
+    return sendSuccess(c, result);
   })
   .get("/:id", async (c) => {
     const id = c.req.param("id");
@@ -53,9 +85,33 @@ export const campaignRoutes = new Hono<HonoEnv>()
     const campaign = await campaignService.getCampaignById(id);
 
     if (!campaign) return sendError(c, "Campaign not found", null, 404);
+
+    const user = await getOptionalUser(c);
+    if (campaign.status === "DRAFT") {
+      if (!user) return sendError(c, "Campaign not found", null, 404);
+      if (user.role !== "ADMIN" && campaign.userId !== user.id) {
+        return sendError(c, "Forbidden", null, 403);
+      }
+    }
+
     return sendSuccess(c, campaign);
   })
-  .patch("/:id/status", zValidator("json", updateCampaignStatusSchema, (result, c) => {
+  .post("/", createCampaignRateLimiter(), authMiddleware(), requireRole(["ADMIN", "CREATOR"]), zValidator("json", createCampaignSchema, (result, c) => {
+    if (!result.success) {
+      return sendError(c, result.error.errors[0]?.message || "Validation error", result.error.format());
+    }
+  }), async (c) => {
+    const userPayload = c.get("user")!;
+    const body = c.req.valid("json");
+    const db = getDb(c.env.DB);
+    const campaignService = new CampaignService(db);
+    const auditLogService = new AuditLogService(db);
+
+    const campaign = await campaignService.createCampaign(userPayload.id, body);
+    await auditLogService.createLog("CAMPAIGN_CREATE", userPayload.id, getClientIp(c), JSON.stringify({ campaignId: campaign?.id, title: campaign?.title }));
+    return sendSuccess(c, campaign, "Campaign created successfully");
+  })
+  .patch("/:id/status", authMiddleware(), zValidator("json", updateCampaignStatusSchema, (result, c) => {
     if (!result.success) {
       return sendError(c, result.error.errors[0]?.message || "Validation error", result.error.format());
     }
@@ -65,6 +121,7 @@ export const campaignRoutes = new Hono<HonoEnv>()
     const { status } = c.req.valid("json");
     const db = getDb(c.env.DB);
     const campaignService = new CampaignService(db);
+    const auditLogService = new AuditLogService(db);
 
     const campaign = await campaignService.getCampaignById(id);
     if (!campaign) return sendError(c, "Campaign not found", null, 404);
@@ -74,5 +131,6 @@ export const campaignRoutes = new Hono<HonoEnv>()
     }
 
     const updated = await campaignService.updateCampaignStatus(id, status);
+    await auditLogService.createLog("CAMPAIGN_UPDATE_STATUS", userPayload.id, getClientIp(c), JSON.stringify({ campaignId: id, newStatus: status }));
     return sendSuccess(c, updated);
   });

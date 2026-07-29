@@ -7,6 +7,7 @@ import {
   payloadLimitMiddleware,
 } from "./middlewares/security";
 import { rateLimiter } from "./middlewares/rateLimiter";
+import { globalAuditLogger } from "./middlewares/auditLogger";
 import { routes } from "./routes/index";
 import { sendSuccess, sendError } from "./utils/response";
 
@@ -17,6 +18,9 @@ app.use("*", corsMiddleware());
 app.use("*", securityHeadersMiddleware());
 app.use("*", ipBlacklistMiddleware());
 app.use("*", payloadLimitMiddleware());
+
+// Global Audit Logger for all API endpoints
+app.use("/api/*", globalAuditLogger());
 
 // 2. Global Rate Limiter (60 requests per minute per IP)
 app.use("/api/*", rateLimiter({ limit: 60, windowSeconds: 60 }));

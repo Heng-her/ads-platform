@@ -12,12 +12,16 @@ export async function generateToken(payload: UserJwtPayload, secretStr: string, 
     .sign(secret);
 }
 
-export const authMiddleware = (): MiddlewareHandler<HonoEnv> => {
+interface AuthOptions {
+  strict?: boolean;
+}
+
+export const authMiddleware = (options: AuthOptions = {}): MiddlewareHandler<HonoEnv> => {
   return async (c, next) => {
     const authHeader = c.req.header("Authorization");
 
-    // Dev Mode Bypass: If ENVIRONMENT is development and no Bearer token is provided, mock a dev user
-    if (!authHeader && c.env?.ENVIRONMENT === "development") {
+    // Dev Mode Bypass: Allowed only if strict is false
+    if (!options.strict && !authHeader && c.env?.ENVIRONMENT === "development") {
       c.set("user", {
         id: "dev-admin-id",
         email: "dev@admin.local",

@@ -7,24 +7,29 @@ import { CampaignService } from "../services/campaignService";
 import { AuditLogService } from "../services/auditLogService";
 import { jwtVerify } from "jose";
 import { registerSchema, loginSchema } from "./authRoutes";
-import { createCampaignSchema, updateCampaignStatusSchema } from "./campaignRoutes";
+import {
+  createCampaignSchema,
+  updateCampaignStatusSchema,
+} from "./campaignRoutes";
 import { updateUserStatusSchema } from "./userRoutes";
 import { sendSuccess, sendError } from "../utils/response";
+import { getClientIp } from "../utils/ip";
+import { checkRateLimit } from "../middlewares/rateLimiter";
 
 export const actionRoutes = new Hono<HonoEnv>();
 
 /**
  * Helper to verify JWT token dynamically for actions requiring authentication
  */
-async function authenticate(c: any): Promise<UserJwtPayload> {
+async function authenticate(c: any, strict = false): Promise<UserJwtPayload> {
   const authHeader = c.req.header("Authorization");
 
-  // Dev Mode Bypass
-  if (!authHeader && c.env?.ENVIRONMENT === "development") {
+  // Dev Mode Bypass: Allowed only if strict is false
+  if (!strict && !authHeader && c.env?.ENVIRONMENT === "development") {
     return {
       id: "dev-admin-id",
       email: "dev@admin.local",
-      role: "ADMIN"
+      role: "ADMIN",
     };
   }
 
@@ -32,12 +37,14 @@ async function authenticate(c: any): Promise<UserJwtPayload> {
     throw new Error("Unauthorized. Authorization token required.");
   }
   const token = authHeader.substring(7);
-  const secret = new TextEncoder().encode(c.env.JWT_SECRET || "fallback-secret-key");
+  const secret = new TextEncoder().encode(
+    c.env.JWT_SECRET || "fallback-secret-key",
+  );
   const { payload } = await jwtVerify(token, secret);
   return {
     id: payload.id as string,
     email: payload.email as string,
-    role: payload.role as "ADMIN" | "CREATOR"
+    role: payload.role as "ADMIN" | "CREATOR",
   };
 }
 
@@ -55,30 +62,70 @@ actionRoutes.post("/", async (c) => {
     }
 
     const db = getDb(c.env.DB);
+    const auditLogService = new AuditLogService(db);
 
     switch (action) {
       // -------------------------------------------------------------
       // Auth Actions
       // -------------------------------------------------------------
       case "auth/register": {
+        const rateLimitErr = await checkRateLimit(c, {
+          limit: 2,
+          windowSeconds: 86400,
+          keyPrefix: "register",
+          message: "Registration limit reached. You can only create a maximum of 2 accounts per day from your IP address."
+        });
+        if (rateLimitErr) return sendError(c, rateLimitErr, null, 429);
+
         const parseResult = registerSchema.safeParse(payloadData);
         if (!parseResult.success) {
-          return sendError(c, parseResult.error.errors[0]?.message || "Validation error", parseResult.error.format());
+          return sendError(
+            c,
+            parseResult.error.errors[0]?.message || "Validation error",
+            parseResult.error.format(),
+          );
         }
-        const { username, email, password, role } = parseResult.data;
+        const { username, email, password, avatar, role } = parseResult.data;
         const authService = new AuthService(db);
-        const res = await authService.register(username, email, password, role, c.env.JWT_SECRET || "fallback-secret");
+        const res = await authService.register(
+          username,
+          email,
+          password,
+          role,
+          avatar,
+          c.env.JWT_SECRET || "fallback-secret",
+        );
+        await auditLogService.createLog(
+          "USER_REGISTER",
+          res.user.id,
+          getClientIp(c),
+          JSON.stringify({ email: res.user.email, role: res.user.role }),
+        );
         return sendSuccess(c, res, "User registered successfully");
       }
 
       case "auth/login": {
         const parseResult = loginSchema.safeParse(payloadData);
         if (!parseResult.success) {
-          return sendError(c, parseResult.error.errors[0]?.message || "Validation error", parseResult.error.format());
+          return sendError(
+            c,
+            parseResult.error.errors[0]?.message || "Validation error",
+            parseResult.error.format(),
+          );
         }
         const { email, password } = parseResult.data;
         const authService = new AuthService(db);
-        const res = await authService.login(email, password, c.env.JWT_SECRET || "fallback-secret");
+        const res = await authService.login(
+          email,
+          password,
+          c.env.JWT_SECRET || "fallback-secret",
+        );
+        await auditLogService.createLog(
+          "USER_LOGIN",
+          res.user.id,
+          getClientIp(c),
+          JSON.stringify({ email: res.user.email }),
+        );
         return sendSuccess(c, res, "Login successful");
       }
 
@@ -93,9 +140,19 @@ actionRoutes.post("/", async (c) => {
         return sendSuccess(c, user);
       }
 
+      case "users/get": {
+        const userId = payloadData?.id;
+        if (!userId) return sendError(c, "User ID is required");
+        const userService = new UserService(db);
+        const user = await userService.getPublicUserById(userId);
+        if (!user) return sendError(c, "User not found", null, 404);
+        return sendSuccess(c, user);
+      }
+
       case "users/list": {
         const currentUser = await authenticate(c);
-        if (currentUser.role !== "ADMIN") return sendError(c, "Forbidden", null, 403);
+        if (currentUser.role !== "ADMIN")
+          return sendError(c, "Forbidden", null, 403);
         const userService = new UserService(db);
         const usersList = await userService.getAllUsers();
         return sendSuccess(c, usersList);
@@ -103,15 +160,32 @@ actionRoutes.post("/", async (c) => {
 
       case "users/update-status": {
         const currentUser = await authenticate(c);
-        if (currentUser.role !== "ADMIN") return sendError(c, "Forbidden", null, 403);
+        if (currentUser.role !== "ADMIN")
+          return sendError(c, "Forbidden", null, 403);
         const parseResult = updateUserStatusSchema.safeParse(payloadData);
         if (!parseResult.success) {
-          return sendError(c, parseResult.error.errors[0]?.message || "Validation error", parseResult.error.format());
+          return sendError(
+            c,
+            parseResult.error.errors[0]?.message || "Validation error",
+            parseResult.error.format(),
+          );
         }
         const userId = payloadData?.id;
         if (!userId) return sendError(c, "User ID is required");
         const userService = new UserService(db);
-        const updated = await userService.updateUserStatus(userId, parseResult.data.status);
+        const updated = await userService.updateUserStatus(
+          userId,
+          parseResult.data.status,
+        );
+        await auditLogService.createLog(
+          "USER_UPDATE_STATUS",
+          currentUser.id,
+          getClientIp(c),
+          JSON.stringify({
+            targetUserId: userId,
+            newStatus: parseResult.data.status,
+          }),
+        );
         return sendSuccess(c, updated);
       }
 
@@ -119,25 +193,64 @@ actionRoutes.post("/", async (c) => {
       // Campaign Actions
       // -------------------------------------------------------------
       case "campaigns/list": {
-        const currentUser = await authenticate(c);
-        const campaignService = new CampaignService(db);
-        if (currentUser.role === "ADMIN") {
-          const allCampaigns = await campaignService.getAllCampaigns();
-          return sendSuccess(c, allCampaigns);
+        let currentUser: UserJwtPayload | null = null;
+        try {
+          currentUser = await authenticate(c);
+        } catch {
+          // Public access if no token
         }
-        const myCampaigns = await campaignService.getUserCampaigns(currentUser.id);
-        return sendSuccess(c, myCampaigns);
+        const page = payloadData?.page ? Number(payloadData.page) : 1;
+        const limit = payloadData?.limit ? Number(payloadData.limit) : 10;
+        const category = payloadData?.category || undefined;
+        const contentType = payloadData?.contentType || undefined;
+        const search = payloadData?.search || undefined;
+        const status = payloadData?.status === "DRAFT" || payloadData?.status === "PUBLIC" ? payloadData.status : undefined;
+
+        const campaignService = new CampaignService(db);
+        const result = await campaignService.getCampaignsList({
+          user: currentUser,
+          category,
+          contentType,
+          search,
+          status,
+          page,
+          limit,
+        });
+        return sendSuccess(c, result);
       }
 
       case "campaigns/create": {
+        const rateLimitErr = await checkRateLimit(c, {
+          limit: 5,
+          windowSeconds: 86400,
+          keyPrefix: "campaign_create",
+          message: "Post limit reached. You can only publish a maximum of 5 posts per day from your IP address."
+        });
+        if (rateLimitErr) return sendError(c, rateLimitErr, null, 429);
+
         const currentUser = await authenticate(c);
         const parseResult = createCampaignSchema.safeParse(payloadData);
         if (!parseResult.success) {
-          return sendError(c, parseResult.error.errors[0]?.message || "Validation error", parseResult.error.format());
+          return sendError(
+            c,
+            parseResult.error.errors[0]?.message || "Validation error",
+            parseResult.error.format(),
+          );
         }
-        const { title, description, budget, dailyBudget } = parseResult.data;
         const campaignService = new CampaignService(db);
-        const newCampaign = await campaignService.createCampaign(currentUser.id, title, budget, description, dailyBudget);
+        const newCampaign = await campaignService.createCampaign(
+          currentUser.id,
+          parseResult.data
+        );
+        await auditLogService.createLog(
+          "CAMPAIGN_CREATE",
+          currentUser.id,
+          getClientIp(c),
+          JSON.stringify({
+            campaignId: newCampaign?.id,
+            title: newCampaign?.title,
+          }),
+        );
         return sendSuccess(c, newCampaign, "Campaign created successfully");
       }
 
@@ -148,7 +261,10 @@ actionRoutes.post("/", async (c) => {
         const campaignService = new CampaignService(db);
         const campaign = await campaignService.getCampaignById(campaignId);
         if (!campaign) return sendError(c, "Campaign not found", null, 404);
-        if (currentUser.role !== "ADMIN" && campaign.userId !== currentUser.id) {
+        if (
+          currentUser.role !== "ADMIN" &&
+          campaign.userId !== currentUser.id
+        ) {
           return sendError(c, "Forbidden", null, 403);
         }
         return sendSuccess(c, campaign);
@@ -158,17 +274,33 @@ actionRoutes.post("/", async (c) => {
         const currentUser = await authenticate(c);
         const parseResult = updateCampaignStatusSchema.safeParse(payloadData);
         if (!parseResult.success) {
-          return sendError(c, parseResult.error.errors[0]?.message || "Validation error", parseResult.error.format());
+          return sendError(
+            c,
+            parseResult.error.errors[0]?.message || "Validation error",
+            parseResult.error.format(),
+          );
         }
         const campaignId = payloadData?.id;
         if (!campaignId) return sendError(c, "Campaign ID is required");
         const campaignService = new CampaignService(db);
         const campaign = await campaignService.getCampaignById(campaignId);
         if (!campaign) return sendError(c, "Campaign not found", null, 404);
-        if (currentUser.role !== "ADMIN" && campaign.userId !== currentUser.id) {
+        if (
+          currentUser.role !== "ADMIN" &&
+          campaign.userId !== currentUser.id
+        ) {
           return sendError(c, "Forbidden", null, 403);
         }
-        const updated = await campaignService.updateCampaignStatus(campaignId, parseResult.data.status);
+        const updated = await campaignService.updateCampaignStatus(
+          campaignId,
+          parseResult.data.status,
+        );
+        await auditLogService.createLog(
+          "CAMPAIGN_UPDATE_STATUS",
+          currentUser.id,
+          getClientIp(c),
+          JSON.stringify({ campaignId, newStatus: parseResult.data.status }),
+        );
         return sendSuccess(c, updated);
       }
 
@@ -176,11 +308,24 @@ actionRoutes.post("/", async (c) => {
       // Audit Log Actions (ADMIN Only)
       // -------------------------------------------------------------
       case "audit-logs/list": {
-        const currentUser = await authenticate(c);
-        if (currentUser.role !== "ADMIN") return sendError(c, "Forbidden", null, 403);
+        const currentUser = await authenticate(c, true);
+        if (currentUser.role !== "ADMIN")
+          return sendError(c, "Forbidden", null, 403);
         const auditLogService = new AuditLogService(db);
         const logs = await auditLogService.getAllLogs();
         return sendSuccess(c, logs);
+      }
+
+      case "audit-logs/clear": {
+        const currentUser = await authenticate(c, true);
+        if (currentUser.role !== "ADMIN")
+          return sendError(c, "Forbidden", null, 403);
+        const auditLogService = new AuditLogService(db);
+        const success = await auditLogService.clearAllLogs();
+        if (success) {
+          return sendSuccess(c, null, "Audit logs cleared successfully");
+        }
+        return sendError(c, "Failed to clear audit logs");
       }
 
       default:
@@ -218,13 +363,20 @@ actionRoutes.delete("/", async (c) => {
         const campaign = await campaignService.getCampaignById(campaignId);
         if (!campaign) return sendError(c, "Campaign not found", null, 404);
 
-        if (currentUser.role !== "ADMIN" && campaign.userId !== currentUser.id) {
+        if (
+          currentUser.role !== "ADMIN" &&
+          campaign.userId !== currentUser.id
+        ) {
           return sendError(c, "Forbidden", null, 403);
         }
 
         // Delete action logic
-        await campaignService.updateCampaignStatus(campaignId, "REJECTED");
-        return sendSuccess(c, { deleted: true, id: campaignId }, "Campaign deleted successfully");
+        await campaignService.deleteCampaign(campaignId);
+        return sendSuccess(
+          c,
+          { deleted: true, id: campaignId },
+          "Campaign deleted successfully",
+        );
       }
 
       default:

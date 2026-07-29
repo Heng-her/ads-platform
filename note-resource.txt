@@ -26,3 +26,6 @@ pnpm --filter shared typecheck
 
 
 pnpm --filter backend exec drizzle-kit generate --name rename_name_to_username
+
+
+npx wrangler d1 migrations apply DB --local

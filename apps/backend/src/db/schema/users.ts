@@ -5,6 +5,7 @@ export const users = sqliteTable("users", {
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  avatar: text("avatar"), // Profile avatar image URL
   role: text("role", { enum: ["ADMIN", "CREATOR"] })
     .default("CREATOR")
     .notNull(),
