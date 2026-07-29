@@ -2,6 +2,7 @@ import type { MiddlewareHandler } from "hono";
 import { jwtVerify, SignJWT } from "jose";
 import type { HonoEnv, UserJwtPayload } from "../types/env";
 import { sendError } from "../utils/response";
+import { getJwtSecret } from "../utils/env";
 
 export async function generateToken(payload: UserJwtPayload, secretStr: string, expiresIn: string = "7d"): Promise<string> {
   const secret = new TextEncoder().encode(secretStr);
@@ -36,7 +37,7 @@ export const authMiddleware = (options: AuthOptions = {}): MiddlewareHandler<Hon
 
     const token = authHeader.substring(7);
     try {
-      const secret = new TextEncoder().encode(c.env.JWT_SECRET || "fallback-secret-key");
+      const secret = new TextEncoder().encode(getJwtSecret(c));
       const { payload } = await jwtVerify(token, secret);
 
       c.set("user", {

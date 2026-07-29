@@ -43,7 +43,7 @@ export class AuditLogService {
   /**
    * Automatically deletes audit logs older than the specified number of days (default: 2 days)
    */
-  async cleanupOldLogs(days = 2) {
+  async cleanupOldLogs(days = 30) {
     try {
       const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
       await this.db

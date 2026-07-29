@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import type { HonoEnv, UserJwtPayload } from "../types/env";
 import { getDb } from "../db/index";
 import { AuthService } from "../services/authService";
@@ -15,13 +15,17 @@ import { updateUserStatusSchema } from "./userRoutes";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
 import { checkRateLimit } from "../middlewares/rateLimiter";
+import { getJwtSecret } from "../utils/env";
 
 export const actionRoutes = new Hono<HonoEnv>();
 
 /**
  * Helper to verify JWT token dynamically for actions requiring authentication
  */
-async function authenticate(c: any, strict = false): Promise<UserJwtPayload> {
+async function authenticate(
+  c: Context<HonoEnv>,
+  strict: boolean = false,
+): Promise<UserJwtPayload> {
   const authHeader = c.req.header("Authorization");
 
   // Dev Mode Bypass: Allowed only if strict is false
@@ -37,9 +41,7 @@ async function authenticate(c: any, strict = false): Promise<UserJwtPayload> {
     throw new Error("Unauthorized. Authorization token required.");
   }
   const token = authHeader.substring(7);
-  const secret = new TextEncoder().encode(
-    c.env.JWT_SECRET || "fallback-secret-key",
-  );
+  const secret = new TextEncoder().encode(getJwtSecret(c));
   const { payload } = await jwtVerify(token, secret);
   return {
     id: payload.id as string,
@@ -93,7 +95,7 @@ actionRoutes.post("/", async (c) => {
           password,
           role,
           avatar,
-          c.env.JWT_SECRET || "fallback-secret",
+          getJwtSecret(c),
         );
         await auditLogService.createLog(
           "USER_REGISTER",
@@ -118,7 +120,7 @@ actionRoutes.post("/", async (c) => {
         const res = await authService.login(
           email,
           password,
-          c.env.JWT_SECRET || "fallback-secret",
+          getJwtSecret(c),
         );
         await auditLogService.createLog(
           "USER_LOGIN",

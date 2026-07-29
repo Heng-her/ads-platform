@@ -7,6 +7,7 @@ import { AuthService } from "../services/authService";
 import { AuditLogService } from "../services/auditLogService";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
+import { getJwtSecret } from "../utils/env";
 import { registerRateLimiter } from "../middlewares/rateLimiter";
 
 export const registerSchema = z.object({
@@ -40,7 +41,7 @@ export const authRoutes = new Hono<HonoEnv>()
         password,
         role,
         avatar,
-        c.env.JWT_SECRET || "fallback-secret"
+        getJwtSecret(c)
       );
       await auditLogService.createLog(
         "USER_REGISTER",
@@ -64,7 +65,7 @@ export const authRoutes = new Hono<HonoEnv>()
     const auditLogService = new AuditLogService(db);
 
     try {
-      const data = await authService.login(email, password, c.env.JWT_SECRET || "fallback-secret");
+      const data = await authService.login(email, password, getJwtSecret(c));
       await auditLogService.createLog(
         "USER_LOGIN",
         data.user.id,

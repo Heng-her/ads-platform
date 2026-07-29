@@ -3,6 +3,7 @@ import type { HonoEnv } from "../types/env";
 import { getDb } from "../db/index";
 import { AuditLogService } from "../services/auditLogService";
 import { getClientIp } from "../utils/ip";
+import { getJwtSecret } from "../utils/env";
 import { jwtVerify } from "jose";
 
 export const globalAuditLogger = (): MiddlewareHandler<HonoEnv> => {
@@ -28,7 +29,7 @@ export const globalAuditLogger = (): MiddlewareHandler<HonoEnv> => {
         if (authHeader && authHeader.startsWith("Bearer ")) {
           try {
             const token = authHeader.substring(7);
-            const secret = new TextEncoder().encode(c.env.JWT_SECRET || "fallback-secret-key");
+            const secret = new TextEncoder().encode(getJwtSecret(c));
             const { payload } = await jwtVerify(token, secret);
             if (payload?.id) {
               userId = payload.id as string;
@@ -45,14 +46,14 @@ export const globalAuditLogger = (): MiddlewareHandler<HonoEnv> => {
       const details = JSON.stringify({
         status: c.res.status,
         duration: `${durationMs}ms`,
-        userAgent: c.req.header("user-agent") || "unknown"
+        userAgent: c.req.header("user-agent") || "unknown",
       });
 
       // Write log asynchronously
       const logPromise = auditLogService.createLog(action, userId, ip, details);
 
-      // Auto-cleanup logs older than 2 days (48 hours)
-      const cleanupPromise = auditLogService.cleanupOldLogs(2);
+      // Auto-cleanup logs older than 30 days (720 hours)
+      const cleanupPromise = auditLogService.cleanupOldLogs(30);
 
       if (c.executionCtx?.waitUntil) {
         c.executionCtx.waitUntil(Promise.all([logPromise, cleanupPromise]));

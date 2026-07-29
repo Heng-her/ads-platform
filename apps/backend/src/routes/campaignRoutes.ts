@@ -8,6 +8,7 @@ import { AuditLogService } from "../services/auditLogService";
 import { authMiddleware, requireRole } from "../middlewares/auth";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
+import { getJwtSecret } from "../utils/env";
 import { jwtVerify } from "jose";
 import { createCampaignRateLimiter } from "../middlewares/rateLimiter";
 
@@ -39,7 +40,7 @@ async function getOptionalUser(c: any): Promise<UserJwtPayload | null> {
   }
   try {
     const token = authHeader.substring(7);
-    const secret = new TextEncoder().encode(c.env.JWT_SECRET || "fallback-secret-key");
+    const secret = new TextEncoder().encode(getJwtSecret(c));
     const { payload } = await jwtVerify(token, secret);
     return {
       id: payload.id as string,
