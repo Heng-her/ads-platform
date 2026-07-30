@@ -65,7 +65,10 @@ export const campaignRoutes = new Hono<HonoEnv>()
     const category = query.category || undefined;
     const contentType = query.contentType || undefined;
     const search = query.search || undefined;
-    const status = query.status === "DRAFT" || query.status === "PUBLIC" ? query.status : undefined;
+    const status =
+      query.status === "DRAFT" || query.status === "PUBLIC"
+        ? query.status
+        : undefined;
 
     const result = await campaignService.getCampaignsList({
       user,
@@ -78,6 +81,14 @@ export const campaignRoutes = new Hono<HonoEnv>()
     });
 
     return sendSuccess(c, result);
+  })
+  .get("/me", authMiddleware(), async (c) => {
+    const userPayload = c.get("user")!; // comes from the verified JWT
+    const db = getDb(c.env.DB);
+    const campaignService = new CampaignService(db);
+
+    const items = await campaignService.getUserCampaigns(userPayload.id);
+    return sendSuccess(c, items);
   })
   .get("/:id", async (c) => {
     const id = c.req.param("id");
@@ -97,41 +108,74 @@ export const campaignRoutes = new Hono<HonoEnv>()
 
     return sendSuccess(c, campaign);
   })
-  .post("/", createCampaignRateLimiter(), authMiddleware(), requireRole(["ADMIN", "CREATOR"]), zValidator("json", createCampaignSchema, (result, c) => {
-    if (!result.success) {
-      return sendError(c, result.error.errors[0]?.message || "Validation error", result.error.format());
-    }
-  }), async (c) => {
-    const userPayload = c.get("user")!;
-    const body = c.req.valid("json");
-    const db = getDb(c.env.DB);
-    const campaignService = new CampaignService(db);
-    const auditLogService = new AuditLogService(db);
+  .post(
+    "/",
+    createCampaignRateLimiter(),
+    authMiddleware(),
+    requireRole(["ADMIN", "CREATOR"]),
+    zValidator("json", createCampaignSchema, (result, c) => {
+      if (!result.success) {
+        return sendError(
+          c,
+          result.error.errors[0]?.message || "Validation error",
+          result.error.format(),
+        );
+      }
+    }),
+    async (c) => {
+      const userPayload = c.get("user")!;
+      const body = c.req.valid("json");
+      const db = getDb(c.env.DB);
+      const campaignService = new CampaignService(db);
+      const auditLogService = new AuditLogService(db);
 
-    const campaign = await campaignService.createCampaign(userPayload.id, body);
-    await auditLogService.createLog("CAMPAIGN_CREATE", userPayload.id, getClientIp(c), JSON.stringify({ campaignId: campaign?.id, title: campaign?.title }));
-    return sendSuccess(c, campaign, "Campaign created successfully");
-  })
-  .patch("/:id/status", authMiddleware(), zValidator("json", updateCampaignStatusSchema, (result, c) => {
-    if (!result.success) {
-      return sendError(c, result.error.errors[0]?.message || "Validation error", result.error.format());
-    }
-  }), async (c) => {
-    const id = c.req.param("id");
-    const userPayload = c.get("user")!;
-    const { status } = c.req.valid("json");
-    const db = getDb(c.env.DB);
-    const campaignService = new CampaignService(db);
-    const auditLogService = new AuditLogService(db);
+      const campaign = await campaignService.createCampaign(
+        userPayload.id,
+        body,
+      );
+      await auditLogService.createLog(
+        "CAMPAIGN_CREATE",
+        userPayload.id,
+        getClientIp(c),
+        JSON.stringify({ campaignId: campaign?.id, title: campaign?.title }),
+      );
+      return sendSuccess(c, campaign, "Campaign created successfully");
+    },
+  )
+  .patch(
+    "/:id/status",
+    authMiddleware(),
+    zValidator("json", updateCampaignStatusSchema, (result, c) => {
+      if (!result.success) {
+        return sendError(
+          c,
+          result.error.errors[0]?.message || "Validation error",
+          result.error.format(),
+        );
+      }
+    }),
+    async (c) => {
+      const id = c.req.param("id");
+      const userPayload = c.get("user")!;
+      const { status } = c.req.valid("json");
+      const db = getDb(c.env.DB);
+      const campaignService = new CampaignService(db);
+      const auditLogService = new AuditLogService(db);
 
-    const campaign = await campaignService.getCampaignById(id);
-    if (!campaign) return sendError(c, "Campaign not found", null, 404);
+      const campaign = await campaignService.getCampaignById(id);
+      if (!campaign) return sendError(c, "Campaign not found", null, 404);
 
-    if (userPayload.role !== "ADMIN" && campaign.userId !== userPayload.id) {
-      return sendError(c, "Forbidden", null, 403);
-    }
+      if (userPayload.role !== "ADMIN" && campaign.userId !== userPayload.id) {
+        return sendError(c, "Forbidden", null, 403);
+      }
 
-    const updated = await campaignService.updateCampaignStatus(id, status);
-    await auditLogService.createLog("CAMPAIGN_UPDATE_STATUS", userPayload.id, getClientIp(c), JSON.stringify({ campaignId: id, newStatus: status }));
-    return sendSuccess(c, updated);
-  });
+      const updated = await campaignService.updateCampaignStatus(id, status);
+      await auditLogService.createLog(
+        "CAMPAIGN_UPDATE_STATUS",
+        userPayload.id,
+        getClientIp(c),
+        JSON.stringify({ campaignId: id, newStatus: status }),
+      );
+      return sendSuccess(c, updated);
+    },
+  );
