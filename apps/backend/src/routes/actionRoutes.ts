@@ -5,17 +5,14 @@ import { AuthService } from "../services/authService";
 import { UserService } from "../services/userService";
 import { CampaignService } from "../services/campaignService";
 import { AuditLogService } from "../services/auditLogService";
-import { jwtVerify } from "jose";
-import { registerSchema, loginSchema } from "./authRoutes";
-import {
-  createCampaignSchema,
-  updateCampaignStatusSchema,
-} from "./campaignRoutes";
-import { updateUserStatusSchema } from "./userRoutes";
+import { registerSchema, loginSchema } from "../schemas/auth";
+import { createCampaignSchema, updateCampaignStatusSchema } from "../schemas/campaign";
+import { updateUserStatusSchema } from "../schemas/user";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
 import { checkRateLimit } from "../middlewares/rateLimiter";
 import { getJwtSecret } from "../utils/env";
+import { extractBearerToken, verifyToken } from "../utils/jwt";
 
 export const actionRoutes = new Hono<HonoEnv>();
 
@@ -37,17 +34,12 @@ async function authenticate(
     };
   }
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    throw new Error("Unauthorized. Authorization token required.");
-  }
-  const token = authHeader.substring(7);
-  const secret = new TextEncoder().encode(getJwtSecret(c));
-  const { payload } = await jwtVerify(token, secret);
-  return {
-    id: payload.id as string,
-    email: payload.email as string,
-    role: payload.role as "ADMIN" | "CREATOR",
-  };
+  const token = extractBearerToken(authHeader);
+  if (!token) throw new Error("Unauthorized. Authorization token required.");
+
+  const user = await verifyToken(token, getJwtSecret(c));
+  if (!user) throw new Error("Unauthorized. Invalid or expired token.");
+  return user;
 }
 
 /**

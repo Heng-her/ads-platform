@@ -4,18 +4,17 @@ import { getDb } from "../db/index";
 import { AuditLogService } from "../services/auditLogService";
 import { getClientIp } from "../utils/ip";
 import { getJwtSecret } from "../utils/env";
-import { jwtVerify } from "jose";
+import { extractBearerToken, verifyToken } from "../utils/jwt";
 
 export const globalAuditLogger = (): MiddlewareHandler<HonoEnv> => {
   return async (c, next) => {
-    const startTime = Date.now();
-
-    await next();
-
-    // Skip OPTIONS preflight or root health check
-    if (c.req.method === "OPTIONS" || c.req.path === "/") {
-      return;
+    // Skip OPTIONS preflight, root health check, and GET requests (to reduce noise)
+    if (c.req.method === "OPTIONS" || c.req.path === "/" || c.req.method === "GET") {
+      return await next();
     }
+
+    const startTime = Date.now();
+    await next();
 
     try {
       const db = getDb(c.env.DB);
@@ -25,18 +24,10 @@ export const globalAuditLogger = (): MiddlewareHandler<HonoEnv> => {
       let userId: string | undefined = c.get("user")?.id;
 
       if (!userId) {
-        const authHeader = c.req.header("Authorization");
-        if (authHeader && authHeader.startsWith("Bearer ")) {
-          try {
-            const token = authHeader.substring(7);
-            const secret = new TextEncoder().encode(getJwtSecret(c));
-            const { payload } = await jwtVerify(token, secret);
-            if (payload?.id) {
-              userId = payload.id as string;
-            }
-          } catch {
-            // Ignore invalid token in logger
-          }
+        const token = extractBearerToken(c.req.header("Authorization"));
+        if (token) {
+          const user = await verifyToken(token, getJwtSecret(c));
+          if (user) userId = user.id;
         }
       }
 
@@ -52,7 +43,7 @@ export const globalAuditLogger = (): MiddlewareHandler<HonoEnv> => {
       // Write log asynchronously
       const logPromise = auditLogService.createLog(action, userId, ip, details);
 
-      // Auto-cleanup logs older than 30 days (720 hours)
+      // Auto-cleanup logs older than 30 days
       const cleanupPromise = auditLogService.cleanupOldLogs(30);
 
       if (c.executionCtx?.waitUntil) {
@@ -65,3 +56,4 @@ export const globalAuditLogger = (): MiddlewareHandler<HonoEnv> => {
     }
   };
 };
+

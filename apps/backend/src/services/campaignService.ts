@@ -1,6 +1,32 @@
-import { eq, desc, and, count, or, like, isNull } from "drizzle-orm";
+import { eq, desc, and, count, or, like } from "drizzle-orm";
 import type { DbClient } from "../db/index";
 import { campaigns, users, type NewCampaign } from "../db/schema/index";
+import { parsePagination, buildPaginationMeta } from "../utils/pagination";
+
+// Shared select shape for campaign queries — single source of truth
+const campaignSelectShape = {
+  id: campaigns.id,
+  userId: campaigns.userId,
+  creator: {
+    username: users.username,
+    avatar: users.avatar,
+  },
+  title: campaigns.title,
+  description: campaigns.description,
+  category: campaigns.category,
+  contentType: campaigns.contentType,
+  content: campaigns.content,
+  imageUrl: campaigns.imageUrl,
+  imageTitle: campaigns.imageTitle,
+  imageDescription: campaigns.imageDescription,
+  adNetwork: campaigns.adNetwork,
+  adUnitCode: campaigns.adUnitCode,
+  status: campaigns.status,
+  isDeleted: campaigns.isDeleted,
+  deletedAt: campaigns.deletedAt,
+  createdAt: campaigns.createdAt,
+  updatedAt: campaigns.updatedAt,
+} as const;
 
 export class CampaignService {
   constructor(private db: DbClient) {}
@@ -72,29 +98,7 @@ export class CampaignService {
     }
 
     const result = await this.db
-      .select({
-        id: campaigns.id,
-        userId: campaigns.userId,
-        creator: {
-          username: users.username,
-          avatar: users.avatar,
-        },
-        title: campaigns.title,
-        description: campaigns.description,
-        category: campaigns.category,
-        contentType: campaigns.contentType,
-        content: campaigns.content,
-        imageUrl: campaigns.imageUrl,
-        imageTitle: campaigns.imageTitle,
-        imageDescription: campaigns.imageDescription,
-        adNetwork: campaigns.adNetwork,
-        adUnitCode: campaigns.adUnitCode,
-        status: campaigns.status,
-        isDeleted: campaigns.isDeleted,
-        deletedAt: campaigns.deletedAt,
-        createdAt: campaigns.createdAt,
-        updatedAt: campaigns.updatedAt,
-      })
+      .select(campaignSelectShape)
       .from(campaigns)
       .leftJoin(users, eq(campaigns.userId, users.id))
       .where(and(...conditions))
@@ -112,9 +116,7 @@ export class CampaignService {
     page?: number;
     limit?: number;
   }) {
-    const page = Math.max(1, options.page || 1);
-    const limit = Math.min(100, Math.max(1, options.limit || 10));
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = parsePagination(options.page, options.limit);
 
     const conditions = [];
 
@@ -177,33 +179,10 @@ export class CampaignService {
       .get();
 
     const total = countResult?.total || 0;
-    const totalPages = Math.ceil(total / limit);
 
     // Fetch paginated records
     const rawItems = await this.db
-      .select({
-        id: campaigns.id,
-        userId: campaigns.userId,
-        creator: {
-          username: users.username,
-          avatar: users.avatar,
-        },
-        title: campaigns.title,
-        description: campaigns.description,
-        category: campaigns.category,
-        contentType: campaigns.contentType,
-        content: campaigns.content,
-        imageUrl: campaigns.imageUrl,
-        imageTitle: campaigns.imageTitle,
-        imageDescription: campaigns.imageDescription,
-        adNetwork: campaigns.adNetwork,
-        adUnitCode: campaigns.adUnitCode,
-        status: campaigns.status,
-        isDeleted: campaigns.isDeleted,
-        deletedAt: campaigns.deletedAt,
-        createdAt: campaigns.createdAt,
-        updatedAt: campaigns.updatedAt,
-      })
+      .select(campaignSelectShape)
       .from(campaigns)
       .leftJoin(users, eq(campaigns.userId, users.id))
       .where(whereClause)
@@ -214,14 +193,7 @@ export class CampaignService {
 
     return {
       items: rawItems,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
-      },
+      pagination: buildPaginationMeta(total, page, limit),
     };
   }
 
@@ -233,9 +205,7 @@ export class CampaignService {
       limit?: number;
     } = {},
   ) {
-    const page = Math.max(1, options.page || 1);
-    const limit = Math.min(100, Math.max(1, options.limit || 10));
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = parsePagination(options.page, options.limit);
 
     const conditions = [
       eq(campaigns.userId, userId),
@@ -255,32 +225,9 @@ export class CampaignService {
       .get();
 
     const total = countResult?.total || 0;
-    const totalPages = Math.ceil(total / limit);
 
     const items = await this.db
-      .select({
-        id: campaigns.id,
-        userId: campaigns.userId,
-        creator: {
-          username: users.username,
-          avatar: users.avatar,
-        },
-        title: campaigns.title,
-        description: campaigns.description,
-        category: campaigns.category,
-        contentType: campaigns.contentType,
-        content: campaigns.content,
-        imageUrl: campaigns.imageUrl,
-        imageTitle: campaigns.imageTitle,
-        imageDescription: campaigns.imageDescription,
-        adNetwork: campaigns.adNetwork,
-        adUnitCode: campaigns.adUnitCode,
-        status: campaigns.status,
-        isDeleted: campaigns.isDeleted,
-        deletedAt: campaigns.deletedAt,
-        createdAt: campaigns.createdAt,
-        updatedAt: campaigns.updatedAt,
-      })
+      .select(campaignSelectShape)
       .from(campaigns)
       .leftJoin(users, eq(campaigns.userId, users.id))
       .where(whereClause)
@@ -291,14 +238,7 @@ export class CampaignService {
 
     return {
       items,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
-      },
+      pagination: buildPaginationMeta(total, page, limit),
     };
   }
 
@@ -331,9 +271,7 @@ export class CampaignService {
     page?: number;
     limit?: number;
   } = {}) {
-    const page = Math.max(1, options.page || 1);
-    const limit = Math.min(100, Math.max(1, options.limit || 10));
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = parsePagination(options.page, options.limit);
 
     const conditions = [];
 
@@ -353,32 +291,9 @@ export class CampaignService {
       .get();
 
     const total = countResult?.total || 0;
-    const totalPages = Math.ceil(total / limit);
 
     const items = await this.db
-      .select({
-        id: campaigns.id,
-        userId: campaigns.userId,
-        creator: {
-          username: users.username,
-          avatar: users.avatar,
-        },
-        title: campaigns.title,
-        description: campaigns.description,
-        category: campaigns.category,
-        contentType: campaigns.contentType,
-        content: campaigns.content,
-        imageUrl: campaigns.imageUrl,
-        imageTitle: campaigns.imageTitle,
-        imageDescription: campaigns.imageDescription,
-        adNetwork: campaigns.adNetwork,
-        adUnitCode: campaigns.adUnitCode,
-        status: campaigns.status,
-        isDeleted: campaigns.isDeleted,
-        deletedAt: campaigns.deletedAt,
-        createdAt: campaigns.createdAt,
-        updatedAt: campaigns.updatedAt,
-      })
+      .select(campaignSelectShape)
       .from(campaigns)
       .leftJoin(users, eq(campaigns.userId, users.id))
       .where(whereClause)
@@ -389,14 +304,7 @@ export class CampaignService {
 
     return {
       items,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
-      },
+      pagination: buildPaginationMeta(total, page, limit),
     };
   }
 }

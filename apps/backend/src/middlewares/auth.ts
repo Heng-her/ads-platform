@@ -1,17 +1,11 @@
 import type { MiddlewareHandler } from "hono";
-import { jwtVerify, SignJWT } from "jose";
-import type { HonoEnv, UserJwtPayload } from "../types/env";
+import type { HonoEnv } from "../types/env";
 import { sendError } from "../utils/response";
 import { getJwtSecret } from "../utils/env";
+import { extractBearerToken, verifyToken } from "../utils/jwt";
 
-export async function generateToken(payload: UserJwtPayload, secretStr: string, expiresIn: string = "7d"): Promise<string> {
-  const secret = new TextEncoder().encode(secretStr);
-  return new SignJWT({ ...payload })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(expiresIn)
-    .sign(secret);
-}
+// Re-export generateToken so existing imports from this file keep working
+export { generateToken } from "../utils/jwt";
 
 interface AuthOptions {
   strict?: boolean;
@@ -26,30 +20,23 @@ export const authMiddleware = (options: AuthOptions = {}): MiddlewareHandler<Hon
       c.set("user", {
         id: "dev-admin-id",
         email: "dev@admin.local",
-        role: "ADMIN"
+        role: "ADMIN",
       });
       return await next();
     }
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const token = extractBearerToken(authHeader);
+    if (!token) {
       return sendError(c, "Unauthorized. Authorization token required.", null, 401);
     }
 
-    const token = authHeader.substring(7);
-    try {
-      const secret = new TextEncoder().encode(getJwtSecret(c));
-      const { payload } = await jwtVerify(token, secret);
-
-      c.set("user", {
-        id: payload.id as string,
-        email: payload.email as string,
-        role: payload.role as "ADMIN" | "CREATOR"
-      });
-
-      await next();
-    } catch {
+    const user = await verifyToken(token, getJwtSecret(c));
+    if (!user) {
       return sendError(c, "Unauthorized. Invalid or expired token.", null, 401);
     }
+
+    c.set("user", user);
+    await next();
   };
 };
 

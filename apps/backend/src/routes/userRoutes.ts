@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
 import type { HonoEnv } from "../types/env";
 import { getDb } from "../db/index";
 import { UserService } from "../services/userService";
@@ -8,10 +7,11 @@ import { AuditLogService } from "../services/auditLogService";
 import { authMiddleware, requireRole } from "../middlewares/auth";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
+import { zodErrorHandler } from "../utils/validation";
+import { updateUserStatusSchema } from "../schemas/user";
 
-export const updateUserStatusSchema = z.object({
-  status: z.enum(["ACTIVE", "SUSPENDED", "PENDING"]),
-});
+// Re-export schema consumed by actionRoutes.ts
+export { updateUserStatusSchema } from "../schemas/user";
 
 export const userRoutes = new Hono<HonoEnv>()
   // 1. Get Current Logged-in User Profile (Authenticated)
@@ -49,13 +49,7 @@ export const userRoutes = new Hono<HonoEnv>()
     authMiddleware(),
     requireRole(["ADMIN"]),
     zValidator("json", updateUserStatusSchema, (result, c) => {
-      if (!result.success) {
-        return sendError(
-          c,
-          result.error.errors[0]?.message || "Validation error",
-          result.error.format(),
-        );
-      }
+      if (!result.success) return zodErrorHandler(result, c);
     }),
     async (c) => {
       const id = c.req.param("id");

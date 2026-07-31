@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { eq, or } from "drizzle-orm";
 import type { DbClient } from "../db/index";
 import { users } from "../db/schema/index";
-import { generateToken } from "../middlewares/auth";
+import { generateToken } from "../utils/jwt";
 
 export class AuthService {
   constructor(private db: DbClient) {}
