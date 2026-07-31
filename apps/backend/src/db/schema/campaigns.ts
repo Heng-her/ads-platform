@@ -29,6 +29,11 @@ export const campaigns = sqliteTable("campaigns", {
   })
     .default("PUBLIC")
     .notNull(),
+
+  // Soft Delete: creators see it as deleted, admins still see it
+  isDeleted: integer("is_deleted", { mode: "boolean" }).default(false).notNull(),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
+
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),

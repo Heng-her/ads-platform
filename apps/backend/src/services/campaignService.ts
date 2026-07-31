@@ -1,4 +1,4 @@
-import { eq, desc, and, count, or, like } from "drizzle-orm";
+import { eq, desc, and, count, or, like, isNull } from "drizzle-orm";
 import type { DbClient } from "../db/index";
 import { campaigns, users, type NewCampaign } from "../db/schema/index";
 
@@ -42,7 +42,35 @@ export class CampaignService {
     return this.getCampaignById(campaignId);
   }
 
-  async getCampaignById(id: string) {
+  async updateCampaign(
+    id: string,
+    data: {
+      title?: string;
+      description?: string;
+      category?: string;
+      contentType?: string;
+      content?: string;
+      imageUrl?: string;
+      imageTitle?: string;
+      imageDescription?: string;
+      adNetwork?: string;
+      adUnitCode?: string;
+      status?: "DRAFT" | "PUBLIC";
+    },
+  ) {
+    await this.db
+      .update(campaigns)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(campaigns.id, id));
+    return this.getCampaignById(id);
+  }
+
+  async getCampaignById(id: string, includeDeleted = false) {
+    const conditions = [eq(campaigns.id, id)];
+    if (!includeDeleted) {
+      conditions.push(eq(campaigns.isDeleted, false));
+    }
+
     const result = await this.db
       .select({
         id: campaigns.id,
@@ -62,12 +90,14 @@ export class CampaignService {
         adNetwork: campaigns.adNetwork,
         adUnitCode: campaigns.adUnitCode,
         status: campaigns.status,
+        isDeleted: campaigns.isDeleted,
+        deletedAt: campaigns.deletedAt,
         createdAt: campaigns.createdAt,
         updatedAt: campaigns.updatedAt,
       })
       .from(campaigns)
       .leftJoin(users, eq(campaigns.userId, users.id))
-      .where(eq(campaigns.id, id))
+      .where(and(...conditions))
       .get();
 
     return result || null;
@@ -83,56 +113,58 @@ export class CampaignService {
     limit?: number;
   }) {
     const page = Math.max(1, options.page || 1);
-    const limit = Math.max(1, options.limit || 10);
+    const limit = Math.min(100, Math.max(1, options.limit || 10));
     const offset = (page - 1) * limit;
 
     const conditions = [];
 
-    // Category filter if provided
+    // Category filter
     if (options.category) {
       conditions.push(eq(campaigns.category, options.category));
     }
 
-    // ContentType filter if provided (e.g. ARTICLE, NEWS, BANNER)
+    // ContentType filter
     if (options.contentType) {
       conditions.push(eq(campaigns.contentType, options.contentType));
     }
 
-    // Search filter if provided (matches title)
+    // Search filter (matches title)
     if (options.search) {
       conditions.push(like(campaigns.title, `%${options.search}%`));
     }
 
     // Auth & Status filter logic:
-    // 1. If NO authenticated user (Public visitor): show ONLY "PUBLIC" status
-    // 2. If CREATOR:
-    //    - If status specified (e.g. DRAFT), show own DRAFT posts
-    //    - Else show ALL "PUBLIC" status OR their own created items
-    // 3. If ADMIN:
-    //    - If status specified, filter by status
-    //    - Else show all items
+    // - No user (public visitor): only PUBLIC, non-deleted
+    // - CREATOR: PUBLIC (all) OR own campaigns; can filter by status on own items only
+    // - ADMIN: sees everything including soft-deleted; can filter by status
     if (!options.user) {
       conditions.push(eq(campaigns.status, "PUBLIC"));
+      conditions.push(eq(campaigns.isDeleted, false));
     } else if (options.user.role === "CREATOR") {
       if (options.status) {
+        // Filter by status but only on own campaigns (non-deleted)
         conditions.push(
           and(
             eq(campaigns.userId, options.user.id),
             eq(campaigns.status, options.status),
+            eq(campaigns.isDeleted, false),
           ),
         );
       } else {
+        // All PUBLIC (non-deleted) OR own non-deleted campaigns
         conditions.push(
           or(
-            eq(campaigns.status, "PUBLIC"),
-            eq(campaigns.userId, options.user.id),
+            and(eq(campaigns.status, "PUBLIC"), eq(campaigns.isDeleted, false)),
+            and(eq(campaigns.userId, options.user.id), eq(campaigns.isDeleted, false)),
           ),
         );
       }
     } else if (options.user.role === "ADMIN") {
+      // Admin sees all including soft-deleted; optional status filter
       if (options.status) {
         conditions.push(eq(campaigns.status, options.status));
       }
+      // No isDeleted filter for admins — they see everything
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -147,7 +179,7 @@ export class CampaignService {
     const total = countResult?.total || 0;
     const totalPages = Math.ceil(total / limit);
 
-    // Fetch paginated records with creator info joined, ordered by newest post first
+    // Fetch paginated records
     const rawItems = await this.db
       .select({
         id: campaigns.id,
@@ -167,6 +199,8 @@ export class CampaignService {
         adNetwork: campaigns.adNetwork,
         adUnitCode: campaigns.adUnitCode,
         status: campaigns.status,
+        isDeleted: campaigns.isDeleted,
+        deletedAt: campaigns.deletedAt,
         createdAt: campaigns.createdAt,
         updatedAt: campaigns.updatedAt,
       })
@@ -191,38 +225,39 @@ export class CampaignService {
     };
   }
 
-  async getUserCampaigns(userId: string) {
-    return await this.db
-      .select({
-        id: campaigns.id,
-        userId: campaigns.userId,
-        creator: {
-          username: users.username,
-          avatar: users.avatar,
-        },
-        title: campaigns.title,
-        description: campaigns.description,
-        category: campaigns.category,
-        contentType: campaigns.contentType,
-        content: campaigns.content,
-        imageUrl: campaigns.imageUrl,
-        imageTitle: campaigns.imageTitle,
-        imageDescription: campaigns.imageDescription,
-        adNetwork: campaigns.adNetwork,
-        adUnitCode: campaigns.adUnitCode,
-        status: campaigns.status,
-        createdAt: campaigns.createdAt,
-        updatedAt: campaigns.updatedAt,
-      })
-      .from(campaigns)
-      .leftJoin(users, eq(campaigns.userId, users.id))
-      .where(eq(campaigns.userId, userId))
-      .orderBy(desc(campaigns.createdAt))
-      .all();
-  }
+  async getUserCampaigns(
+    userId: string,
+    options: {
+      status?: "DRAFT" | "PUBLIC";
+      page?: number;
+      limit?: number;
+    } = {},
+  ) {
+    const page = Math.max(1, options.page || 1);
+    const limit = Math.min(100, Math.max(1, options.limit || 10));
+    const offset = (page - 1) * limit;
 
-  async getAllCampaigns() {
-    return await this.db
+    const conditions = [
+      eq(campaigns.userId, userId),
+      eq(campaigns.isDeleted, false), // owners don't see soft-deleted
+    ];
+
+    if (options.status) {
+      conditions.push(eq(campaigns.status, options.status));
+    }
+
+    const whereClause = and(...conditions);
+
+    const countResult = await this.db
+      .select({ total: count() })
+      .from(campaigns)
+      .where(whereClause)
+      .get();
+
+    const total = countResult?.total || 0;
+    const totalPages = Math.ceil(total / limit);
+
+    const items = await this.db
       .select({
         id: campaigns.id,
         userId: campaigns.userId,
@@ -241,13 +276,30 @@ export class CampaignService {
         adNetwork: campaigns.adNetwork,
         adUnitCode: campaigns.adUnitCode,
         status: campaigns.status,
+        isDeleted: campaigns.isDeleted,
+        deletedAt: campaigns.deletedAt,
         createdAt: campaigns.createdAt,
         updatedAt: campaigns.updatedAt,
       })
       .from(campaigns)
       .leftJoin(users, eq(campaigns.userId, users.id))
+      .where(whereClause)
       .orderBy(desc(campaigns.createdAt))
+      .limit(limit)
+      .offset(offset)
       .all();
+
+    return {
+      items,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
   }
 
   async updateCampaignStatus(id: string, status: "DRAFT" | "PUBLIC") {
@@ -258,8 +310,93 @@ export class CampaignService {
     return this.getCampaignById(id);
   }
 
-  async deleteCampaign(id: string) {
-    await this.db.delete(campaigns).where(eq(campaigns.id, id));
+  /**
+   * Soft delete: sets isDeleted = true and records deletedAt timestamp.
+   * Creators won't see the campaign anymore; admins still can via includeDeleted flag.
+   */
+  async softDeleteCampaign(id: string) {
+    await this.db
+      .update(campaigns)
+      .set({ isDeleted: true, deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(campaigns.id, id));
     return true;
+  }
+
+  /**
+   * Admin-only: get all campaigns including soft-deleted ones, with optional filters.
+   */
+  async getAllCampaigns(options: {
+    status?: "DRAFT" | "PUBLIC";
+    includeDeleted?: boolean;
+    page?: number;
+    limit?: number;
+  } = {}) {
+    const page = Math.max(1, options.page || 1);
+    const limit = Math.min(100, Math.max(1, options.limit || 10));
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+
+    if (options.status) {
+      conditions.push(eq(campaigns.status, options.status));
+    }
+    if (!options.includeDeleted) {
+      conditions.push(eq(campaigns.isDeleted, false));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const countResult = await this.db
+      .select({ total: count() })
+      .from(campaigns)
+      .where(whereClause)
+      .get();
+
+    const total = countResult?.total || 0;
+    const totalPages = Math.ceil(total / limit);
+
+    const items = await this.db
+      .select({
+        id: campaigns.id,
+        userId: campaigns.userId,
+        creator: {
+          username: users.username,
+          avatar: users.avatar,
+        },
+        title: campaigns.title,
+        description: campaigns.description,
+        category: campaigns.category,
+        contentType: campaigns.contentType,
+        content: campaigns.content,
+        imageUrl: campaigns.imageUrl,
+        imageTitle: campaigns.imageTitle,
+        imageDescription: campaigns.imageDescription,
+        adNetwork: campaigns.adNetwork,
+        adUnitCode: campaigns.adUnitCode,
+        status: campaigns.status,
+        isDeleted: campaigns.isDeleted,
+        deletedAt: campaigns.deletedAt,
+        createdAt: campaigns.createdAt,
+        updatedAt: campaigns.updatedAt,
+      })
+      .from(campaigns)
+      .leftJoin(users, eq(campaigns.userId, users.id))
+      .where(whereClause)
+      .orderBy(desc(campaigns.createdAt))
+      .limit(limit)
+      .offset(offset)
+      .all();
+
+    return {
+      items,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
   }
 }

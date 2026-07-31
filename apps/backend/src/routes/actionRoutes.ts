@@ -372,8 +372,8 @@ actionRoutes.delete("/", async (c) => {
           return sendError(c, "Forbidden", null, 403);
         }
 
-        // Delete action logic
-        await campaignService.deleteCampaign(campaignId);
+        // Soft delete action logic
+        await campaignService.softDeleteCampaign(campaignId);
         return sendSuccess(
           c,
           { deleted: true, id: campaignId },
