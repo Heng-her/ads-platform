@@ -88,4 +88,85 @@ export class AuthService {
       token,
     };
   }
+
+  async googleLogin(idToken: string, jwtSecret: string) {
+    const res = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
+    );
+    if (!res.ok) {
+      throw new Error("Invalid Google ID token");
+    }
+    const payload = (await res.json()) as {
+      email?: string;
+      name?: string;
+      picture?: string;
+      sub?: string;
+    };
+    if (!payload.email) {
+      throw new Error("Google account email not found");
+    }
+
+    const email = payload.email;
+    let user = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .get();
+
+    if (!user) {
+      const userId = crypto.randomUUID();
+      const emailPrefix = email.split("@")[0] || "user";
+      const baseUsername = emailPrefix.replace(/[^a-zA-Z0-9_]/g, "");
+      const username = `${baseUsername}_${crypto.randomUUID().slice(0, 6)}`;
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(crypto.randomUUID(), salt);
+
+      await this.db.insert(users).values({
+        id: userId,
+        username,
+        email,
+        passwordHash,
+        avatar: payload.picture,
+        role: "CREATOR",
+        status: "ACTIVE",
+      });
+
+      user = {
+        id: userId,
+        username,
+        email,
+
+        passwordHash,
+        avatar: payload.picture || null,
+        portfolioLink: null,
+        country: null,
+        role: "CREATOR",
+        status: "ACTIVE",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    }
+
+    if (user.status === "SUSPENDED") {
+      throw new Error("Account has been suspended");
+    }
+
+    const token = await generateToken(
+      { id: user.id, email: user.email, role: user.role },
+      jwtSecret,
+    );
+
+    return {
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar,
+        role: user.role,
+        status: user.status,
+      },
+      token,
+    };
+  }
 }
+
