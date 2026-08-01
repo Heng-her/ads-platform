@@ -5,7 +5,9 @@ import { defineNuxtConfig } from "nuxt/config";
 export default defineNuxtConfig({
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:8787/api",
+      apiBase:
+        process.env.NUXT_PUBLIC_API_BASE ||
+        "https://alot-calls-trades-codes.trycloudflare.com/api",
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || "",
     },
   },
@@ -13,6 +15,7 @@ export default defineNuxtConfig({
   alias: {
     "@backend": fileURLToPath(new URL("../backend/src", import.meta.url)),
   },
+
   modules: [
     "@pinia/nuxt",
     "@nuxt/eslint",
@@ -24,7 +27,10 @@ export default defineNuxtConfig({
   routeRules: {
     "/": { prerender: false },
   },
-
+  devServer: {
+    host: "0.0.0.0",
+    port: 3000,
+  },
   nitro: {
     preset:
       process.env.NITRO_PRESET ||

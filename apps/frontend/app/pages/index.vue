@@ -1,123 +1,53 @@
 <script setup lang="ts">
-import { useAuthStore } from '~/stores/auth'
-import { encryptData, decryptData } from '~/lib/crypto'
 import { useCustomSeoMeta } from '~/lib/seo/metadata'
+import HomeHero from '~/components/home/HomeHero.vue'
+import HomePartners from '~/components/home/HomePartners.vue'
+import HomePillars from '~/components/home/HomePillars.vue'
+import HomeHowItWorks from '~/components/home/HomeHowItWorks.vue'
+import HomeComparison from '~/components/home/HomeComparison.vue'
+import HomeSecurity from '~/components/home/HomeSecurity.vue'
+import HomeSandbox from '~/components/home/HomeSandbox.vue'
+import HomeRoadmap from '~/components/home/HomeRoadmap.vue'
+import HomeFaq from '~/components/home/HomeFaq.vue'
+import HomeCta from '~/components/home/HomeCta.vue'
 
 useCustomSeoMeta({
-  title: 'Home',
-  description: 'Welcome to New Platform - Modern advertising network connecting advertisers and publishers.',
+  title: 'Decentralized Web3 Advertising Platform',
+  description: 'Transparent, escrow-backed advertising infrastructure powered by smart contracts. Programmatic payouts, 0.5% protocol fees, zero middleman markups.',
   path: '/'
 })
-
-const authStore = useAuthStore()
-
-// Custom raw text encryption testing
-const customInput = ref('Hello, Nuxt Encryption!')
-const customEncrypted = ref('')
-const customDecrypted = ref('')
-
-onMounted(() => {
-  authStore.initAuth()
-})
-
-
-function onEncryptCustom() {
-  customEncrypted.value = encryptData(customInput.value)
-  customDecrypted.value = ''
-}
-
-function onDecryptCustom() {
-  if (customEncrypted.value) {
-    const result = decryptData<string>(customEncrypted.value)
-    customDecrypted.value = result || 'Failed to decrypt'
-  }
-}
 </script>
 
 <template>
-  <UContainer class="py-10 max-w-4xl space-y-8">
-    <UCard>
-      <template #header>
-        <div class="flex items-center justify-between">
-          <h2 class="text-xl font-bold">
-            1. User Login & Response Payload Encryption
-          </h2>
-          <UBadge :color="authStore.isAuthenticated ? 'success' : 'neutral'">
-            {{ authStore.isAuthenticated ? 'Authenticated' : 'Not Logged In' }}
-          </UBadge>
-        </div>
-      </template>
+  <div class="space-y-24 md:space-y-32 py-4">
+    <!-- 1. Hero Section & Web3 dApp Wallet Escrow Deposit -->
+    <HomeHero />
 
-      <div v-if="!authStore.isAuthenticated" class="flex gap-4">
-        <UButton to="/login" color="primary">
-          Log In
-        </UButton>
-        <UButton to="/register" color="neutral" variant="outline">
-          Create Account
-        </UButton>
-      </div>
+    <!-- 2. Network & Infrastructure Compatibility -->
+    <HomePartners />
 
+    <!-- 3. Core Architectural Pillars -->
+    <HomePillars />
 
-      <div v-else class="space-y-6">
-        <div class="bg-green-500/10 p-4 rounded-lg border border-green-500/20">
-          <h3 class="font-semibold text-green-500">
-            Decrypted Active User Session (Memory State):
-          </h3>
-          <pre class="mt-2 text-xs overflow-x-auto p-2 bg-black/20 rounded">{{ authStore.user }}</pre>
-        </div>
+    <!-- 4. How It Works (Dual Perspective Workflow) -->
+    <HomeHowItWorks />
 
-        <div>
-          <h3 class="font-semibold text-amber-500">
-            Encrypted Payload Stored in localStorage ('data_xx2_'):
-          </h3>
-          <p class="text-xs break-all font-mono p-3 bg-neutral-900 rounded border border-neutral-800 mt-2">
-            {{ authStore.encryptedPayload }}
-          </p>
-        </div>
+    <!-- 5. Financial Efficiency Matrix & ROI Calculator -->
+    <HomeComparison />
 
-        <UButton color="error" variant="soft" @click="authStore.logout">
-          Logout & Clear Encrypted Store
-        </UButton>
-      </div>
-    </UCard>
+    <!-- 6. Smart Contract Security Architecture -->
+    <HomeSecurity />
 
-    <UCard>
-      <template #header>
-        <h2 class="text-xl font-bold">
-          2. Quick Test: Encrypt / Decrypt Any Data
-        </h2>
-      </template>
+    <!-- 7. Interactive Dashboard Sandbox -->
+    <HomeSandbox />
 
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium mb-1">Input Text / Payload</label>
-          <UInput v-model="customInput" placeholder="Enter text to encrypt..." />
-        </div>
+    <!-- 8. Protocol Engineering Roadmap -->
+    <HomeRoadmap />
 
-        <div class="flex gap-2">
-          <UButton color="neutral" @click="onEncryptCustom">
-            Encrypt Text
-          </UButton>
-          <UButton color="neutral" variant="outline" :disabled="!customEncrypted" @click="onDecryptCustom">
-            Decrypt Text
-          </UButton>
-        </div>
+    <!-- 9. Technical & Operational FAQ -->
+    <HomeFaq />
 
-        <div v-if="customEncrypted" class="space-y-2 pt-2">
-          <div>
-            <span class="text-xs text-neutral-400">Ciphertext (Encrypted):</span>
-            <div class="text-xs font-mono break-all p-2 bg-neutral-900 rounded border border-neutral-800">
-              {{ customEncrypted }}
-            </div>
-          </div>
-          <div v-if="customDecrypted">
-            <span class="text-xs text-neutral-400">Decrypted Output:</span>
-            <div class="text-xs font-mono p-2 bg-green-950/40 border border-green-500/30 text-green-400 rounded">
-              {{ customDecrypted }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </UCard>
-  </UContainer>
+    <!-- 10. Final Call to Action Banner -->
+    <HomeCta />
+  </div>
 </template>

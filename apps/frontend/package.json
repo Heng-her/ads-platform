@@ -25,6 +25,7 @@
     "@pinia/nuxt": "^1.0.1",
     "@takumi-rs/core": "^2.4.0",
     "crypto-js": "^4.2.0",
+    "ethers": "^6.17.0",
     "hono": "^4.12.31",
     "nuxt": "^4.4.8",
     "pinia": "^4.0.2",
