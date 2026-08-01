@@ -11,10 +11,6 @@ useCustomSeoMeta({
 
 const authStore = useAuthStore()
 
-// Local demo state
-const email = ref('user@example.com')
-const password = ref('password123')
-
 // Custom raw text encryption testing
 const customInput = ref('Hello, Nuxt Encryption!')
 const customEncrypted = ref('')
@@ -24,26 +20,6 @@ onMounted(() => {
   authStore.initAuth()
 })
 
-function onSimulateLogin() {
-  // Simulated server login response payload
-  const mockResponse = {
-    user: {
-      id: 'usr_1029',
-      username: 'jane_admin',
-      email: email.value,
-      name: 'Jane Doe',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane',
-      role: 'admin' as const,
-      balance: 12500.50,
-      status: 'active'
-    },
-    token: 'jwt_mock_token_xyz987654321',
-    expiresAt: new Date(Date.now() + 86400000).toISOString()
-  }
-
-  // Pass to Pinia store (which encrypts automatically)
-  authStore.handleLoginResponse(mockResponse)
-}
 
 function onEncryptCustom() {
   customEncrypted.value = encryptData(customInput.value)
@@ -72,19 +48,15 @@ function onDecryptCustom() {
         </div>
       </template>
 
-      <div v-if="!authStore.isAuthenticated" class="space-y-4 max-w-md">
-        <div>
-          <label class="block text-sm font-medium mb-1">Email</label>
-          <UInput v-model="email" type="email" placeholder="Email" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Password</label>
-          <UInput v-model="password" type="password" placeholder="Password" />
-        </div>
-        <UButton color="primary" @click="onSimulateLogin">
-          Simulate Login & Encrypt Response
+      <div v-if="!authStore.isAuthenticated" class="flex gap-4">
+        <UButton to="/login" color="primary">
+          Log In
+        </UButton>
+        <UButton to="/register" color="neutral" variant="outline">
+          Create Account
         </UButton>
       </div>
+
 
       <div v-else class="space-y-6">
         <div class="bg-green-500/10 p-4 rounded-lg border border-green-500/20">
@@ -96,7 +68,7 @@ function onDecryptCustom() {
 
         <div>
           <h3 class="font-semibold text-amber-500">
-            Encrypted Payload Stored in localStorage ('auth_data_encrypted'):
+            Encrypted Payload Stored in localStorage ('data_xx2_'):
           </h3>
           <p class="text-xs break-all font-mono p-3 bg-neutral-900 rounded border border-neutral-800 mt-2">
             {{ authStore.encryptedPayload }}

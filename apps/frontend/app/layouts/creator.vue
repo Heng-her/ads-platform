@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { useSidebar } from '~/composables/useSidebar'
+import { useAuthStore } from '~/stores/auth'
+
+const authStore = useAuthStore()
 
 const creatorNav = [
   { label: 'Dashboard', icon: 'i-heroicons-squares-2x2', to: '/creator' },
@@ -51,6 +54,7 @@ const { isMobileOpen } = useSidebar()
               aria-label="Notifications"
             />
             <UButton
+              v-if="authStore.user?.role === 'admin'"
               to="/admin"
               color="neutral"
               variant="subtle"
@@ -63,6 +67,7 @@ const { isMobileOpen } = useSidebar()
           </div>
         </template>
       </AppHeader>
+
 
       <main class="flex-1 p-6">
         <slot />

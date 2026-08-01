@@ -79,29 +79,22 @@ const userDropdownItems = computed(() => {
       {
         label: 'Profile Settings',
         icon: 'i-heroicons-user',
-        to: '/settings'
-      }
-    ],
-    [
-      {
-        label: 'Switch Role (Mock)',
-        icon: 'i-heroicons-arrows-right-left',
-        children: [
-          { label: 'Switch to Admin', icon: 'i-heroicons-shield-check', onSelect: () => authStore.loginWithMock('admin') },
-          { label: 'Switch to Creator', icon: 'i-heroicons-sparkles', onSelect: () => authStore.loginWithMock('creator') },
-          { label: 'Switch to Advertiser', icon: 'i-heroicons-megaphone', onSelect: () => authStore.loginWithMock('advertiser') }
-        ]
+        to: '/creator/settings'
       }
     ],
     [
       {
         label: 'Logout',
         icon: 'i-heroicons-arrow-right-start-on-rectangle',
-        onSelect: () => authStore.logout()
+        onSelect: () => {
+          authStore.logout()
+          navigateTo('/login')
+        }
       }
     ]
   ]
 })
+
 
 onMounted(() => {
   authStore.initAuth()
@@ -189,9 +182,11 @@ onUnmounted(() => {
           <!-- Logged In User Controls -->
           <template v-if="authStore.isAuthenticated && authStore.user">
             <!-- Balance Pill -->
-            <div class="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-semibold">
+            <div
+              class="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-semibold">
               <UIcon name="i-heroicons-banknotes" class="w-4 h-4" />
-              <span>${{ authStore.user.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00' }}</span>
+              <span>${{ authStore.user.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'
+              }}</span>
             </div>
 
             <!-- Role Badge -->
@@ -201,7 +196,8 @@ onUnmounted(() => {
 
             <!-- User Menu Dropdown -->
             <UDropdownMenu :items="userDropdownItems">
-              <button class="flex items-center gap-2 focus:outline-none rounded-full p-0.5 hover:ring-2 hover:ring-primary/50 transition-all">
+              <button
+                class="flex items-center gap-2 focus:outline-none rounded-full p-0.5 hover:ring-2 hover:ring-primary/50 transition-all">
                 <UAvatar :src="authStore.user.avatar" :alt="authStore.user.name" size="sm" class="cursor-pointer" />
               </button>
             </UDropdownMenu>
@@ -209,20 +205,6 @@ onUnmounted(() => {
 
           <!-- Guest Controls (Logged Out) -->
           <template v-else>
-            <!-- Quick Demo Login Button for convenient dev testing -->
-            <UDropdownMenu :items="[
-              [{ label: 'Mock Login as...', disabled: true }],
-              [
-                { label: 'Creator Role', icon: 'i-heroicons-sparkles', onSelect: () => authStore.loginWithMock('creator') },
-                { label: 'Admin Role', icon: 'i-heroicons-shield-check', onSelect: () => authStore.loginWithMock('admin') },
-                { label: 'Advertiser Role', icon: 'i-heroicons-megaphone', onSelect: () => authStore.loginWithMock('advertiser') }
-              ]
-            ]">
-              <UButton color="neutral" variant="subtle" size="sm" icon="i-heroicons-beaker">
-                Demo User
-              </UButton>
-            </UDropdownMenu>
-
             <UButton to="/login" color="neutral" variant="ghost">
               Login
             </UButton>
@@ -231,6 +213,7 @@ onUnmounted(() => {
               Get Started
             </UButton>
           </template>
+
         </div>
 
         <!-- Mobile Actions -->

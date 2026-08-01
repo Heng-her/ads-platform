@@ -1,62 +1,69 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 
 interface Props {
   role: 'admin' | 'creator'
 }
 
 const props = defineProps<Props>()
+const authStore = useAuthStore()
+
+function handleLogout() {
+  authStore.logout()
+  navigateTo('/login')
+}
 
 const items = computed(() => {
-  if (props.role === 'admin') {
-    return [
-      [
-        {
-          label: 'Switch to Creator',
-          icon: 'i-heroicons-sparkles',
-          to: '/creator'
-        },
-        {
-          label: 'System Settings',
-          icon: 'i-heroicons-cog-8-tooth',
-          to: '/admin/settings'
-        }
-      ],
-      [
-        {
-          label: 'Exit Admin',
-          icon: 'i-heroicons-arrow-right-start-on-rectangle',
-          to: '/'
-        }
-      ]
-    ]
-  } else {
-    return [
-      [
-        {
-          label: 'Switch to Admin',
-          icon: 'i-heroicons-shield-check',
-          to: '/admin'
-        },
-        {
-          label: 'Studio Settings',
-          icon: 'i-heroicons-cog-6-tooth',
-          to: '/creator/settings'
-        }
-      ],
-      [
-        {
-          label: 'Exit to Public',
-          icon: 'i-heroicons-arrow-right-start-on-rectangle',
-          to: '/'
-        }
-      ]
-    ]
+  const isActualAdmin = authStore.user?.role === 'admin'
+  const navGroup: any[] = []
+
+  if (isActualAdmin) {
+    if (props.role === 'admin') {
+      navGroup.push({
+        label: 'Switch to Creator',
+        icon: 'i-heroicons-sparkles',
+        to: '/creator'
+      })
+    } else {
+      navGroup.push({
+        label: 'Switch to Admin',
+        icon: 'i-heroicons-shield-check',
+        to: '/admin'
+      })
+    }
   }
+
+  if (props.role === 'admin') {
+    navGroup.push({
+      label: 'System Settings',
+      icon: 'i-heroicons-cog-8-tooth',
+      to: '/admin/settings'
+    })
+  } else {
+    navGroup.push({
+      label: 'Studio Settings',
+      icon: 'i-heroicons-cog-6-tooth',
+      to: '/creator/settings'
+    })
+  }
+
+  return [
+    navGroup,
+    [
+      {
+        label: 'Log Out',
+        icon: 'i-heroicons-arrow-right-start-on-rectangle',
+        onSelect: handleLogout
+      }
+    ]
+  ]
 })
 
-const avatarAlt = computed(() => props.role === 'admin' ? 'Admin User' : 'Creator User')
+const avatarAlt = computed(() => authStore.user?.name || (props.role === 'admin' ? 'Admin User' : 'Creator User'))
+const avatarSrc = computed(() => authStore.user?.avatar || undefined)
 </script>
+
 
 <template>
   <UDropdownMenu
@@ -66,10 +73,12 @@ const avatarAlt = computed(() => props.role === 'admin' ? 'Admin User' : 'Creato
   >
     <button class="flex items-center gap-2 focus:outline-none rounded-full p-0.5 hover:ring-2 hover:ring-primary/50 dark:hover:ring-primary/30 transition-all shrink-0">
       <UAvatar
+        :src="avatarSrc"
         :alt="avatarAlt"
         size="sm"
         class="font-semibold text-xs select-none cursor-pointer"
       />
+
     </button>
   </UDropdownMenu>
 </template>
