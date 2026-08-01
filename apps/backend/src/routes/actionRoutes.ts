@@ -5,6 +5,7 @@ import { AuthService } from "../services/authService";
 import { UserService } from "../services/userService";
 import { CampaignService } from "../services/campaignService";
 import { AuditLogService } from "../services/auditLogService";
+import { DashboardService } from "../services/dashboardService";
 import { registerSchema, loginSchema } from "../schemas/auth";
 import { createCampaignSchema, updateCampaignStatusSchema } from "../schemas/campaign";
 import { updateUserStatusSchema } from "../schemas/user";
@@ -320,6 +321,25 @@ actionRoutes.post("/", async (c) => {
           return sendSuccess(c, null, "Audit logs cleared successfully");
         }
         return sendError(c, "Failed to clear audit logs");
+      }
+
+      // -------------------------------------------------------------
+      // Dashboard Actions
+      // -------------------------------------------------------------
+      case "dashboard/me/stats": {
+        const currentUser = await authenticate(c);
+        const dashboardService = new DashboardService(db);
+        const stats = await dashboardService.getCreatorStats(currentUser.id);
+        return sendSuccess(c, stats);
+      }
+
+      case "dashboard/admin/stats": {
+        const currentUser = await authenticate(c, true);
+        if (currentUser.role !== "ADMIN")
+          return sendError(c, "Forbidden", null, 403);
+        const dashboardService = new DashboardService(db);
+        const stats = await dashboardService.getAdminStats();
+        return sendSuccess(c, stats);
       }
 
       default:
