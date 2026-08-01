@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { useGoogleIdentity } from '~/composables/useGoogleIdentity'
+import { useAuthStore, type ApiResponseEnvelope, type AuthSessionPayload } from '~/stores/auth'
 
 definePageMeta({
   layout: 'auth'
@@ -10,16 +12,83 @@ useSeoMeta({
   robots: 'noindex, nofollow'
 })
 
+const authStore = useAuthStore()
+const api = useApi()
+
 const fullName = ref('')
 const email = ref('')
 const portfolio = ref('')
 const country = ref('')
+const password = ref('')
+const googleButton = ref<HTMLElement | null>(null)
 
 const loading = ref(false)
+const googleLoading = ref(false)
 const success = ref(false)
 const showToast = ref(false)
-
 const focusedField = ref<string | null>(null)
+const errorMessage = ref('')
+const googleError = ref('')
+
+const { isConfigured: googleEnabled, renderButton, cancelPrompt } = useGoogleIdentity()
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
+function resetFeedback() {
+  errorMessage.value = ''
+  googleError.value = ''
+  success.value = false
+  showToast.value = false
+}
+
+async function finishLogin(data: AuthSessionPayload) {
+  authStore.handleLoginResponse(data)
+  success.value = true
+  showToast.value = true
+
+  await new Promise(resolve => setTimeout(resolve, 900))
+  await navigateTo(authStore.getDashboardPath(authStore.user?.role))
+}
+
+async function handleGoogleCredential(idToken: string) {
+  resetFeedback()
+  googleLoading.value = true
+
+  try {
+    const response = await api.auth.google.$post({
+      json: { idToken }
+    })
+
+    const body = await response.json() as ApiResponseEnvelope<AuthSessionPayload>
+    if (!response.ok || body.code !== 1) {
+      throw new Error(body.msg || 'Google sign-up failed.')
+    }
+
+    await finishLogin(body.data)
+  } catch (error) {
+    googleError.value = getErrorMessage(error, 'Google sign-up failed.')
+  } finally {
+    googleLoading.value = false
+  }
+}
+
+onMounted(async () => {
+  if (!googleEnabled.value || !googleButton.value) return
+
+  try {
+    await renderButton(googleButton.value, handleGoogleCredential, {
+      text: 'signup_with'
+    })
+  } catch (error) {
+    googleError.value = getErrorMessage(error, 'Failed to load Google sign-up.')
+  }
+})
+
+onUnmounted(() => {
+  cancelPrompt()
+})
 
 const handleSubmit = () => {
   loading.value = true
@@ -119,24 +188,20 @@ const handleSubmit = () => {
         <form class="space-y-3" @submit.prevent="handleSubmit">
           <!-- Google Sign In -->
           <div class="space-y-3 mb-3">
-            <button type="button"
-              class="w-full py-2.5 px-5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-sm font-medium rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-200 flex items-center justify-center gap-3 cursor-pointer">
-              <svg class="w-4 h-4" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  fill="#4285F4" />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853" />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05" />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335" />
-              </svg>
-              Sign up with Google
-            </button>
+            <div v-if="googleEnabled"
+              class="flex justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <div ref="googleButton" class="min-h-[44px]" />
+            </div>
+            <div v-else
+              class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+              Google sign-in is not configured. Set `NUXT_PUBLIC_GOOGLE_CLIENT_ID` for the frontend and `GOOGLE_CLIENT_ID` for the backend.
+            </div>
+            <p v-if="googleLoading" class="text-sm text-slate-500 dark:text-slate-400">
+              Waiting for Google sign-in...
+            </p>
+            <p v-if="googleError" class="text-sm text-rose-600 dark:text-rose-400">
+              {{ googleError }}
+            </p>
 
             <div class="relative flex items-center">
               <div class="flex-grow border-t border-slate-200 dark:border-slate-800" />
@@ -146,6 +211,7 @@ const handleSubmit = () => {
               <div class="flex-grow border-t border-slate-200 dark:border-slate-800" />
             </div>
           </div>
+
 
           <!-- Full Name -->
           <div class="relative">

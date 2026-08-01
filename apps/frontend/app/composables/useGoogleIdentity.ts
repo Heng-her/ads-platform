@@ -78,7 +78,7 @@ export function useGoogleIdentity() {
     String((config.public as any)?.googleClientId || ""),
   );
   const isConfigured = computed(() => Boolean(clientId.value));
-  console.log("googleClientId:", clientId.value);
+  //   console.log("googleClientId:", clientId.value);
 
   async function renderButton(
     element: HTMLElement,
