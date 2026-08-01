@@ -1,0 +1,129 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Write bug condition exploration test": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573336528
+      },
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573349154
+      }
+    ],
+    "2. Write preservation property tests (BEFORE implementing fix)": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573336627
+      }
+    ],
+    "3.1 Add new environment variable types to `CloudflareBindings`": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573336775
+      }
+    ],
+    "3.2 Add placeholder values to `.dev.vars`": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573336851
+      }
+    ],
+    "3.3 Make `passwordHash` nullable in the Drizzle schema": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573336920
+      }
+    ],
+    "3.4 Create D1 SQL migration for nullable `password_hash`": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573337029
+      }
+    ],
+    "3.5 Add null-hash guard in `AuthService.login()`": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573337116
+      }
+    ],
+    "4.1 Add `GET /google` OAuth initiation route": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573337209
+      }
+    ],
+    "4.2 Add `GET /google/callback` OAuth callback route": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573337324
+      }
+    ],
+    "4.3 Add `GET /me` authenticated endpoint": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573337385
+      }
+    ],
+    "5.1 Wire the Google button in `login.vue`": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573337444
+      }
+    ],
+    "5.2 Replace the mock `handleSubmit` in `login.vue` with a real API call": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573337495
+      }
+    ],
+    "5.3 Wire the Google button in `register.vue`": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573337554
+      }
+    ],
+    "5.4 Create the `/auth/callback` Nuxt page": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573337601
+      }
+    ],
+    "6.1 Verify bug condition exploration test now passes": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573337656
+      }
+    ],
+    "6.2 Verify preservation tests still pass": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573337709
+      }
+    ],
+    "7. Checkpoint — Ensure all tests pass": [
+      {
+        "executionId": "94038fb8-83da-4324-9948-65c636dcb0c0",
+        "chatSessionId": "sess_5c4c7b4d-0092-4d7b-84ef-9e2fead7d028",
+        "timestamp": 1785573337828
+      }
+    ]
+  }
+}
