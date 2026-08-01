@@ -5,6 +5,7 @@ import { getDb } from "../db/index";
 import { CampaignService } from "../services/campaignService";
 import { AuditLogService } from "../services/auditLogService";
 import { ImpressionService } from "../services/impressionService";
+import { CategoryService } from "../services/categoryService";
 import { authMiddleware, requireRole } from "../middlewares/auth";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
@@ -130,6 +131,93 @@ export const campaignRoutes = new Hono<HonoEnv>()
       return sendSuccess(c, { ...result, items: itemsWithStats });
     },
   )
+
+  // ── GET /api/campaigns/search/suggestions?q= — Search suggestions ──────────
+  // Public endpoint. Returns grouped suggestions: system categories, custom
+  // categories (authenticated user's own only), content types, and campaign titles.
+  // Frontend uses the returned `filter` value to call GET /campaigns?{filter}.
+  .get("/search/suggestions", async (c) => {
+    const q = (c.req.query("q") ?? "").trim();
+    if (!q) return sendSuccess(c, []);
+
+    const db = getDb(c.env.DB);
+    const categoryService = new CategoryService(db);
+    const user = await getOptionalUser(c);
+
+    const pattern = `%${q}%`;
+
+    // Run all queries in parallel
+    const [systemCats, allContentTypes, titleMatches] = await Promise.all([
+      categoryService.getAllSystemCategories(),
+      categoryService.getAllContentTypes(),
+      // Match campaign titles — public & non-deleted only
+      db.query.campaigns.findMany({
+        columns: { id: true, title: true },
+        where: (campaigns, { and, eq, like }) =>
+          and(
+            eq(campaigns.status, "PUBLIC"),
+            eq(campaigns.isDeleted, false),
+            like(campaigns.title, pattern),
+          ),
+        limit: 5,
+      }),
+    ]);
+
+    const suggestions: {
+      type: string;
+      label: string;
+      filter: string;
+      campaignId?: string;
+    }[] = [];
+
+    // System category matches
+    for (const cat of systemCats) {
+      if (cat.name.toLowerCase().includes(q.toLowerCase())) {
+        suggestions.push({
+          type: "category",
+          label: cat.name,
+          filter: `category=${encodeURIComponent(cat.name)}`,
+        });
+      }
+    }
+
+    // Creator's own custom category matches (authenticated only)
+    if (user) {
+      const customCats = await categoryService.getCustomCategoriesByUser(user.id);
+      for (const cat of customCats) {
+        if (cat.name.toLowerCase().includes(q.toLowerCase())) {
+          suggestions.push({
+            type: "customCategory",
+            label: cat.name,
+            filter: `customCategoryId=${cat.id}`,
+          });
+        }
+      }
+    }
+
+    // Content type matches
+    for (const ct of allContentTypes) {
+      if (ct.name.toLowerCase().includes(q.toLowerCase())) {
+        suggestions.push({
+          type: "contentType",
+          label: ct.name,
+          filter: `contentType=${encodeURIComponent(ct.name)}`,
+        });
+      }
+    }
+
+    // Campaign title matches
+    for (const campaign of titleMatches) {
+      suggestions.push({
+        type: "title",
+        label: campaign.title,
+        filter: `search=${encodeURIComponent(campaign.title)}`,
+        campaignId: campaign.id,
+      });
+    }
+
+    return sendSuccess(c, suggestions);
+  })
 
   // ── GET /api/campaigns/:id — Single campaign by ID ─────────────────────────
   .get("/:id", async (c) => {
