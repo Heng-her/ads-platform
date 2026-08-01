@@ -4,6 +4,7 @@ import type { HonoEnv, UserJwtPayload } from "../types/env";
 import { getDb } from "../db/index";
 import { CampaignService } from "../services/campaignService";
 import { AuditLogService } from "../services/auditLogService";
+import { ImpressionService } from "../services/impressionService";
 import { authMiddleware, requireRole } from "../middlewares/auth";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
@@ -56,8 +57,9 @@ export const campaignRoutes = new Hono<HonoEnv>()
     async (c) => {
       const db = getDb(c.env.DB);
       const campaignService = new CampaignService(db);
+      const impressionService = new ImpressionService(db, c.env.CACHE_KV);
       const user = await getOptionalUser(c);
-      const { page, limit, category, contentType, search, status } = c.req.valid("query");
+      const { page, limit, category, contentType, search, status, customCategoryId } = c.req.valid("query");
 
       const result = await campaignService.getCampaignsList({
         user,
@@ -65,11 +67,37 @@ export const campaignRoutes = new Hono<HonoEnv>()
         contentType,
         search,
         status,
+        customCategoryId,
         page,
         limit,
       });
 
-      return sendSuccess(c, result);
+      const campaignIds = result.items.map((item) => item.id);
+
+      // Fetch impression stats for all returned campaigns in one batch
+      const statsMap = await impressionService.getStatsForCampaigns(campaignIds);
+
+      // Attach stats to each item
+      const itemsWithStats = result.items.map((item) => ({
+        ...item,
+        ...(statsMap[item.id] ?? { totalImpressions: 0, uniqueViewers: 0 }),
+      }));
+
+      // Record one impression per campaign in the background — never blocks the response.
+      // Only fires for unauthenticated (public) visitors; authenticated users are skipped.
+      if (!user) {
+        const ip = getClientIp(c) ?? "unknown";
+        const ua = c.req.header("User-Agent") ?? "unknown";
+        c.executionCtx.waitUntil(
+          ImpressionService.buildViewerHash(ip, ua).then((viewerHash) =>
+            Promise.all(
+              campaignIds.map((id) => impressionService.recordImpression(id, viewerHash)),
+            ),
+          ),
+        );
+      }
+
+      return sendSuccess(c, { ...result, items: itemsWithStats });
     },
   )
 
@@ -84,10 +112,22 @@ export const campaignRoutes = new Hono<HonoEnv>()
       const userPayload = c.get("user")!;
       const db = getDb(c.env.DB);
       const campaignService = new CampaignService(db);
+      const impressionService = new ImpressionService(db, c.env.CACHE_KV);
       const { page, limit, status } = c.req.valid("query");
 
       const result = await campaignService.getUserCampaigns(userPayload.id, { page, limit, status });
-      return sendSuccess(c, result);
+
+      const campaignIds = result.items.map((item) => item.id);
+
+      // Read stats only — no impression recording for the owner's own view
+      const statsMap = await impressionService.getStatsForCampaigns(campaignIds);
+
+      const itemsWithStats = result.items.map((item) => ({
+        ...item,
+        ...(statsMap[item.id] ?? { totalImpressions: 0, uniqueViewers: 0 }),
+      }));
+
+      return sendSuccess(c, { ...result, items: itemsWithStats });
     },
   )
 

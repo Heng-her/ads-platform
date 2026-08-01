@@ -39,6 +39,7 @@ export const listCampaignsQuerySchema = z.object({
   contentType: z.string().optional(),
   search: z.string().optional(),
   status: z.enum(["DRAFT", "PUBLIC"]).optional(),
+  customCategoryId: z.coerce.number().int().positive().optional(),
 });
 
 export const meCampaignsQuerySchema = z.object({

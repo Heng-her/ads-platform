@@ -1,6 +1,6 @@
-import { eq, desc, and, count, or, like } from "drizzle-orm";
+import { eq, desc, and, count, or, like, notInArray, isNull } from "drizzle-orm";
 import type { DbClient } from "../db/index";
-import { campaigns, users, type NewCampaign } from "../db/schema/index";
+import { campaigns, users, systemCategories, type NewCampaign } from "../db/schema/index";
 import { parsePagination, buildPaginationMeta } from "../utils/pagination";
 
 // Shared select shape for campaign queries — single source of truth
@@ -14,6 +14,7 @@ const campaignSelectShape = {
   title: campaigns.title,
   description: campaigns.description,
   category: campaigns.category,
+  customCategoryId: campaigns.customCategoryId,
   contentType: campaigns.contentType,
   content: campaigns.content,
   imageUrl: campaigns.imageUrl,
@@ -113,6 +114,7 @@ export class CampaignService {
     contentType?: string;
     search?: string;
     status?: "DRAFT" | "PUBLIC";
+    customCategoryId?: number;
     page?: number;
     limit?: number;
   }) {
@@ -122,12 +124,45 @@ export class CampaignService {
 
     // Category filter
     if (options.category) {
-      conditions.push(eq(campaigns.category, options.category));
+      if (options.category === "OTHER") {
+        // "OTHER" = campaigns whose category is not a system category name
+        // Fetch system category names to build the exclusion list
+        const systemCats = await this.db
+          .select({ name: systemCategories.name })
+          .from(systemCategories)
+          .all();
+        const systemNames = systemCats.map((c) => c.name);
+
+        if (systemNames.length > 0) {
+          // Include campaigns with no category, or a category not in the system list
+          conditions.push(
+            or(
+              isNull(campaigns.category),
+              notInArray(campaigns.category, systemNames),
+            ),
+          );
+        }
+        // If no system categories exist yet, "OTHER" matches everything — no filter added
+      } else {
+        conditions.push(eq(campaigns.category, options.category));
+      }
     }
 
     // ContentType filter
     if (options.contentType) {
       conditions.push(eq(campaigns.contentType, options.contentType));
+    }
+
+    // Custom category filter — only returns campaigns owned by the requesting user
+    if (options.customCategoryId !== undefined) {
+      conditions.push(eq(campaigns.customCategoryId, options.customCategoryId));
+      // Enforce ownership: custom categories are private, only the owner can see them
+      if (options.user) {
+        conditions.push(eq(campaigns.userId, options.user.id));
+      } else {
+        // Unauthenticated users cannot query custom categories
+        return { items: [], pagination: buildPaginationMeta(0, options.page ?? 1, options.limit ?? 10) };
+      }
     }
 
     // Search filter (matches title)
