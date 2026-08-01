@@ -188,13 +188,13 @@ const handleSubmit = () => {
         <form class="space-y-3" @submit.prevent="handleSubmit">
           <!-- Google Sign In -->
           <div class="space-y-3 mb-3">
-            <div v-if="googleEnabled"
-              class="flex justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div v-if="googleEnabled" class="flex justify-center rounded-xl px-4 py-3">
               <div ref="googleButton" class="min-h-[44px]" />
             </div>
             <div v-else
               class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-              Google sign-in is not configured. Set `NUXT_PUBLIC_GOOGLE_CLIENT_ID` for the frontend and `GOOGLE_CLIENT_ID` for the backend.
+              Google sign-in is not configured. Set `NUXT_PUBLIC_GOOGLE_CLIENT_ID` for the frontend and
+              `GOOGLE_CLIENT_ID` for the backend.
             </div>
             <p v-if="googleLoading" class="text-sm text-slate-500 dark:text-slate-400">
               Waiting for Google sign-in...
@@ -286,7 +286,8 @@ const handleSubmit = () => {
                   France
                 </option>
               </select>
-              <UIcon name="i-lucide-chevron-down" class="absolute right-3.5 text-slate-400 h-4 w-4 pointer-events-none" />
+              <UIcon name="i-lucide-chevron-down"
+                class="absolute right-3.5 text-slate-400 h-4 w-4 pointer-events-none" />
             </div>
           </div>
 

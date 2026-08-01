@@ -199,8 +199,7 @@ onUnmounted(() => {
         <form class="space-y-4" @submit.prevent="handleSubmit">
           <!-- Google Sign In -->
           <div class="space-y-4 mb-4">
-            <div v-if="googleEnabled"
-              class="flex justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div v-if="googleEnabled" class="flex justify-center rounded-xl px-4 py-3">
               <div ref="googleButton" class="min-h-[44px]" />
             </div>
             <div v-else
