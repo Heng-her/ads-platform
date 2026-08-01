@@ -5,6 +5,7 @@ export interface CloudflareBindings {
   CACHE_KV: KVNamespace;
   ASSETS_BUCKET: R2Bucket;
   JWT_SECRET: string;
+  ADMIN_SECRET: string;
   ENVIRONMENT: string;
 }
 

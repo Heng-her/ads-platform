@@ -14,6 +14,8 @@ export class AuthService {
     role: "ADMIN" | "CREATOR" = "CREATOR",
     avatar?: string,
     jwtSecret: string = "fallback-secret",
+    portfolioLink?: string,
+    country?: string,
   ) {
     const existing = await this.db
       .select()
@@ -38,13 +40,15 @@ export class AuthService {
       email,
       passwordHash,
       avatar,
+      portfolioLink,
+      country,
       role,
       status: "ACTIVE",
     });
 
     const token = await generateToken({ id: userId, email, role }, jwtSecret);
     return {
-      user: { id: userId, username, email, avatar, role, status: "ACTIVE" },
+      user: { id: userId, username, email, avatar, portfolioLink, country, role, status: "ACTIVE" },
       token,
     };
   }

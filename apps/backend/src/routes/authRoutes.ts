@@ -22,7 +22,16 @@ export const authRoutes = new Hono<HonoEnv>()
       if (!result.success) return zodErrorHandler(result, c);
     }),
     async (c) => {
-      const { username, email, password, avatar, role } = c.req.valid("json");
+      const { username, email, password, avatar, role, portfolioLink, country } = c.req.valid("json");
+
+      // Only allow ADMIN registration if the correct secret header is provided
+      if (role === "ADMIN") {
+        const adminSecret = c.req.header("x-admin-secret");
+        if (!adminSecret || adminSecret !== c.env.ADMIN_SECRET) {
+          return sendError(c, "Forbidden: invalid or missing admin secret", null, 403);
+        }
+      }
+
       const db = getDb(c.env.DB);
       const authService = new AuthService(db);
       const auditLogService = new AuditLogService(db);
@@ -35,6 +44,8 @@ export const authRoutes = new Hono<HonoEnv>()
           role,
           avatar,
           getJwtSecret(c),
+          portfolioLink,
+          country,
         );
         await auditLogService.createLog(
           "USER_REGISTER",

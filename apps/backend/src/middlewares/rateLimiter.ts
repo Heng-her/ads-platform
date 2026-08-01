@@ -62,15 +62,21 @@ export const rateLimiter = (options: RateLimitOptions = {}): MiddlewareHandler<H
 };
 
 /**
- * Strict User Registration Rate Limiter: Maximum 2 account registrations per 24 hours per IP
+ * Strict User Registration Rate Limiter: Maximum 2 account registrations per 24 hours per IP.
+ * Skipped entirely in development (ENVIRONMENT === "development").
  */
 export const registerRateLimiter = (): MiddlewareHandler<HonoEnv> => {
-  return rateLimiter({
-    limit: 2,
-    windowSeconds: 86400, // 24 hours
-    keyPrefix: "register",
-    message: "Registration limit reached. You can only create a maximum of 2 accounts per day from your IP address."
-  });
+  return async (c, next) => {
+    if (c.env.ENVIRONMENT === "development") {
+      return next();
+    }
+    return rateLimiter({
+      limit: 2,
+      windowSeconds: 86400, // 24 hours
+      keyPrefix: "register",
+      message: "Registration limit reached. You can only create a maximum of 2 accounts per day from your IP address.",
+    })(c, next);
+  };
 };
 
 /**
