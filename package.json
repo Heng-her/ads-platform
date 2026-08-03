@@ -7,8 +7,8 @@
     "dev:frontend": "pnpm --filter frontend dev",
     "dev:backend": "pnpm --filter backend dev",
     "build": "pnpm -r build",
-    "deploy:frontend": "pnpm --filter frontend build && pnpm --filter frontend deploy",
-    "deploy:backend": "pnpm --filter backend deploy",
+    "deploy:frontend": "pnpm --filter frontend build && pnpm --filter frontend run deploy",
+    "deploy:backend": "pnpm --filter backend run deploy",
     "deploy:all": "pnpm deploy:backend && pnpm deploy:frontend",
     "lint": "pnpm -r lint"
   },
