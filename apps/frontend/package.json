@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "nuxt build",
-    "deploy": "wrangler pages deploy --project-name ads-platform --branch main dist",
+    "deploy": "wrangler deploy .output/server/index.mjs --assets .output/public --name ads-platform",
     "dev": "nuxt dev",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
