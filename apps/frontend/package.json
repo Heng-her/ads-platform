@@ -37,7 +37,8 @@
     "eslint": "^10.7.0",
     "nuxtseo-layer-devtools": "^5.3.3",
     "typescript": "^6.0.3",
-    "vue-tsc": "^3.3.7"
+    "vue-tsc": "^3.3.7",
+    "wrangler": "^4.110.0"
   },
   "packageManager": "pnpm@11.13.1"
 }
