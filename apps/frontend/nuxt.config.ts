@@ -5,7 +5,9 @@ import { defineNuxtConfig } from "nuxt/config";
 export default defineNuxtConfig({
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:8787/api",
+      apiBase:
+        process.env.NUXT_PUBLIC_API_BASE ||
+        "https://processor-licence-flying-adware.trycloudflare.com/api",
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID,
     },
   },
@@ -28,6 +30,11 @@ export default defineNuxtConfig({
   devServer: {
     host: "0.0.0.0",
     port: 3000,
+  },
+  vite: {
+    server: {
+      allowedHosts: true,
+    },
   },
   nitro: {
     preset:

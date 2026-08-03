@@ -1,17 +1,17 @@
 export const seoConfig = {
-  siteName: 'New Platform',
-  siteUrl: 'https://new-platform.example.com',
-  defaultTitle: 'New Platform | Powerful Advertising & Publisher Network',
+  siteName: 'Signal — Ads Platform',
+  siteUrl: 'https://signal-ads.com',
+  defaultTitle: 'Signal — Ads Platform | Smart Publisher & Ad Targeting Network',
   defaultDescription:
-    'New Platform is a modern advertising network connecting advertisers and publishers with smart targeting and real-time analytics.',
+    'Signal is a modern advertising & publisher network connecting creators, advertisers, and audiences with smart targeting, AI discovery, and real-time impression analytics.',
   defaultImage: '/og-image.png',
-  twitterHandle: '@newplatform',
+  twitterHandle: '@signal_ads',
   keywords: [
-    'new platform',
+    'signal ads',
+    'ads platform',
     'advertising network',
     'publisher monetization',
-    'digital marketing',
     'ad targeting',
-    'ad analytics'
+    'real-time analytics'
   ]
 }

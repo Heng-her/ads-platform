@@ -1,0 +1,371 @@
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useCategories } from '~/composables/useCategories'
+import { useApi } from '~/composables/useApi'
+
+useHead({
+    title: 'Signal — Ads Platform Search & Discover',
+    link: [
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: 'anonymous' },
+        {
+            rel: 'stylesheet',
+            href: 'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap'
+        }
+    ]
+})
+
+const route = useRoute()
+const router = useRouter()
+const api = useApi()
+const { categories, fetchCategories } = useCategories()
+
+const publicNavLinks = [
+    { label: 'Home', to: '/' },
+    { label: 'Explore Feed', to: '/public' },
+    { label: 'Trending Posts', to: '/trending' },
+    { label: 'Monetization', to: '/pricing' },
+    { label: 'News & Trends', to: '/news' }
+]
+
+// ---- Search & Filter state ----
+const searchQuery = ref((route.query.search as string) || '')
+const isSearchFocused = ref(false)
+const searchInputRef = ref<HTMLInputElement | null>(null)
+
+// Suggestions state from backend GET /api/campaigns/search/suggestions?q=
+type SuggestionItem = {
+    type: 'category' | 'customCategory' | 'contentType' | 'title' | string
+    label: string
+    filter: string
+    campaignId?: string
+}
+
+type GroupedSuggestions = {
+    category: SuggestionItem[]
+    customCategory: SuggestionItem[]
+    contentType: SuggestionItem[]
+    title: SuggestionItem[]
+}
+
+const suggestions = ref<SuggestionItem[]>([])
+const isLoadingSuggestions = ref(false)
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+// Group suggestions by type for clean presentation
+const groupedSuggestions = computed<GroupedSuggestions>(() => {
+    const groups: GroupedSuggestions = {
+        category: [],
+        customCategory: [],
+        contentType: [],
+        title: []
+    }
+    for (const item of suggestions.value) {
+        if (item.type in groups) {
+            groups[item.type as keyof GroupedSuggestions].push(item)
+        }
+    }
+    return groups
+})
+
+const hasSuggestions = computed(() => suggestions.value.length > 0)
+
+// Sync input if URL updates externally
+watch(
+    () => route.query.search,
+    (newSearch) => {
+        searchQuery.value = (newSearch as string) || ''
+    }
+)
+
+function pushQuery(patch: Record<string, string | undefined>) {
+    router.push({
+        path: route.path.startsWith('/public') ? route.path : '/public',
+        query: { ...route.query, ...patch }
+    })
+}
+
+async function fetchSuggestions(query: string) {
+    const q = query.trim()
+    if (!q) {
+        suggestions.value = []
+        isLoadingSuggestions.value = false
+        return
+    }
+    isLoadingSuggestions.value = true
+    try {
+        const res = await (api.campaigns as any).search.suggestions.$get({ query: { q } })
+        const json = await res.json()
+        if (json?.code === 1 && Array.isArray(json?.data)) {
+            suggestions.value = json.data
+        } else {
+            suggestions.value = []
+        }
+    } catch (e) {
+        console.error('[GET /search/suggestions] failed:', e)
+        suggestions.value = []
+    } finally {
+        isLoadingSuggestions.value = false
+    }
+}
+
+function onSearchInput() {
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = setTimeout(() => {
+        const query = searchQuery.value.trim()
+        fetchSuggestions(query)
+        pushQuery({ search: query || undefined })
+    }, 300)
+}
+
+function handleSearchSubmit() {
+    const query = searchQuery.value.trim()
+    isSearchFocused.value = false
+    pushQuery({ search: query || undefined })
+}
+
+function selectSuggestion(item: SuggestionItem) {
+    isSearchFocused.value = false
+    searchQuery.value = item.type === 'title' ? item.label : searchQuery.value
+
+    const [key, val] = item.filter.split('=')
+    if (key && val) {
+        const decodedVal = decodeURIComponent(val)
+        pushQuery({ [key]: decodedVal })
+    } else {
+        pushQuery({ search: item.label })
+    }
+}
+
+function onSearchBlur() {
+    setTimeout(() => {
+        isSearchFocused.value = false
+    }, 200)
+}
+
+function clearSearch() {
+    searchQuery.value = ''
+    suggestions.value = []
+    pushQuery({ search: undefined })
+    if (searchInputRef.value) searchInputRef.value.focus()
+}
+
+// Global keydown shortcut '/' to focus search input
+function onKeyDown(e: KeyboardEvent) {
+    if (e.key === '/' && document.activeElement !== searchInputRef.value && !['INPUT', 'TEXTAREA'].includes((document.activeElement as HTMLElement)?.tagName)) {
+        e.preventDefault()
+        searchInputRef.value?.focus()
+    }
+    if (e.key === 'Escape' && isSearchFocused.value) {
+        isSearchFocused.value = false
+    }
+}
+
+onMounted(() => {
+    fetchCategories()
+    window.addEventListener('keydown', onKeyDown)
+})
+
+onUnmounted(() => {
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+    window.removeEventListener('keydown', onKeyDown)
+})
+</script>
+
+<template>
+    <div class="min-h-screen w-full flex flex-col bg-background text-foreground">
+        <!-- ================= TOP HEADER / NAVIGATION ================= -->
+        <AppHeader>
+            <template #left>
+                <NuxtLink to="/public" class="flex items-center gap-2 text-xl font-bold text-primary group">
+                    <div
+                        class="h-9 w-9 rounded-xl flex items-center justify-center bg-primary-500/10 text-primary border border-primary/20 transition-transform group-hover:scale-105">
+                        <UIcon name="i-heroicons-globe-alt" class="w-6 h-6 text-primary" />
+                    </div>
+                    <div class="hidden sm:flex flex-col">
+                        <span
+                            class="font-display font-bold text-base tracking-tight text-gray-900 dark:text-white group-hover:text-primary transition-colors">
+                            SIGNAL
+                        </span>
+                        <span
+                            class="text-[10px] font-mono tracking-wider text-gray-500 dark:text-gray-400 uppercase -mt-1">
+                            Ads Platform
+                        </span>
+                    </div>
+                </NuxtLink>
+            </template>
+
+            <!-- Center Navigation (Home Page Pill Style) -->
+            <template #center>
+                <nav
+                    class="hidden lg:flex items-center gap-1 bg-gray-100/70 dark:bg-gray-800 p-1 rounded-full border border-gray-200/50 dark:border-gray-800/50 shadow-inner">
+                    <NuxtLink v-for="link in publicNavLinks" :key="link.to" :to="link.to"
+                        class="px-3.5 py-1.5 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-all duration-300 transform active:scale-95"
+                        active-class="bg-white dark:bg-gray-900 text-primary dark:text-primary font-bold shadow-sm border border-gray-200/60 dark:border-gray-800/60">
+                        {{ link.label }}
+                    </NuxtLink>
+                </nav>
+            </template>
+
+            <!-- Right: Search Box, Color Mode Toggle & Actions -->
+            <template #right>
+                <div class="flex items-center gap-2 md:gap-3">
+                    <!-- Search Input Wrapper -->
+                    <div class="relative w-48 sm:w-64 lg:w-72">
+                        <div
+                            class="relative flex items-center rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 transition-all duration-200 focus-within:ring-2 focus-within:ring-primary/50">
+                            <!-- Search Icon -->
+                            <span class="pl-3 pr-2 text-gray-400 flex items-center shrink-0">
+                                <UIcon name="i-heroicons-magnifying-glass" class="w-4 h-4 text-primary" />
+                            </span>
+
+                            <!-- Input -->
+                            <input ref="searchInputRef" v-model="searchQuery" type="text"
+                                placeholder="Search campaigns... (/)"
+                                class="w-full bg-transparent py-1.5 pr-7 text-xs outline-none text-gray-900 dark:text-white placeholder-gray-400 font-body"
+                                @input="onSearchInput" @focus="isSearchFocused = true" @blur="onSearchBlur"
+                                @keydown.enter="handleSearchSubmit" />
+
+                            <!-- Clear button or shortcut -->
+                            <div class="pr-2.5 flex items-center shrink-0">
+                                <button v-if="searchQuery" type="button" @click="clearSearch"
+                                    class="h-4 w-4 rounded-full flex items-center justify-center text-xs text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
+                                    title="Clear search">
+                                    <UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
+                                </button>
+                                <kbd v-else
+                                    class="hidden md:inline-block px-1 py-0.2 text-[10px] font-mono text-gray-400 bg-gray-200/50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded">
+                                    /
+                                </kbd>
+                            </div>
+                        </div>
+
+                        <!-- Autocomplete Suggestions Popover Dropdown -->
+                        <transition name="fade-slide">
+                            <div v-if="isSearchFocused && (hasSuggestions || isLoadingSuggestions)"
+                                class="absolute top-full left-0 right-0 mt-2 rounded-xl overflow-hidden z-50 shadow-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+                                <!-- Loading state -->
+                                <div v-if="isLoadingSuggestions"
+                                    class="p-3 text-center text-xs font-mono text-gray-400 flex items-center justify-center gap-2">
+                                    <UIcon name="i-lucide-loader-2" class="h-4 w-4 text-primary animate-spin" />
+                                    Searching suggestions...
+                                </div>
+
+                                <div v-else
+                                    class="max-h-[360px] overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800 p-2">
+                                    <!-- Category Suggestions -->
+                                    <div v-if="groupedSuggestions.category?.length" class="py-1">
+                                        <div
+                                            class="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-primary font-semibold flex items-center gap-1.5">
+                                            <UIcon name="i-heroicons-tag" class="w-3.5 h-3.5" /> Categories
+                                        </div>
+                                        <button v-for="s in groupedSuggestions.category" :key="s.filter"
+                                            class="w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-primary-50 dark:hover:bg-primary-950/30 text-gray-700 dark:text-gray-200 transition-all"
+                                            @mousedown.prevent="selectSuggestion(s)">
+                                            <span>{{ s.label }}</span>
+                                            <CategoryBadge :name="s.label" size="sm" />
+                                        </button>
+                                    </div>
+
+                                    <!-- Custom Category Suggestions -->
+                                    <div v-if="groupedSuggestions.customCategory?.length" class="py-1">
+                                        <div
+                                            class="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-500 font-semibold flex items-center gap-1.5">
+                                            <UIcon name="i-heroicons-folder" class="w-3.5 h-3.5" /> Custom Categories
+                                        </div>
+                                        <button v-for="s in groupedSuggestions.customCategory" :key="s.filter"
+                                            class="w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-amber-50 dark:hover:bg-amber-950/30 text-gray-700 dark:text-gray-200 transition-all"
+                                            @mousedown.prevent="selectSuggestion(s)">
+                                            <span>{{ s.label }}</span>
+                                            <CategoryBadge :name="s.label" size="sm" />
+                                        </button>
+                                    </div>
+
+                                    <!-- Content Type Suggestions -->
+                                    <div v-if="groupedSuggestions.contentType?.length" class="py-1">
+                                        <div
+                                            class="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-sky-500 font-semibold flex items-center gap-1.5">
+                                            <UIcon name="i-heroicons-document-text" class="w-3.5 h-3.5" /> Content Types
+                                        </div>
+                                        <button v-for="s in groupedSuggestions.contentType" :key="s.filter"
+                                            class="w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-sky-50 dark:hover:bg-sky-950/30 text-gray-700 dark:text-gray-200 transition-all"
+                                            @mousedown.prevent="selectSuggestion(s)">
+                                            <span>{{ s.label }}</span>
+                                            <CategoryBadge :contentType="s.label" size="sm" />
+                                        </button>
+                                    </div>
+
+                                    <!-- Campaign Title Matches -->
+                                    <div v-if="groupedSuggestions.title?.length" class="py-1">
+                                        <div
+                                            class="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-purple-500 font-semibold flex items-center gap-1.5">
+                                            <UIcon name="i-heroicons-magnifying-glass" class="w-3.5 h-3.5" /> Campaign
+                                            Titles
+                                        </div>
+                                        <button v-for="s in groupedSuggestions.title" :key="s.filter"
+                                            class="w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-purple-50 dark:hover:bg-purple-950/30 text-gray-700 dark:text-gray-200 transition-all"
+                                            @mousedown.prevent="selectSuggestion(s)">
+                                            <span class="truncate font-medium">{{ s.label }}</span>
+                                            <span
+                                                class="text-[10px] font-mono text-purple-500 shrink-0 ml-2">Match</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </transition>
+                    </div>
+
+                    <!-- Color Mode Toggle Button (Matching Home Page) -->
+                    <UColorModeButton />
+
+                    <!-- Action Buttons -->
+                    <UButton to="/login" color="neutral" variant="ghost" class="hidden sm:inline-flex text-xs">
+                        Sign In
+                    </UButton>
+                    <UButton to="/creator" color="primary" size="xs" class="font-semibold text-xs">
+                        Creator Studio
+                    </UButton>
+                </div>
+            </template>
+        </AppHeader>
+
+        <!-- Main Body Container -->
+        <main class="max-w-[1400px] mx-auto px-4 sm:px-6 flex-1 w-full py-6">
+            <slot />
+        </main>
+
+        <!-- Footer -->
+        <footer
+            class="border-t border-gray-200 dark:border-gray-800 py-6 bg-gray-50/50 dark:bg-gray-900/50 hidden md:block">
+            <div class="max-w-[1400px] mx-auto px-4 text-center text-xs text-gray-500">
+                © {{ new Date().getFullYear() }} Signal Ads Platform. All rights reserved.
+            </div>
+        </footer>
+    </div>
+</template>
+
+<style>
+.font-display {
+    font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-body {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-mono {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+    opacity: 0;
+    transform: translateY(-6px);
+}
+</style>
