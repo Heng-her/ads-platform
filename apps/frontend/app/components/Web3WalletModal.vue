@@ -15,7 +15,7 @@ const connectedAddress = ref<string | null>(null)
 const selectedNetwork = ref('Arbitrum One')
 
 const networks = [
-  { name: 'Arbitrum One', chainId: '42161', icon: 'i-simple-icons-arbitrum' },
+  { name: 'Arbitrum One', chainId: '42161', icon: 'i-heroicons-bolt' },
   { name: 'Ethereum Mainnet', chainId: '1', icon: 'i-simple-icons-ethereum' },
   { name: 'Base', chainId: '8453', icon: 'i-heroicons-square-3-stack-3d' },
   { name: 'Polygon', chainId: '137', icon: 'i-simple-icons-polygon' }

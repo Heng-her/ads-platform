@@ -102,6 +102,7 @@ export const useAuthStore = defineStore("auth", () => {
   // Initialize store state from encrypted persistent storage (if available)
   function initAuth() {
     if (import.meta.client) {
+      if (user.value && token.value) return;
       const storedEncrypted = localStorage.getItem("data_xx2_");
       if (storedEncrypted) {
         const decrypted = decryptData<AuthSessionPayload>(storedEncrypted);

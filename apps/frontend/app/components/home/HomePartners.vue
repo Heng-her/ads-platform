@@ -4,13 +4,14 @@
       <span class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
         Compatible Execution Chains & Non-Custodial Wallets
       </span>
-      <div class="flex flex-wrap items-center justify-center gap-8 sm:gap-12 opacity-80 grayscale hover:grayscale-0 transition-all duration-300">
+      <div
+        class="flex flex-wrap items-center justify-center gap-8 sm:gap-12 opacity-80 grayscale hover:grayscale-0 transition-all duration-300">
         <div class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
           <UIcon name="i-simple-icons-ethereum" class="w-5 h-5 text-indigo-400" />
           <span>Ethereum Mainnet</span>
         </div>
         <div class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-          <UIcon name="i-simple-icons-arbitrum" class="w-5 h-5 text-cyan-400" />
+          <UIcon name="i-heroicons-bolt" class="w-5 h-5 text-cyan-400" />
           <span>Arbitrum One</span>
         </div>
         <div class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">

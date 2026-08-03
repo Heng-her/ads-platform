@@ -1,12 +1,11 @@
-import { defineNuxtRouteMiddleware, navigateTo } from "#imports";
 import { useAuthStore } from "~/stores/auth";
 
 export default defineNuxtRouteMiddleware((to) => {
-  const authStore = useAuthStore();
+  // localStorage is browser-only; skip route redirect during SSR so client can hydrate session from localStorage
+  if (import.meta.server) return;
 
-  if (import.meta.client && !authStore.isAuthenticated) {
-    authStore.initAuth();
-  }
+  const authStore = useAuthStore();
+  authStore.initAuth();
 
   const path = to.path;
 

@@ -53,15 +53,12 @@ async function handleLaunchCampaign() {
       </p>
 
       <!-- CTA Buttons & Connected Wallet State -->
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-        <!-- Launch Your First Campaign CTA -->
-        <UButton color="primary" size="xl"
-          class="w-full sm:w-auto font-bold px-8 shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform"
-          :loading="isConnecting" @click="handleLaunchCampaign">
-          <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5 mr-2" />
-          {{ isConnected ? 'Get Started' : 'Connect Wallet & Get' }}
-        </UButton>
-      </div>
+      <UButton color="primary" size="xl"
+        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 font-bold px-8 shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform"
+        :loading="isConnecting" @click="handleLaunchCampaign">
+        <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5" />
+        <span>{{ isConnected ? 'Get Started' : 'Connect Wallet' }}</span>
+      </UButton>
 
       <!-- Connected Wallet Badge Bar -->
       <div v-if="isConnected" class="pt-2 flex items-center justify-center gap-3">
@@ -89,15 +86,6 @@ async function handleLaunchCampaign() {
       <div class="pt-8 max-w-4xl mx-auto">
         <div
           class="p-4 sm:p-6 rounded-2xl bg-gray-900/95 border border-gray-800 shadow-2xl text-left font-sans relative overflow-hidden backdrop-blur">
-          <div class="flex items-center justify-between pb-4 border-b border-gray-800">
-            <div class="flex items-center gap-3">
-              <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
-              <span class="text-xs font-mono text-gray-400 uppercase tracking-wider">Smart Escrow Instance
-                #0x8F4A...12</span>
-            </div>
-            <UBadge color="success" variant="subtle" size="xs">Escrow Active: Non-Custodial</UBadge>
-          </div>
-
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4 py-5 text-xs">
             <div class="bg-gray-800/60 p-3 rounded-xl border border-gray-700/50">
               <div class="text-gray-400 mb-1">Locked Ad Budget</div>

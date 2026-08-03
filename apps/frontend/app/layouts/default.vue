@@ -19,13 +19,6 @@ const mobileNavItems = [
   { label: 'Finance', icon: 'mdi:finance', to: '/finance' }
 ]
 
-const publicDrawerLinks = [
-  { label: 'Explore Campaigns', icon: 'i-heroicons-magnifying-glass', to: '/' },
-  { label: 'Pricing Calculator', icon: 'i-heroicons-calculator', to: '/' },
-  { label: 'Documentation & API', icon: 'i-heroicons-document-text', to: '/' },
-  { label: 'Help & FAQs', icon: 'i-heroicons-question-mark-circle', to: '/' },
-  { label: 'Contact Sales', icon: 'i-heroicons-chat-bubble-left-right', to: '/' }
-]
 
 const mobileMenuOpen = ref(false)
 const searchQuery = ref('')
@@ -169,7 +162,7 @@ onUnmounted(() => {
                     <div class="flex-1 min-w-0">
                       <div class="text-gray-900 dark:text-gray-100 text-xs font-semibold truncate">{{ res.label }}</div>
                       <div class="text-[10px] text-gray-400 dark:text-gray-500 font-normal truncate mt-0.5">{{ res.desc
-                      }}</div>
+                        }}</div>
                     </div>
                   </div>
                 </div>
@@ -186,7 +179,7 @@ onUnmounted(() => {
               class="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-semibold">
               <UIcon name="i-heroicons-banknotes" class="w-4 h-4" />
               <span>${{ authStore.user.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'
-              }}</span>
+                }}</span>
             </div>
 
             <!-- Role Badge -->
@@ -278,8 +271,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Mobile Menu Drawer -->
-    <MobileDrawer v-model:open="mobileMenuOpen" side="right" title="NewPlatform" icon="i-heroicons-globe-alt"
-      :links="publicDrawerLinks" role="public" />
+    <MobileDrawer v-model:open="mobileMenuOpen" side="right" title="NewPlatform" icon="i-heroicons-globe-alt" role="public" />
 
     <!-- Main Content -->
     <main class="flex-1 container mx-auto px-4 py-8 pb-24 md:pb-8">
