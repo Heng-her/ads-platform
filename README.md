@@ -101,8 +101,25 @@ pnpm --filter backend db:generate
 # Apply migrations locally
 pnpm --filter backend db:migrate:local
 
-# Apply migrations to production Cloudflare D1
+# 1. Apply D1 schema migrations to production
 pnpm --filter backend db:migrate:prod
+
+# 2. Deploy your Hono backend Worker
+pnpm deploy:backend
+```
+
+---
+
+## 🔑 Environment Variables & API Connection
+
+The frontend connects to the backend using `NUXT_PUBLIC_API_BASE` loaded automatically from `.env` and `.env.local` ([apps/frontend/.env](file:///d:/learning/Project%20Hosting/ads-platform/apps/frontend/.env)):
+
+```env
+# Local Development (default fallback)
+NUXT_PUBLIC_API_BASE="http://localhost:8787/api"
+
+# Production (replace with your deployed Cloudflare Worker API URL)
+NUXT_PUBLIC_API_BASE="https://<YOUR_BACKEND_WORKER_URL>/api"
 ```
 
 ---
