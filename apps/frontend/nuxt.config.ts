@@ -32,7 +32,7 @@ export default defineNuxtConfig({
   nitro: {
     preset:
       process.env.NITRO_PRESET ||
-      (process.env.NODE_ENV === "production" ? "cloudflare-module" : undefined),
+      (process.env.NODE_ENV === "production" ? "cloudflare-pages" : undefined),
     prerender: {
       crawlLinks: false,
       routes: [],
