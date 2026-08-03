@@ -5,10 +5,8 @@ import { defineNuxtConfig } from "nuxt/config";
 export default defineNuxtConfig({
   runtimeConfig: {
     public: {
-      apiBase:
-        process.env.NUXT_PUBLIC_API_BASE ||
-        "https://alot-calls-trades-codes.trycloudflare.com/api",
-      googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || "",
+      apiBase: process.env.NUXT_PUBLIC_API_BASE,
+      googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID,
     },
   },
 

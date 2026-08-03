@@ -62,25 +62,18 @@ const publisherSteps = [
 
     <!-- Tab Switcher -->
     <div class="flex justify-center">
-      <div class="p-1 bg-gray-200 dark:bg-gray-850 rounded-xl flex gap-1 border border-gray-300 dark:border-gray-800">
-        <button
-          type="button"
-          class="px-6 py-2 rounded-lg text-xs font-bold transition-all"
-          :class="activeHowItWorksTab === 'advertiser'
-            ? 'bg-white dark:bg-gray-900 text-emerald-500 shadow-sm'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
-          @click="activeHowItWorksTab = 'advertiser'"
-        >
+      <div
+        class="p-1 bg-gray-200 dark:bg-emerald-500/10 rounded-xl flex gap-1 border border-gray-300 dark:border-gray-800">
+        <button type="button" class="px-6 py-2 rounded-lg text-xs font-bold transition-all" :class="activeHowItWorksTab === 'advertiser'
+          ? 'bg-white dark:bg-gray-900 text-emerald-500 shadow-sm'
+          : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
+          @click="activeHowItWorksTab = 'advertiser'">
           For Advertisers & Brands
         </button>
-        <button
-          type="button"
-          class="px-6 py-2 rounded-lg text-xs font-bold transition-all"
-          :class="activeHowItWorksTab === 'publisher'
-            ? 'bg-white dark:bg-gray-900 text-emerald-500 shadow-sm'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
-          @click="activeHowItWorksTab = 'publisher'"
-        >
+        <button type="button" class="px-6 py-2 rounded-lg text-xs font-bold transition-all" :class="activeHowItWorksTab === 'publisher'
+          ? 'bg-white dark:bg-gray-900 text-emerald-500 shadow-sm'
+          : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
+          @click="activeHowItWorksTab = 'publisher'">
           For Publishers & Validators
         </button>
       </div>
@@ -88,11 +81,8 @@ const publisherSteps = [
 
     <!-- Workflow Cards Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div
-        v-for="step in (activeHowItWorksTab === 'advertiser' ? advertiserSteps : publisherSteps)"
-        :key="step.num"
-        class="p-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 relative space-y-3"
-      >
+      <div v-for="step in (activeHowItWorksTab === 'advertiser' ? advertiserSteps : publisherSteps)" :key="step.num"
+        class="p-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 relative space-y-3">
         <div class="text-2xl font-mono font-extrabold text-emerald-500/80">{{ step.num }}</div>
         <h3 class="text-base font-bold text-gray-900 dark:text-white">{{ step.title }}</h3>
         <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{{ step.desc }}</p>
