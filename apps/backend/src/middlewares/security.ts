@@ -22,10 +22,20 @@ export const ipBlacklistMiddleware = (): MiddlewareHandler<HonoEnv> => {
 
 export const corsMiddleware = () =>
   cors({
-    origin: ["http://localhost:3000", "http://localhost:5173"],
+    origin: (origin) => {
+      if (!origin) return "*";
+      if (
+        origin.startsWith("http://localhost:") ||
+        origin.endsWith(".pages.dev") ||
+        origin.endsWith(".workers.dev")
+      ) {
+        return origin;
+      }
+      return origin;
+    },
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-    maxAge: 86400
+    maxAge: 86400,
   });
 
 export const securityHeadersMiddleware = () =>
