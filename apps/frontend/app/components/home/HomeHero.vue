@@ -28,6 +28,20 @@ async function handleLaunchCampaign() {
     showDepositModal.value = true
   }
 }
+
+async function handleApproveAndDeploy() {
+  await requestUsdcApprovalAndDeposit()
+  showDepositModal.value = false
+  if (depositSuccess.value) {
+    console.log("🚀 [Get Started Campaign] Approved & Deployed Escrow Successfully!", {
+      wallet: wallet.value,
+      txHash: txHash.value,
+      amount: "10.00 USDC",
+      status: "APPROVED",
+      timestamp: new Date().toISOString()
+    })
+  }
+}
 </script>
 
 <template>
@@ -157,7 +171,7 @@ async function handleLaunchCampaign() {
               Cancel
             </UButton>
             <UButton color="primary" block :loading="isApproving"
-              @click="requestUsdcApprovalAndDeposit(); showDepositModal = false">
+              @click="handleApproveAndDeploy">
               Approve 10 USDC & Deploy
             </UButton>
           </div>

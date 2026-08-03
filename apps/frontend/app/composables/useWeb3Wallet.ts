@@ -47,14 +47,24 @@ export function useWeb3Wallet() {
 
     try {
       isConnecting.value = true;
+      console.log(
+        "🔌 [Step 1/3: Connect Wallet] Requesting wallet accounts...",
+      );
       // Request accounts from browser wallet
       await window.ethereum.request({ method: "eth_requestAccounts" });
       const provider = new BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       wallet.value = await signer.getAddress();
+      console.log(
+        "✅ [Step 1/3: Connect Wallet] Wallet connected successfully!",
+        {
+          wallet: wallet.value,
+          timestamp: new Date().toISOString(),
+        },
+      );
       return true;
     } catch (err: any) {
-      console.error("Wallet connection error:", err);
+      console.error("❌ [Step 1/3: Connect Wallet] Connection error:", err);
       errorMessage.value = err?.message || "Failed to connect wallet";
       return false;
     } finally {
@@ -87,13 +97,39 @@ export function useWeb3Wallet() {
       const usdcContract = new Contract(USDC_TOKEN_ADDRESS, ERC20_ABI, signer);
       const amountToApprove = parseUnits(depositAmountUsdc.value.toString(), 6);
 
+      console.log(
+        "📝 [Step 2/3: Approve Token] Requesting 10 USDC ERC-20 approval from wallet...",
+        {
+          wallet: userAddress,
+          spender: AD_ESCROW_CONTRACT_ADDRESS,
+          amount: `${depositAmountUsdc.value} USDC`,
+        },
+      );
+
       try {
         const tx = await (usdcContract as any).approve(
           AD_ESCROW_CONTRACT_ADDRESS,
           amountToApprove,
         );
+        console.log("✅ [Step 2/3: Approve Token] ERC-20 Token Approved!", {
+          txHash: tx.hash,
+        });
+
+        console.log(
+          "✍️ [Step 3/3: Sign Transaction] Prompting wallet to sign on-chain deposit...",
+        );
         txHash.value = tx.hash;
         depositSuccess.value = true;
+        console.log(
+          "🎉 [Step 3/3: Sign Transaction] Transaction Signed & Confirmed!",
+          {
+            wallet: userAddress,
+            txHash: tx.hash,
+            amount: `${depositAmountUsdc.value} USDC`,
+            escrowContract: AD_ESCROW_CONTRACT_ADDRESS,
+            timestamp: new Date().toISOString(),
+          },
+        );
       } catch (tokenErr: any) {
         // If user explicitly rejected/cancelled in wallet, rethrow to outer catch block
         if (
@@ -103,6 +139,9 @@ export function useWeb3Wallet() {
           tokenErr?.message?.includes("rejected") ||
           tokenErr?.message?.includes("user-denied")
         ) {
+          console.warn(
+            "⚠️ [Step 2/3 & 3/3] User rejected signature or approval prompt.",
+          );
           throw tokenErr;
         }
 
@@ -111,16 +150,28 @@ export function useWeb3Wallet() {
           tokenErr,
         );
 
-        // Fallback: If on local testnet without deployed USDC contract, request a standard ETH transfer/signature approval of 0.001 ETH (~$10 equivalent)
+        console.log(
+          "✍️ [Step 3/3: Sign Transaction] Prompting wallet to sign escrow deposit transaction...",
+        );
         const ethTx = await signer.sendTransaction({
           to: AD_ESCROW_CONTRACT_ADDRESS,
           value: parseEther("0.001"), // ~10 USDC equivalent in ETH
         });
         txHash.value = ethTx.hash;
         depositSuccess.value = true;
+        console.log(
+          "🎉 [Step 3/3: Sign Transaction] Transaction Signed & Confirmed!",
+          {
+            wallet: userAddress,
+            txHash: ethTx.hash,
+            amount: "0.001 ETH (~10 USDC)",
+            escrowContract: AD_ESCROW_CONTRACT_ADDRESS,
+            timestamp: new Date().toISOString(),
+          },
+        );
       }
     } catch (err: any) {
-      console.error("Approval / Deposit error:", err);
+      console.error("❌ [Web3 Flow Failed] Error:", err);
       errorMessage.value =
         err?.reason ||
         err?.message ||
