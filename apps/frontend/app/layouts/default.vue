@@ -54,8 +54,9 @@ const handleOutsideClick = (event: MouseEvent) => {
 const userDropdownItems = computed(() => {
   const role = authStore.user?.role
   const dashboardPath = role === 'admin' ? '/admin' : (role === 'advertiser' ? '/advertiser' : '/creator')
+  const isActualAdmin = role === 'admin'
 
-  return [
+  const items: any[][] = [
     [
       {
         label: authStore.user?.name || 'User Account',
@@ -74,18 +75,40 @@ const userDropdownItems = computed(() => {
         icon: 'i-heroicons-user',
         to: '/creator/settings'
       }
-    ],
-    [
-      {
-        label: 'Logout',
-        icon: 'i-heroicons-arrow-right-start-on-rectangle',
-        onSelect: () => {
-          authStore.logout()
-          navigateTo('/login')
-        }
-      }
     ]
   ]
+
+  if (isActualAdmin) {
+    items.push([
+      {
+        label: 'Switch to Admin Panel',
+        icon: 'i-heroicons-shield-check',
+        to: '/admin'
+      },
+      {
+        label: 'Switch to Creator Studio',
+        icon: 'i-heroicons-sparkles',
+        to: '/creator'
+      }
+    ])
+  }
+
+  items.push([
+    {
+      label: 'Logout',
+      icon: 'i-heroicons-arrow-right-start-on-rectangle',
+      onSelect: () => {
+        authStore.logout()
+        navigateTo('/login')
+      },
+      onClick: () => {
+        authStore.logout()
+        navigateTo('/login')
+      }
+    }
+  ])
+
+  return items
 })
 
 
@@ -123,8 +146,7 @@ onUnmounted(() => {
       </template>
 
       <template #right>
-        <!-- Desktop Actions -->
-        <div class="hidden md:flex items-center gap-3">
+        <div class="flex items-center gap-2 md:gap-3">
           <!-- Desktop Search Wrapper -->
           <div ref="searchWrapper" class="relative hidden md:block">
             <UInput v-model="searchQuery" icon="i-heroicons-magnifying-glass" placeholder="Search platform..."
@@ -170,54 +192,47 @@ onUnmounted(() => {
             </div>
           </div>
 
+          <!-- Mobile Search Button -->
+          <UButton icon="i-heroicons-magnifying-glass" color="neutral" variant="ghost" class="md:hidden"
+            aria-label="Search" @click="showMobileSearch = true" />
+
           <UColorModeButton />
 
-          <!-- Logged In User Controls -->
+          <!-- Logged In User Controls: Show Avatar popup on mobile & desktop -->
           <template v-if="authStore.isAuthenticated && authStore.user">
-            <!-- Balance Pill -->
+            <!-- Balance Pill (Desktop) -->
             <div
-              class="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-semibold">
+              class="hidden md:flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-semibold">
               <UIcon name="i-heroicons-banknotes" class="w-4 h-4" />
               <span>${{ authStore.user.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'
                 }}</span>
             </div>
 
-            <!-- Role Badge -->
-            <UBadge color="primary" variant="subtle" size="sm" class="capitalize font-bold text-[10px]">
+            <!-- Role Badge (Desktop) -->
+            <UBadge color="primary" variant="subtle" size="sm"
+              class="hidden md:inline-flex capitalize font-bold text-[10px]">
               {{ authStore.user.role }}
             </UBadge>
 
-            <!-- User Menu Dropdown -->
-            <UDropdownMenu :items="userDropdownItems">
+            <!-- User Avatar Popup Dropdown Menu -->
+            <UDropdownMenu :items="userDropdownItems" :content="{ align: 'end' }">
               <button
-                class="flex items-center gap-2 focus:outline-none rounded-full p-0.5 hover:ring-2 hover:ring-primary/50 transition-all">
+                class="flex items-center gap-2 focus:outline-none rounded-full p-0.5 hover:ring-2 hover:ring-primary/50 transition-all shrink-0">
                 <UAvatar :src="authStore.user.avatar" :alt="authStore.user.name" size="sm" class="cursor-pointer" />
               </button>
             </UDropdownMenu>
           </template>
 
-          <!-- Guest Controls (Logged Out) -->
+          <!-- Guest Controls (Not Logged In): Show Get Started Button -> /register -->
           <template v-else>
-            <UButton to="/login" color="neutral" variant="ghost">
+            <UButton to="/login" color="neutral" variant="ghost" class="hidden md:inline-flex">
               Login
             </UButton>
 
-            <UButton to="/register" color="primary">
+            <UButton to="/register" color="primary" size="sm" class="font-semibold">
               Get Started
             </UButton>
           </template>
-
-        </div>
-
-        <!-- Mobile Actions -->
-        <div class="flex md:hidden items-center gap-2">
-          <UButton icon="i-heroicons-magnifying-glass" color="neutral" variant="ghost" aria-label="Search"
-            @click="showMobileSearch = true" />
-
-          <UColorModeButton />
-
-          <UButton icon="i-heroicons-bars-3" color="neutral" variant="ghost" aria-label="Open menu"
-            @click="mobileMenuOpen = true" />
         </div>
       </template>
     </AppHeader>
@@ -270,8 +285,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Mobile Menu Drawer -->
-    <MobileDrawer v-model:open="mobileMenuOpen" side="right" title="NewPlatform" icon="i-heroicons-globe-alt" role="public" />
+
 
     <!-- Main Content -->
     <main class="flex-1 container mx-auto px-4 py-8 pb-24 md:pb-8">
