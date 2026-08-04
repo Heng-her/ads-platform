@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getArticleUrl } from '~/lib/utils'
+
 const props = defineProps<{
   sponsoredAds: any[]
 }>()
@@ -17,7 +19,7 @@ const props = defineProps<{
     <div v-if="sponsoredAds.length > 0" class="space-y-3">
       <div v-for="ad in sponsoredAds.slice(0, 2)" :key="ad.id"
         class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-2 hover:border-amber-500/40 transition-colors">
-        <NuxtLink :to="`/public/${ad.id}`" class="block">
+        <NuxtLink :to="getArticleUrl(ad)" class="block">
           <img v-if="ad.imageUrl" :src="ad.imageUrl" :alt="ad.title" class="h-24 w-full object-cover rounded-lg mb-2" />
           <h5 class="text-xs font-bold text-gray-900 dark:text-white hover:text-amber-500 transition-colors line-clamp-2">
             {{ ad.title }}

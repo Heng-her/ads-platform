@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getArticleUrl } from '~/lib/utils'
+
 const props = defineProps<{
   item: any
 }>()
@@ -6,7 +8,7 @@ const props = defineProps<{
 
 <template>
   <div v-if="item" class="rounded-2xl overflow-hidden border shadow-lg transition-all bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-amber-500/40">
-    <NuxtLink :to="`/public/${item.id}`">
+    <NuxtLink :to="getArticleUrl(item)">
       <div class="relative h-28 w-full bg-gray-900 cursor-pointer">
         <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.title" class="h-full w-full object-cover" />
         <div class="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/40 to-transparent"></div>
@@ -19,7 +21,7 @@ const props = defineProps<{
       <h4 class="text-[11px] font-mono font-semibold text-gray-500 dark:text-gray-400 mb-1">
         {{ item.category || 'Industry Report' }}
       </h4>
-      <NuxtLink :to="`/public/${item.id}`">
+      <NuxtLink :to="getArticleUrl(item)">
         <p class="text-xs font-display font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 hover:text-amber-500 transition-colors cursor-pointer">
           {{ item.title }}
         </p>

@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import type { InferResponseType } from 'hono/client'
 import { useApi } from '~/composables/useApi'
 import { useAuthStore } from '~/stores/auth'
+import { useCustomSeoMeta, useArticleSeo } from '~/lib/seo/metadata'
+import { extractIdFromSlug, getArticleUrl } from '~/lib/utils'
 
 definePageMeta({
     layout: 'public'
@@ -13,13 +16,55 @@ const router = useRouter()
 const api = useApi()
 const authStore = useAuthStore()
 
+type SingleCampaignResponse = InferResponseType<typeof api.campaigns[':id']['$get']>
+
 const slug = computed(() => (route.params.slug as string) || '')
 
-const campaign = ref<any>(null)
-const isLoading = ref(true)
-const errorMessage = ref('')
+const { data: campaign, pending: isLoading, error: asyncError } = await useAsyncData(
+    `campaign-${slug.value}`,
+    async () => {
+        if (!slug.value) return null
+        const targetId = extractIdFromSlug(slug.value)
+        authStore.initAuth()
+        const headers: Record<string, string> = {}
+        if (authStore.token) {
+            headers['Authorization'] = `Bearer ${authStore.token}`
+        }
+        const response = await api.campaigns[':id'].$get(
+            { param: { id: targetId } },
+            { headers }
+        )
+        const json = await response.json()
+        if (response.ok && json.code === 1 && json.data) {
+            return json.data
+        }
+        throw new Error(json.msg || `Campaign with ID "${slug.value}" was not found.`)
+    },
+    { watch: [slug] }
+)
+
+const errorMessage = computed(() => {
+    if (asyncError.value) {
+        return (asyncError.value as any)?.message || `Campaign "${slug.value}" was not found or is restricted.`
+    }
+    return ''
+})
+
 const copied = ref(false)
 const feedbackGiven = ref<boolean | null>(null)
+
+// SEO Metadata and Structured Data (JSON-LD) for Search Engines & Social Cards
+watchEffect(() => {
+    if (campaign.value) {
+        useArticleSeo(campaign.value)
+    } else {
+        useCustomSeoMeta({
+            title: 'Article Details',
+            description: 'Explore detailed campaign and article metrics on Signal Platform.',
+            path: `/article/${slug.value}`
+        })
+    }
+})
 
 function timeAgo(iso: string) {
     if (!iso) return 'recently'
@@ -51,7 +96,9 @@ function initials(name: string) {
 }
 
 function copyLink() {
-    navigator.clipboard.writeText(window.location.href).then(() => {
+    if (!campaign.value) return
+    const fullUrl = `${window.location.origin}${getArticleUrl(campaign.value)}`
+    navigator.clipboard.writeText(fullUrl).then(() => {
         copied.value = true
         setTimeout(() => {
             copied.value = false
@@ -62,44 +109,6 @@ function copyLink() {
 function giveFeedback(val: boolean) {
     feedbackGiven.value = val
 }
-
-async function fetchCampaign() {
-    if (!slug.value) return
-    isLoading.value = true
-    errorMessage.value = ''
-    authStore.initAuth()
-
-    const config = useRuntimeConfig()
-    const baseUrl = (config.public as any)?.apiBase || 'http://localhost:8787/api'
-    const headers: Record<string, string> = {}
-    if (authStore.token) {
-        headers['Authorization'] = `Bearer ${authStore.token}`
-    }
-
-    try {
-        const response = await fetch(`${baseUrl}/campaigns/${encodeURIComponent(slug.value)}`, { headers })
-        const json: any = await response.json()
-
-        if (response.ok && json?.code === 1 && json?.data) {
-            campaign.value = json.data
-            useHead({
-                title: `${json.data.title} — Signal Platform`,
-                meta: [
-                    { name: 'description', content: json.data.description || json.data.title }
-                ]
-            })
-        } else {
-            throw new Error(json?.msg || `Campaign with ID "${slug.value}" was not found.`)
-        }
-    } catch (e: any) {
-        console.error('[GET /campaigns/:id] failed:', e)
-        errorMessage.value = e?.message || `Campaign "${slug.value}" was not found or is restricted.`
-    } finally {
-        isLoading.value = false
-    }
-}
-
-onMounted(fetchCampaign)
 </script>
 
 <template>
@@ -107,15 +116,15 @@ onMounted(fetchCampaign)
 
         <!-- Breadcrumb & Back Button -->
         <div class="flex items-center justify-between mb-6">
-            <NuxtLink to="/public"
+            <NuxtLink to="/article"
                 class="inline-flex items-center gap-2 text-xs font-mono font-semibold text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">
-                <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" /> Back to All Campaigns
+                <UIcon name="i-heroicons-arrow-left" class="w-6 h-6" />
             </NuxtLink>
 
             <div v-if="campaign"
                 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-600 dark:text-gray-300">
                 <span>Category:</span>
-                <NuxtLink :to="`/public?category=${encodeURIComponent(campaign.category || '')}`"
+                <NuxtLink :to="`/article?category=${encodeURIComponent(campaign.category || '')}`"
                     class="text-primary hover:underline font-bold">
                     {{ campaign.category || 'General' }}
                 </NuxtLink>
@@ -142,7 +151,7 @@ onMounted(fetchCampaign)
             </div>
             <h2 class="font-display font-bold text-lg text-gray-900 dark:text-white">Campaign Not Found</h2>
             <p class="text-xs font-medium text-gray-600 dark:text-gray-300 max-w-sm">{{ errorMessage }}</p>
-            <NuxtLink to="/public"
+            <NuxtLink to="/article"
                 class="mt-2 text-xs font-mono px-4 py-2 rounded-xl font-bold text-white bg-primary hover:bg-primary-600 transition-all">
                 Return to Search & Discover
             </NuxtLink>
@@ -161,16 +170,6 @@ onMounted(fetchCampaign)
                     <!-- Glow decoration -->
                     <div
                         class="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-primary/10 blur-3xl pointer-events-none">
-                    </div>
-
-                    <!-- Category & Type Badges -->
-                    <div class="flex flex-wrap items-center gap-2 mb-4">
-                        <CategoryBadge :name="campaign.category" size="sm" />
-                        <CategoryBadge v-if="campaign.contentType" :contentType="campaign.contentType" size="sm" />
-                        <span v-if="campaign.adNetwork"
-                            class="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400">
-                            {{ campaign.adNetwork }}
-                        </span>
                     </div>
 
                     <!-- Campaign Title -->
@@ -248,20 +247,15 @@ onMounted(fetchCampaign)
 
             <!-- Right Sidebar Column (Metrics & Ad Info) -->
             <aside class="lg:col-span-4 space-y-6 sticky top-20">
-                <PublicPerformanceStats
-                    :total-impressions="campaign.totalImpressions"
-                    :unique-viewers="campaign.uniqueViewers"
-                />
+                <PublicPerformanceStats :total-impressions="campaign.totalImpressions"
+                    :unique-viewers="campaign.uniqueViewers" />
 
                 <PublicPublisherCard :creator="campaign.creator" />
 
-                <PublicAdIntegrationCard
-                    :ad-network="campaign.adNetwork"
-                    :ad-unit-code="campaign.adUnitCode"
-                />
+                <PublicAdIntegrationCard :ad-network="campaign.adNetwork" :ad-unit-code="campaign.adUnitCode" />
 
                 <!-- Explore Category Button -->
-                <NuxtLink :to="`/public?category=${encodeURIComponent(campaign.category || '')}`"
+                <NuxtLink :to="`/article?category=${encodeURIComponent(campaign.category || '')}`"
                     class="w-full text-center flex items-center justify-center gap-1.5 text-xs font-mono font-bold py-3 rounded-xl transition-all text-white bg-primary hover:bg-primary-600 shadow-md">
                     <span>Explore {{ campaign.category || 'General' }} Campaigns</span>
                     <UIcon name="i-heroicons-arrow-right" class="w-4 h-4" />

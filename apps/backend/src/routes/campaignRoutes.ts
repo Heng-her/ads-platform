@@ -26,6 +26,11 @@ export { createCampaignSchema, updateCampaignStatusSchema } from "../schemas/cam
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function extractId(rawParam: string): string {
+  const uuidMatch = rawParam.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  return uuidMatch ? uuidMatch[0] : rawParam;
+}
+
 /**
  * Optionally extract authenticated user from Bearer token if provided.
  * Returns null if no token or token is invalid — used on public endpoints
@@ -221,7 +226,7 @@ export const campaignRoutes = new Hono<HonoEnv>()
 
   // ── GET /api/campaigns/:id — Single campaign by ID ─────────────────────────
   .get("/:id", async (c) => {
-    const id = c.req.param("id");
+    const id = extractId(c.req.param("id"));
     const db = getDb(c.env.DB);
     const campaignService = new CampaignService(db);
     const user = await getOptionalUser(c);
@@ -281,7 +286,7 @@ export const campaignRoutes = new Hono<HonoEnv>()
       if (!result.success) return zodErrorHandler(result, c);
     }),
     async (c) => {
-      const id = c.req.param("id");
+      const id = extractId(c.req.param("id"));
       const userPayload = c.get("user")!;
       const body = c.req.valid("json");
       const db = getDb(c.env.DB);
@@ -318,7 +323,7 @@ export const campaignRoutes = new Hono<HonoEnv>()
       if (!result.success) return zodErrorHandler(result, c);
     }),
     async (c) => {
-      const id = c.req.param("id");
+      const id = extractId(c.req.param("id"));
       const userPayload = c.get("user")!;
       const { status } = c.req.valid("json");
       const db = getDb(c.env.DB);
@@ -345,7 +350,7 @@ export const campaignRoutes = new Hono<HonoEnv>()
 
   // ── DELETE /api/campaigns/:id — Soft delete ────────────────────────────────
   .delete("/:id", authMiddleware(), async (c) => {
-    const id = c.req.param("id");
+    const id = extractId(c.req.param("id"));
     const userPayload = c.get("user")!;
     const db = getDb(c.env.DB);
     const campaignService = new CampaignService(db);

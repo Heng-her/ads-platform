@@ -23,7 +23,7 @@ const { categories, fetchCategories } = useCategories()
 
 const publicNavLinks = [
     { label: 'Home', to: '/' },
-    { label: 'Explore Feed', to: '/public' },
+    { label: 'Explore Feed', to: '/article' },
     { label: 'Trending Posts', to: '/trending' },
     { label: 'Monetization', to: '/pricing' },
     { label: 'News & Trends', to: '/news' }
@@ -81,7 +81,7 @@ watch(
 
 function pushQuery(patch: Record<string, string | undefined>) {
     router.push({
-        path: route.path.startsWith('/public') ? route.path : '/public',
+        path: route.path.startsWith('/article') ? route.path : '/article',
         query: { ...route.query, ...patch }
     })
 }
@@ -162,8 +162,10 @@ function onKeyDown(e: KeyboardEvent) {
     }
 }
 
+// Fetch categories immediately when layout initializes
+fetchCategories()
+
 onMounted(() => {
-    fetchCategories()
     window.addEventListener('keydown', onKeyDown)
 })
 
@@ -178,7 +180,7 @@ onUnmounted(() => {
         <!-- ================= TOP HEADER / NAVIGATION ================= -->
         <AppHeader>
             <template #left>
-                <NuxtLink to="/public" class="flex items-center gap-2 text-xl font-bold text-primary group">
+                <NuxtLink to="/article" class="flex items-center gap-2 text-xl font-bold text-primary group">
                     <div
                         class="h-9 w-9 rounded-xl flex items-center justify-center bg-primary-500/10 text-primary border border-primary/20 transition-transform group-hover:scale-105">
                         <UIcon name="i-heroicons-globe-alt" class="w-6 h-6 text-primary" />
@@ -194,18 +196,6 @@ onUnmounted(() => {
                         </span>
                     </div>
                 </NuxtLink>
-            </template>
-
-            <!-- Center Navigation (Home Page Pill Style) -->
-            <template #center>
-                <nav
-                    class="hidden lg:flex items-center gap-1 bg-gray-100/70 dark:bg-gray-800 p-1 rounded-full border border-gray-200/50 dark:border-gray-800/50 shadow-inner">
-                    <NuxtLink v-for="link in publicNavLinks" :key="link.to" :to="link.to"
-                        class="px-3.5 py-1.5 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-all duration-300 transform active:scale-95"
-                        active-class="bg-white dark:bg-gray-900 text-primary dark:text-primary font-bold shadow-sm border border-gray-200/60 dark:border-gray-800/60">
-                        {{ link.label }}
-                    </NuxtLink>
-                </nav>
             </template>
 
             <!-- Right: Search Box, Color Mode Toggle & Actions -->

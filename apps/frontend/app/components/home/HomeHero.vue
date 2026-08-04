@@ -170,9 +170,8 @@ async function handleApproveAndDeploy() {
             <UButton color="neutral" variant="soft" block @click="showDepositModal = false">
               Cancel
             </UButton>
-            <UButton color="primary" block :loading="isApproving"
-              @click="handleApproveAndDeploy">
-              Approve 10 USDC & Deploy
+            <UButton color="primary" block :loading="isApproving" @click="handleApproveAndDeploy">
+              Confirm
             </UButton>
           </div>
         </div>

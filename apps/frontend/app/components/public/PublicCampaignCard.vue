@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getArticleUrl } from '~/lib/utils'
+
 const props = defineProps<{
   campaign: any
 }>()
@@ -29,13 +31,7 @@ function timeAgo(iso: string) {
     class="result-row rounded-2xl p-5 border transition-all duration-200 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-primary/50 flex flex-col sm:flex-row gap-5">
     <div class="flex-1 min-w-0 flex flex-col justify-between">
       <div>
-        <div class="flex items-center gap-2 text-xs font-mono mb-1.5 text-gray-500 dark:text-gray-400 font-medium">
-          <span class="text-primary font-bold">{{ campaign.creator?.username || 'publisher' }}</span>
-          <span>·</span>
-          <span>{{ timeAgo(campaign.createdAt) }}</span>
-        </div>
-
-        <NuxtLink :to="`/public/${campaign.id}`">
+        <NuxtLink :to="getArticleUrl(campaign)">
           <h3
             class="font-display font-bold text-base sm:text-lg text-gray-900 dark:text-white hover:text-primary transition-colors mb-2 leading-snug cursor-pointer">
             {{ campaign.title }}
@@ -63,7 +59,7 @@ function timeAgo(iso: string) {
     </div>
 
     <div v-if="campaign.imageUrl" class="shrink-0">
-      <NuxtLink :to="`/public/${campaign.id}`">
+      <NuxtLink :to="getArticleUrl(campaign)">
         <img :src="campaign.imageUrl" :alt="campaign.imageTitle || campaign.title" loading="lazy"
           class="h-24 w-24 sm:h-28 sm:w-28 rounded-xl object-cover border border-gray-200 dark:border-gray-800 shadow-md hover:opacity-90 transition-opacity cursor-pointer" />
       </NuxtLink>
@@ -78,7 +74,7 @@ function timeAgo(iso: string) {
 
 .line-clamp-2 {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  /* -webkit-line-clamp: 2; */
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

@@ -87,6 +87,9 @@ importers:
       '@ads-platform/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@iconify-json/heroicons':
+        specifier: ^1.2.3
+        version: 1.2.3
       '@iconify-json/lucide':
         specifier: ^1.2.117
         version: 1.2.119
@@ -151,6 +154,9 @@ importers:
       vue-tsc:
         specifier: ^3.3.7
         version: 3.3.8(typescript@6.0.3)
+      wrangler:
+        specifier: ^4.110.0
+        version: 4.118.0(@cloudflare/workers-types@4.20260702.1)
 
   packages/shared:
     dependencies:
@@ -1206,6 +1212,9 @@ packages:
 
   '@iconify-json/carbon@1.2.24':
     resolution: {integrity: sha512-b7u/eTWE3xFa7UXlRJBSEm6At1y6+F0P3imBEip5/8QeRzouxVjBf80Y2xnu1GYsFo9MYlHA0bZfxxMd5givfw==}
+
+  '@iconify-json/heroicons@1.2.3':
+    resolution: {integrity: sha512-n+vmCEgTesRsOpp5AB5ILB6srsgsYK+bieoQBNlafvoEhjVXLq8nIGN4B0v/s4DUfa0dOrjwE/cKJgIKdJXOEg==}
 
   '@iconify-json/lucide@1.2.119':
     resolution: {integrity: sha512-KbrC7fT5wPshV1KLRM0k91poP0OH4eKEVywEOH0FCczKb+qth8Pcq1Hy9kS2tXeF52s23qzLnG8AJsExPSupeA==}
@@ -8244,6 +8253,10 @@ snapshots:
   '@humanwhocodes/retry@0.4.3': {}
 
   '@iconify-json/carbon@1.2.24':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/heroicons@1.2.3':
     dependencies:
       '@iconify/types': 2.0.0
 

@@ -1,17 +1,29 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import type { InferResponseType } from 'hono/client'
 import { useApi } from '~/composables/useApi'
 import { useCategories } from '~/composables/useCategories'
+import { useCustomSeoMeta } from '~/lib/seo/metadata'
+import { getArticleUrl } from '~/lib/utils'
 
 definePageMeta({
     layout: 'public'
+})
+
+useCustomSeoMeta({
+    title: 'Explore Articles & Campaigns',
+    description: 'Discover featured articles, product updates, and ad campaigns on Signal Platform.',
+    path: '/article'
 })
 
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
 const { categories, fetchCategories } = useCategories()
+
+type CampaignsListResponse = InferResponseType<typeof api.campaigns['$get']>
+type CampaignItem = NonNullable<CampaignsListResponse['data']>['items'][number]
 
 // ---- Query state, driven entirely by the URL ----
 const page = ref(1)
@@ -31,7 +43,7 @@ const copiedId = ref<string | null>(null)
 const contentTypes = ['ARTICLE', 'BANNER', 'VIDEO', 'SPONSORED', 'NATIVE']
 
 // ---- Data state ----
-const campaigns = ref<any[]>([])
+const campaigns = ref<CampaignItem[]>([])
 const isLoading = ref(false)
 const isLoadingMore = ref(false)
 const hasMore = ref(true)
@@ -41,33 +53,9 @@ const errorMessage = ref('')
 
 let sentinelObserver: IntersectionObserver | null = null
 
-function stripHtml(html: string | null | undefined) {
-    if (!html) return ''
-    return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-}
-
-function timeAgo(iso: string) {
-    if (!iso) return 'recently'
-    const diffMs = Date.now() - new Date(iso).getTime()
-    const mins = Math.floor(diffMs / 60000)
-    if (mins < 1) return 'just now'
-    if (mins < 60) return `${mins}m ago`
-    const hours = Math.floor(mins / 60)
-    if (hours < 24) return `${hours}h ago`
-    const days = Math.floor(hours / 24)
-    if (days < 30) return `${days}d ago`
-    const months = Math.floor(days / 30)
-    if (months < 12) return `${months}mo ago`
-    return `${Math.floor(months / 12)}y ago`
-}
-
-function initials(name: string) {
-    if (!name) return '?'
-    return name.trim().slice(0, 2).toUpperCase()
-}
 
 function copyCampaignLink(campaign: any) {
-    const url = `${window.location.origin}/public/${campaign.id}`
+    const url = `${window.location.origin}${getArticleUrl(campaign)}`
     navigator.clipboard.writeText(url).then(() => {
         copiedId.value = campaign.id
         setTimeout(() => {
@@ -156,14 +144,14 @@ async function fetchCampaigns(targetPage: number, isAppend = false) {
 
     try {
         const res = await api.campaigns.$get({ query: queryObj })
-        const json: any = await res.json()
+        const json = await res.json()
 
         if (myGeneration !== fetchGeneration) return
 
-        if (json?.code !== 1) throw new Error(json?.msg || 'Failed to load campaigns')
+        if (json.code !== 1) throw new Error(json.msg || 'Failed to load campaigns')
 
-        const newItems = json?.data?.items || []
-        const pagination = json?.data?.pagination
+        const newItems = json.data?.items || []
+        const pagination = json.data?.pagination
 
         campaigns.value = isAppend ? [...campaigns.value, ...newItems] : newItems
         page.value = targetPage
@@ -203,10 +191,11 @@ function loadNextPage() {
     fetchCampaigns(page.value + 1, true)
 }
 
-onMounted(() => {
-    fetchCampaigns(1, false)
-    fetchCategories()
+// Fetch initial campaigns and categories immediately when page setup runs
+fetchCampaigns(1, false)
+fetchCategories()
 
+onMounted(() => {
     if (typeof IntersectionObserver !== 'undefined' && sentinel.value) {
         sentinelObserver = new IntersectionObserver((entries) => {
             if (entries[0]?.isIntersecting) loadNextPage()
@@ -222,7 +211,6 @@ onUnmounted(() => {
 
 <template>
     <div class="pb-12 pt-2 font-body text-foreground">
-
         <!-- Mobile Filter Chips (Horizontal Scroll on Mobile) -->
         <div class="lg:hidden flex gap-2 overflow-x-auto pb-3 mb-3 no-scrollbar -mx-1 px-1">
             <button class="shrink-0 text-xs font-mono px-3.5 py-1.5 rounded-full transition-all"
@@ -254,38 +242,41 @@ onUnmounted(() => {
 
                 <!-- Active Filter Tags Bar -->
                 <div v-if="activeFilterCount > 0"
-                    class="flex flex-wrap items-center gap-2 p-3 rounded-2xl border bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                    class="flex flex-wrap items-center gap-2 p-3 rounded-2xl border bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-sm">
                     <span class="text-[11px] font-mono text-gray-500 dark:text-gray-400 font-semibold">Active
                         Filters:</span>
 
                     <span v-if="searchQuery"
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono bg-primary-50 dark:bg-primary-950/40 border border-primary/30 text-primary font-semibold">
+                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 font-semibold shadow-sm">
                         Search: "{{ searchQuery }}"
-                        <button @click="setQuery({ search: undefined })" class="hover:opacity-75">
+                        <button @click="setQuery({ search: undefined })"
+                            class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                             <UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
                         </button>
                     </span>
 
                     <span v-if="selectedCategory"
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono bg-sky-50 dark:bg-sky-950/40 border border-sky-500/30 text-sky-600 dark:text-sky-400 font-semibold">
+                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 font-semibold shadow-sm">
                         Category: {{ selectedCategory }}
-                        <button @click="setQuery({ category: undefined })" class="hover:opacity-75">
+                        <button @click="setQuery({ category: undefined })"
+                            class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                             <UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
                         </button>
                     </span>
 
                     <span v-if="selectedContentType"
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono bg-amber-50 dark:bg-amber-950/40 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-semibold">
+                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 font-semibold shadow-sm">
                         Type: {{ selectedContentType }}
-                        <button @click="setQuery({ contentType: undefined })" class="hover:opacity-75">
+                        <button @click="setQuery({ contentType: undefined })"
+                            class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                             <UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
                         </button>
                     </span>
 
-                    <button @click="clearAllFilters"
-                        class="ml-auto text-xs font-mono font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white underline">
+                    <UButton color="error" variant="subtle" size="xs" icon="i-heroicons-trash"
+                        class="ml-auto font-mono text-xs font-semibold" @click="clearAllFilters">
                         Clear all
-                    </button>
+                    </UButton>
                 </div>
 
                 <!-- Error State -->
