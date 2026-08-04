@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { getArticleUrl } from '~/lib/utils'
+import type { CampaignItem } from '~/types/campaign'
 
 const props = defineProps<{
-  sponsoredAds: any[]
+  sponsoredAds: CampaignItem[]
 }>()
 </script>
 

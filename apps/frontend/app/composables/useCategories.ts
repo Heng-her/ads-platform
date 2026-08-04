@@ -28,7 +28,10 @@ export function useCategories() {
     try {
       const api = useApi();
       const res = await api.categories.$get();
-      const json: any = await res.json();
+      const json = (await res.json()) as {
+        code: number;
+        data?: CategoryItem[];
+      };
       if (json?.code === 1 && Array.isArray(json?.data)) {
         categories.value = json.data;
       }

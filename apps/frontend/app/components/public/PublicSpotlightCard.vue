@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { getArticleUrl } from '~/lib/utils'
+import type { CampaignItem } from '~/types/campaign'
 
 const props = defineProps<{
-  campaign: any
+  campaign: CampaignItem | null
   copiedId: string | null
 }>()
 
 const isShareModalOpen = ref(false)
 
 const emit = defineEmits<{
-  (e: 'copy-link', campaign: any): void
+  (e: 'copy-link', campaign: CampaignItem): void
 }>()
 
 function stripHtml(html: string | null | undefined) {

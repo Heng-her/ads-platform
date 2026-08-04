@@ -5,16 +5,11 @@ import { useCategories } from '~/composables/useCategories'
 const props = defineProps<{
   categories?: Array<{ id?: string | number; name: string }>
   selectedCategory: string
-  selectedContentType: string
-  contentTypes: string[]
-  sortBy?: 'newest' | 'impressions' | 'viewers'
   activeFilterCount: number
 }>()
 
 const emit = defineEmits<{
   (e: 'select-category', category?: string): void
-  (e: 'select-content-type', contentType?: string): void
-  (e: 'update:sortBy', value: 'newest' | 'impressions' | 'viewers'): void
   (e: 'reset-filters'): void
 }>()
 
@@ -71,37 +66,6 @@ function formatText(val?: string) {
             <span v-if="selectedCategory === cat.name" class="h-2 w-2 rounded-full bg-white dark:bg-gray-950" />
           </button>
         </nav>
-      </div>
-
-      <!-- Content Type Selector Section -->
-      <div class="pt-4 border-t border-gray-200 dark:border-[#273647]">
-        <div class="flex items-center justify-between mb-3">
-          <h4 class="text-xs uppercase tracking-wider font-extrabold text-gray-900 dark:text-white">
-            Content Type
-          </h4>
-        </div>
-
-        <!-- Clean Grid Filter Options Without Icons -->
-        <div class="grid grid-cols-2 gap-2">
-          <!-- All Types Option -->
-          <button class="text-center text-xs px-2.5 py-2 rounded-xl font-bold transition-all cursor-pointer border"
-            :class="!selectedContentType
-              ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-950 border-gray-900 dark:border-white shadow-sm'
-              : 'bg-gray-50 dark:bg-[#0d1c2d] border-gray-200 dark:border-[#273647] text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'"
-            @click="emit('select-content-type', undefined)">
-            <span class="truncate">All Types</span>
-          </button>
-
-          <!-- Specific Content Types Options -->
-          <button v-for="ct in contentTypes" :key="ct"
-            class="text-center text-xs px-2.5 py-2 rounded-xl font-bold transition-all cursor-pointer border"
-            :class="selectedContentType === ct
-              ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-950 border-gray-900 dark:border-white shadow-sm'
-              : 'bg-gray-50 dark:bg-[#0d1c2d] border-gray-200 dark:border-[#273647] text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'"
-            @click="emit('select-content-type', ct)">
-            <span class="truncate">{{ formatText(ct) }}</span>
-          </button>
-        </div>
       </div>
 
     </div>

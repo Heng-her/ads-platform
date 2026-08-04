@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { getArticleUrl, getSocialShareLinks } from '~/lib/utils'
+import type { CampaignItem } from '~/types/campaign'
 
 const props = defineProps<{
   modelValue: boolean
   title?: string
-  article?: any
+  article?: CampaignItem
 }>()
 
 const emit = defineEmits<{

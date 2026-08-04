@@ -6,6 +6,7 @@ import { useApi } from '~/composables/useApi'
 import { useCategories } from '~/composables/useCategories'
 import { useCustomSeoMeta } from '~/lib/seo/metadata'
 import { getArticleUrl } from '~/lib/utils'
+import type { CampaignItem } from '~/types/campaign'
 
 definePageMeta({
     layout: 'public'
@@ -21,9 +22,6 @@ const route = useRoute()
 const router = useRouter()
 const api = useApi()
 const { categories, fetchCategories } = useCategories()
-
-type CampaignsListResponse = InferResponseType<typeof api.campaigns['$get']>
-type CampaignItem = NonNullable<CampaignsListResponse['data']>['items'][number]
 
 // ---- Query state, driven entirely by the URL ----
 const page = ref(1)
@@ -54,7 +52,7 @@ const errorMessage = ref('')
 let sentinelObserver: IntersectionObserver | null = null
 
 
-function copyCampaignLink(campaign: any) {
+function copyCampaignLink(campaign: CampaignItem) {
     const url = `${window.location.origin}${getArticleUrl(campaign)}`
     navigator.clipboard.writeText(url).then(() => {
         copiedId.value = campaign.id
@@ -116,12 +114,6 @@ function giveFeedback(value: boolean) {
     feedbackGiven.value = value
 }
 
-// React to changes in route parameters
-watch([searchQuery, selectedCategory, selectedContentType, selectedCustomCategoryId], () => {
-    hasMore.value = true
-    fetchCampaigns(1, false)
-})
-
 let fetchGeneration = 0
 
 async function fetchCampaigns(targetPage: number, isAppend = false) {
@@ -134,7 +126,6 @@ async function fetchCampaigns(targetPage: number, isAppend = false) {
     const queryObj: Record<string, string> = {
         page: targetPage.toString(),
         limit: limit.value.toString(),
-        status: 'PUBLIC' // Always fetch public campaigns only
     }
 
     if (selectedCategory.value) queryObj.category = selectedCategory.value
@@ -164,10 +155,10 @@ async function fetchCampaigns(targetPage: number, isAppend = false) {
             totalCount.value = campaigns.value.length
             hasMore.value = newItems.length === limit.value
         }
-    } catch (error: any) {
+    } catch (error: unknown) {
         if (myGeneration !== fetchGeneration) return
-        console.error('[GET /campaigns] failed:', error)
-        errorMessage.value = error?.message || 'Something went wrong loading campaigns.'
+        const err = error as Error
+        errorMessage.value = err?.message || 'Something went wrong loading campaigns.'
         if (!isAppend) {
             campaigns.value = []
             totalCount.value = 0
@@ -207,6 +198,12 @@ onMounted(() => {
 onUnmounted(() => {
     sentinelObserver?.disconnect()
 })
+
+// React to changes in route parameters
+watch([searchQuery, selectedCategory, selectedContentType, selectedCustomCategoryId], () => {
+    hasMore.value = true
+    fetchCampaigns(1, false)
+})
 </script>
 
 <template>
@@ -232,9 +229,7 @@ onUnmounted(() => {
 
             <!-- ================= LEFT RAIL: FILTERS & NAVIGATION (Desktop Sticky) ================= -->
             <PublicFilterSidebar :categories="categories" :selected-category="selectedCategory"
-                :selected-content-type="selectedContentType" :content-types="contentTypes" :sort-by="sortBy"
                 :active-filter-count="activeFilterCount" @select-category="(cat) => setQuery({ category: cat })"
-                @select-content-type="(ct) => setQuery({ contentType: ct })" @update:sort-by="(val) => sortBy = val"
                 @reset-filters="clearAllFilters" />
 
             <!-- ================= CENTER SECTION: SPOTLIGHT + RESULTS ================= -->

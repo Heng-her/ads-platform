@@ -1,3 +1,5 @@
+import type { CampaignItem } from '~/types/campaign'
+
 /**
  * Convert text into a clean, SEO-friendly URL slug
  */
@@ -26,7 +28,7 @@ export function extractIdFromSlug(slug: string): string {
  * Generate full SEO-friendly Article URL (slug + ID combo)
  * Example: /article/introducing-next-gen-ai-ad-targeting-c0133b77-4a86-4e76-aa6b-6ff5f0c373c9
  */
-export function getArticleUrl(campaign: { id: string; title?: string } | null | undefined): string {
+export function getArticleUrl(campaign: Partial<CampaignItem> | null | undefined): string {
   if (!campaign || !campaign.id) return '/article'
   const titleSlug = slugify(campaign.title || '')
   return titleSlug ? `/article/${titleSlug}-${campaign.id}` : `/article/${campaign.id}`
