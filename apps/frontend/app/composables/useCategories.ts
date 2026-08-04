@@ -1,3 +1,4 @@
+import { onMounted } from "vue";
 import { useApi } from "~/composables/useApi";
 
 export type CategoryItem = {
@@ -7,20 +8,22 @@ export type CategoryItem = {
 };
 
 /**
- * Shared category list. Uses useState so the data (and in-flight state) is
- * shared across every component that calls this — the layout's filter
- * dropdown and the campaigns page both use it without double-fetching.
+ * Shared category list composable. Always fetches from GET /api/categories
+ * whenever categories state is empty.
  */
 export function useCategories() {
-  const categories = useState<CategoryItem[]>("categories", () => []);
+  const categories = useState<CategoryItem[]>(
+    "categories-shared-data",
+    () => [],
+  );
   const isLoadingCategories = useState<boolean>(
-    "categories-loading",
+    "categories-loading-state",
     () => false,
   );
-  const hasFetched = useState<boolean>("categories-fetched", () => false);
 
-  async function fetchCategories() {
-    if (hasFetched.value || isLoadingCategories.value) return;
+  async function fetchCategories(force = false) {
+    if ((categories.value.length > 0 && !force) || isLoadingCategories.value)
+      return;
     isLoadingCategories.value = true;
     try {
       const api = useApi();
@@ -29,12 +32,25 @@ export function useCategories() {
       if (json?.code === 1 && Array.isArray(json?.data)) {
         categories.value = json.data;
       }
-      hasFetched.value = true;
     } catch (error) {
       console.error("[GET /categories] failed:", error);
     } finally {
       isLoadingCategories.value = false;
     }
+  }
+
+  // Trigger fetch immediately if empty
+  if (categories.value.length === 0 && !isLoadingCategories.value) {
+    fetchCategories();
+  }
+
+  // On client side mount, ensure categories are loaded
+  if (import.meta.client) {
+    onMounted(() => {
+      if (categories.value.length === 0) {
+        fetchCategories();
+      }
+    });
   }
 
   return { categories, isLoadingCategories, fetchCategories };

@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { getArticleUrl } from '~/lib/utils'
 
 const props = defineProps<{
   campaign: any
   copiedId: string | null
 }>()
+
+const isShareModalOpen = ref(false)
 
 const emit = defineEmits<{
   (e: 'copy-link', campaign: any): void
@@ -38,7 +41,7 @@ function initials(name: string) {
 
 <template>
   <div v-if="campaign"
-    class="rounded-2xl p-6 border shadow-xl relative overflow-hidden transition-all duration-300 bg-white dark:bg-gray-900 border-primary/30 hover:border-primary/60">
+    class="rounded-2xl p-5 sm:p-6 border shadow-lg relative overflow-hidden transition-all duration-300 bg-white dark:bg-[#122131] border-gray-200 dark:border-[#273647] hover:border-primary/60">
 
     <!-- Top Accent Glow -->
     <div class="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
@@ -90,14 +93,17 @@ function initials(name: string) {
         </div>
 
         <div class="flex items-center gap-1.5">
-          <button @click="emit('copy-link', campaign)"
-            class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-all text-xs flex items-center gap-1 font-semibold"
-            title="Copy link">
-            <span v-if="copiedId === campaign.id" class="text-primary font-mono text-[10px]">Copied!</span>
-            <UIcon v-else name="i-heroicons-link" class="w-3.5 h-3.5" />
+          <button @click="isShareModalOpen = true"
+            class="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 transition-all text-xs flex items-center gap-1.5 font-bold"
+            title="Share article">
+            <UIcon name="i-heroicons-share" class="w-3.5 h-3.5 text-primary" />
+            <span>Share</span>
           </button>
         </div>
       </div>
     </div>
+
+    <!-- Share Modal -->
+    <PublicShareModal v-model="isShareModalOpen" :article="campaign" />
   </div>
 </template>

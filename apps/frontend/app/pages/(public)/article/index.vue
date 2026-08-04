@@ -273,10 +273,12 @@ onUnmounted(() => {
                         </button>
                     </span>
 
-                    <UButton color="error" variant="subtle" size="xs" icon="i-heroicons-trash"
-                        class="ml-auto font-mono text-xs font-semibold" @click="clearAllFilters">
-                        Clear all
-                    </UButton>
+                    <button @click="clearAllFilters"
+                        class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-800/80 transition-all cursor-pointer group shadow-sm"
+                        title="Clear all filters">
+                        <UIcon name="i-heroicons-x-mark"
+                            class="w-5 h-5 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform" />
+                    </button>
                 </div>
 
                 <!-- Error State -->

@@ -52,6 +52,7 @@ const errorMessage = computed(() => {
 
 const copied = ref(false)
 const feedbackGiven = ref<boolean | null>(null)
+const isShareModalOpen = ref(false)
 
 // SEO Metadata and Structured Data (JSON-LD) for Search Engines & Social Cards
 watchEffect(() => {
@@ -203,10 +204,10 @@ function giveFeedback(val: boolean) {
 
                         <!-- Action Controls -->
                         <div class="flex items-center gap-2">
-                            <button @click="copyLink"
-                                class="px-3.5 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-mono font-semibold transition-all flex items-center gap-1.5">
-                                <UIcon name="i-heroicons-link" class="w-4 h-4 text-primary shrink-0" />
-                                <span>{{ copied ? 'Copied Link!' : 'Copy Link' }}</span>
+                            <button @click="isShareModalOpen = true"
+                                class="px-3.5 py-1.5 rounded-xl bg-[#1c2b3c] hover:bg-gray-700 text-white text-xs font-mono font-bold transition-all flex items-center gap-1.5 shadow-sm border border-gray-700/60">
+                                <UIcon name="i-heroicons-share" class="w-4 h-4 text-primary shrink-0" />
+                                <span>Share / Copy Link</span>
                             </button>
                         </div>
                     </div>
@@ -262,6 +263,9 @@ function giveFeedback(val: boolean) {
                 </NuxtLink>
             </aside>
         </div>
+
+        <!-- Social Share Modal -->
+        <PublicShareModal v-model="isShareModalOpen" :article="campaign" />
     </div>
 </template>
 
