@@ -93,9 +93,11 @@ export const userRoutes = new Hono<HonoEnv>()
         "USER_UPDATE_DETAILS",
         userPayload.id,
         getClientIp(c),
-        JSON.stringify({ targetUserId: id, updatedFields: Object.keys(updateData) }),
+        JSON.stringify({
+          targetUserId: id,
+          updatedFields: Object.keys(updateData),
+        }),
       );
       return sendSuccess(c, updatedUser);
     },
   );
-
