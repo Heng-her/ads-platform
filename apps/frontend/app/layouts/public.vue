@@ -87,7 +87,12 @@ async function fetchSuggestions(query: string) {
     }
     isLoadingSuggestions.value = true
     try {
-        const res = await (api.campaigns as any).search.suggestions.$get({ query: { q } })
+        const res = await api.action.$post({
+            json: {
+                action: 'campaigns/search-suggestions',
+                data: { q }
+            }
+        })
         const json = await res.json()
         if (json?.code === 1 && Array.isArray(json?.data)) {
             suggestions.value = json.data
@@ -95,7 +100,7 @@ async function fetchSuggestions(query: string) {
             suggestions.value = []
         }
     } catch (e) {
-        console.error('[GET /search/suggestions] failed:', e)
+        console.error('[POST /action campaigns/search-suggestions] failed:', e)
         suggestions.value = []
     } finally {
         isLoadingSuggestions.value = false

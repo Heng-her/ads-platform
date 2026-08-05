@@ -99,6 +99,31 @@ export const useAuthStore = defineStore("auth", () => {
   const isAuthenticated = computed(() => !!token.value && !!user.value);
   const userRole = computed(() => user.value?.role || "public");
 
+  /**
+   * Fetch current logged-in user profile from backend using `users/me` action.
+   * ONLY executes if a Bearer token exists.
+   */
+  async function fetchUserMe() {
+    initAuth();
+    if (!token.value) return null;
+
+    try {
+      const api = useApi();
+      const response = await api.action.$post({
+        json: { action: "users/me" },
+      });
+      const body =
+        (await response.json()) as ApiResponseEnvelope<BackendAuthUser>;
+      if (response.ok && body.code === 1 && body.data) {
+        user.value = normalizeUser(body.data);
+        return user.value;
+      }
+    } catch (error) {
+      console.error("[users/me] fetch failed:", error);
+    }
+    return null;
+  }
+
   // Initialize store state from encrypted persistent storage (if available)
   function initAuth() {
     if (import.meta.client) {
@@ -106,9 +131,11 @@ export const useAuthStore = defineStore("auth", () => {
       const storedEncrypted = localStorage.getItem("data_xx2_");
       if (storedEncrypted) {
         const decrypted = decryptData<AuthSessionPayload>(storedEncrypted);
-        if (decrypted && decrypted.user && decrypted.token) {
-          user.value = normalizeUser(decrypted.user);
+        if (decrypted && decrypted.token) {
           token.value = decrypted.token;
+          if (decrypted.user) {
+            user.value = normalizeUser(decrypted.user);
+          }
           encryptedPayload.value = storedEncrypted;
         }
       }
@@ -161,6 +188,7 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated,
     userRole,
     initAuth,
+    fetchUserMe,
     handleLoginResponse,
     logout,
     getDashboardPath,

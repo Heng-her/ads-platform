@@ -1,0 +1,248 @@
+import type { Context } from "hono";
+import type { HonoEnv, UserJwtPayload } from "../types/env";
+import type { DbClient } from "../db/index";
+import { CampaignService } from "../services/campaignService";
+import { CategoryService } from "../services/categoryService";
+import { AuditLogService } from "../services/auditLogService";
+import {
+  createCampaignSchema,
+  updateCampaignStatusSchema,
+} from "../schemas/campaign";
+import { sendSuccess, sendError } from "../utils/response";
+import { getClientIp } from "../utils/ip";
+import { checkRateLimit } from "../middlewares/rateLimiter";
+
+export async function handleCampaignAction(
+  c: Context<HonoEnv>,
+  db: DbClient,
+  action: string,
+  payloadData: any,
+  authenticate: (c: Context<HonoEnv>, strict?: boolean) => Promise<UserJwtPayload>,
+) {
+  const auditLogService = new AuditLogService(db);
+
+  switch (action) {
+    case "campaigns/search-suggestions": {
+      const q = (payloadData?.q || payloadData?.search || "").trim();
+      if (!q) return sendSuccess(c, []);
+
+      let currentUser: UserJwtPayload | null = null;
+      try {
+        currentUser = await authenticate(c);
+      } catch {
+        // Optional auth
+      }
+
+      const categoryService = new CategoryService(db);
+      const pattern = `%${q}%`;
+
+      const [systemCats, allContentTypes, titleMatches, customCats] = await Promise.all([
+        categoryService.getAllSystemCategories(),
+        categoryService.getAllContentTypes(),
+        db.query.campaigns.findMany({
+          columns: { id: true, title: true },
+          where: (campaigns, { and, eq, like }) =>
+            and(
+              eq(campaigns.status, "PUBLIC"),
+              eq(campaigns.isDeleted, false),
+              like(campaigns.title, pattern),
+            ),
+          limit: 5,
+        }),
+        currentUser
+          ? categoryService.getCustomCategoriesByUser(currentUser.id)
+          : Promise.resolve([]),
+      ]);
+
+      const qLower = q.toLowerCase();
+      const suggestions: Array<{
+        type: "category" | "customCategory" | "contentType" | "title";
+        label: string;
+        filter: string;
+        campaignId?: string;
+      }> = [];
+
+      for (const cat of systemCats) {
+        if (cat.name.toLowerCase().includes(qLower)) {
+          suggestions.push({
+            type: "category",
+            label: cat.name,
+            filter: `category=${encodeURIComponent(cat.name)}`,
+          });
+        }
+      }
+
+      for (const cat of customCats) {
+        if (cat.name.toLowerCase().includes(qLower)) {
+          suggestions.push({
+            type: "customCategory",
+            label: cat.name,
+            filter: `customCategoryId=${cat.id}`,
+          });
+        }
+      }
+
+      for (const ct of allContentTypes) {
+        if (ct.name.toLowerCase().includes(qLower)) {
+          suggestions.push({
+            type: "contentType",
+            label: ct.name,
+            filter: `contentType=${encodeURIComponent(ct.name)}`,
+          });
+        }
+      }
+
+      for (const campaign of titleMatches) {
+        suggestions.push({
+          type: "title",
+          label: campaign.title,
+          filter: `search=${encodeURIComponent(campaign.title)}`,
+          campaignId: campaign.id,
+        });
+      }
+
+      return sendSuccess(c, suggestions);
+    }
+    case "campaigns/list": {
+      let currentUser: UserJwtPayload | null = null;
+      try {
+        currentUser = await authenticate(c);
+      } catch {
+        // Public access if no token
+      }
+      const page = payloadData?.page ? Number(payloadData.page) : 1;
+      const limit = payloadData?.limit ? Number(payloadData.limit) : 10;
+      const category = payloadData?.category || undefined;
+      const contentType = payloadData?.contentType || undefined;
+      const search = payloadData?.search || undefined;
+      const status =
+        payloadData?.status === "DRAFT" || payloadData?.status === "PUBLIC"
+          ? payloadData.status
+          : undefined;
+
+      const campaignService = new CampaignService(db);
+      const result = await campaignService.getCampaignsList({
+        user: currentUser,
+        category,
+        contentType,
+        search,
+        status,
+        page,
+        limit,
+      });
+      return sendSuccess(c, result);
+    }
+
+    case "campaigns/create": {
+      const rateLimitErr = await checkRateLimit(c, {
+        limit: 5,
+        windowSeconds: 86400,
+        keyPrefix: "campaign_create",
+        message:
+          "Post limit reached. You can only publish a maximum of 5 posts per day from your IP address.",
+      });
+      if (rateLimitErr) return sendError(c, rateLimitErr, null, 429);
+
+      const currentUser = await authenticate(c);
+      const parseResult = createCampaignSchema.safeParse(payloadData);
+      if (!parseResult.success) {
+        return sendError(
+          c,
+          parseResult.error.errors[0]?.message || "Validation error",
+          parseResult.error.format(),
+        );
+      }
+      const campaignService = new CampaignService(db);
+      const newCampaign = await campaignService.createCampaign(
+        currentUser.id,
+        parseResult.data,
+      );
+      await auditLogService.createLog(
+        "CAMPAIGN_CREATE",
+        currentUser.id,
+        getClientIp(c),
+        JSON.stringify({
+          campaignId: newCampaign?.id,
+          title: newCampaign?.title,
+        }),
+      );
+      return sendSuccess(c, newCampaign, "Campaign created successfully");
+    }
+
+    case "campaigns/get": {
+      const currentUser = await authenticate(c);
+      const campaignId = payloadData?.id;
+      if (!campaignId) return sendError(c, "Campaign ID is required");
+      const campaignService = new CampaignService(db);
+      const campaign = await campaignService.getCampaignById(campaignId);
+      if (!campaign) return sendError(c, "Campaign not found", null, 404);
+      if (
+        currentUser.role !== "ADMIN" &&
+        campaign.userId !== currentUser.id
+      ) {
+        return sendError(c, "Forbidden", null, 403);
+      }
+      return sendSuccess(c, campaign);
+    }
+
+    case "campaigns/update-status": {
+      const currentUser = await authenticate(c);
+      const parseResult = updateCampaignStatusSchema.safeParse(payloadData);
+      if (!parseResult.success) {
+        return sendError(
+          c,
+          parseResult.error.errors[0]?.message || "Validation error",
+          parseResult.error.format(),
+        );
+      }
+      const campaignId = payloadData?.id;
+      if (!campaignId) return sendError(c, "Campaign ID is required");
+      const campaignService = new CampaignService(db);
+      const campaign = await campaignService.getCampaignById(campaignId);
+      if (!campaign) return sendError(c, "Campaign not found", null, 404);
+      if (
+        currentUser.role !== "ADMIN" &&
+        campaign.userId !== currentUser.id
+      ) {
+        return sendError(c, "Forbidden", null, 403);
+      }
+      const updated = await campaignService.updateCampaignStatus(
+        campaignId,
+        parseResult.data.status,
+      );
+      await auditLogService.createLog(
+        "CAMPAIGN_UPDATE_STATUS",
+        currentUser.id,
+        getClientIp(c),
+        JSON.stringify({ campaignId, newStatus: parseResult.data.status }),
+      );
+      return sendSuccess(c, updated);
+    }
+
+    case "campaigns/delete": {
+      const currentUser = await authenticate(c);
+      const campaignId = payloadData?.id;
+      if (!campaignId) return sendError(c, "Campaign ID is required");
+      const campaignService = new CampaignService(db);
+      const campaign = await campaignService.getCampaignById(campaignId);
+      if (!campaign) return sendError(c, "Campaign not found", null, 404);
+
+      if (
+        currentUser.role !== "ADMIN" &&
+        campaign.userId !== currentUser.id
+      ) {
+        return sendError(c, "Forbidden", null, 403);
+      }
+
+      await campaignService.softDeleteCampaign(campaignId);
+      return sendSuccess(
+        c,
+        { deleted: true, id: campaignId },
+        "Campaign deleted successfully",
+      );
+    }
+
+    default:
+      return null;
+  }
+}

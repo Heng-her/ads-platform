@@ -56,10 +56,13 @@ const handleSubmit = async () => {
   loading.value = true
 
   try {
-    const response = await api.auth.login.$post({
+    const response = await api.action.$post({
       json: {
-        email: email.value.trim(),
-        password: password.value
+        action: 'auth/login',
+        data: {
+          email: email.value.trim(),
+          password: password.value
+        }
       }
     })
 
@@ -81,8 +84,11 @@ async function handleGoogleCredential(idToken: string) {
   googleLoading.value = true
 
   try {
-    const response = await api.auth.google.$post({
-      json: { idToken }
+    const response = await api.action.$post({
+      json: {
+        action: 'auth/google',
+        data: { idToken }
+      }
     })
 
     const body = await response.json() as ApiResponseEnvelope<AuthSessionPayload>

@@ -27,7 +27,9 @@ export function useCategories() {
     isLoadingCategories.value = true;
     try {
       const api = useApi();
-      const res = await api.categories.$get();
+      const res = await api.action.$post({
+        json: { action: "categories/list" },
+      });
       const json = (await res.json()) as {
         code: number;
         data?: CategoryItem[];
@@ -36,7 +38,7 @@ export function useCategories() {
         categories.value = json.data;
       }
     } catch (error) {
-      console.error("[GET /categories] failed:", error);
+      console.error("[POST /action categories/list] failed:", error);
     } finally {
       isLoadingCategories.value = false;
     }

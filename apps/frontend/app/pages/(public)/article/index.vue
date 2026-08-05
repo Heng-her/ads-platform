@@ -134,7 +134,12 @@ async function fetchCampaigns(targetPage: number, isAppend = false) {
     if (searchQuery.value.trim()) queryObj.search = searchQuery.value.trim()
 
     try {
-        const res = await api.campaigns.$get({ query: queryObj })
+        const res = await api.action.$post({
+            json: {
+                action: 'campaigns/list',
+                data: queryObj
+            }
+        })
         const json = await res.json()
 
         if (myGeneration !== fetchGeneration) return

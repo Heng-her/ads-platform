@@ -20,6 +20,7 @@ const email = ref('')
 const portfolio = ref('')
 const country = ref('')
 const password = ref('')
+const showPassword = ref(false)
 const googleButton = ref<HTMLElement | null>(null)
 
 const loading = ref(false)
@@ -57,8 +58,11 @@ async function handleGoogleCredential(idToken: string) {
   googleLoading.value = true
 
   try {
-    const response = await api.auth.google.$post({
-      json: { idToken }
+    const response = await api.action.$post({
+      json: {
+        action: 'auth/google',
+        data: { idToken }
+      }
     })
 
     const body = await response.json() as ApiResponseEnvelope<AuthSessionPayload>
@@ -90,18 +94,36 @@ onUnmounted(() => {
   cancelPrompt()
 })
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
+  resetFeedback()
   loading.value = true
 
-  setTimeout(() => {
-    loading.value = false
-    success.value = true
-    showToast.value = true
+  try {
+    const response = await api.action.$post({
+      json: {
+        action: 'auth/register',
+        data: {
+          username: fullName.value.trim(),
+          email: email.value.trim(),
+          password: password.value,
+          portfolioLink: portfolio.value.trim() || undefined,
+          country: country.value || undefined,
+          role: "CREATOR"
+        }
+      }
+    })
 
-    setTimeout(() => {
-      showToast.value = false
-    }, 4000)
-  }, 1500)
+    const body = await response.json() as ApiResponseEnvelope<AuthSessionPayload>
+    if (!response.ok || body.code !== 1) {
+      throw new Error(body.msg || 'Registration failed.')
+    }
+
+    await finishLogin(body.data)
+  } catch (error) {
+    errorMessage.value = getErrorMessage(error, 'Registration failed.')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -238,6 +260,26 @@ const handleSubmit = () => {
               @focus="focusedField = 'email'" @blur="focusedField = null">
           </div>
 
+          <!-- Password -->
+          <div class="relative">
+            <label class="block text-xs font-medium mb-1 ml-1 transition-colors duration-200"
+              :class="[focusedField === 'password' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400']"
+              for="password">
+              Password
+            </label>
+            <div class="relative flex items-center">
+              <input id="password" v-model="password" name="password" :type="showPassword ? 'text' : 'password'"
+                placeholder="••••••••" required minlength="6"
+                class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs lg:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 outline-none transition-all shadow-sm pr-10"
+                @focus="focusedField = 'password'" @blur="focusedField = null">
+              <button type="button"
+                class="absolute right-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                @click="showPassword = !showPassword">
+                <UIcon :name="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'" class="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
           <!-- Portfolio Link -->
           <div class="relative">
             <label class="block text-xs font-medium mb-1 ml-1 transition-colors duration-200"
@@ -290,6 +332,11 @@ const handleSubmit = () => {
                 class="absolute right-3.5 text-slate-400 h-4 w-4 pointer-events-none" />
             </div>
           </div>
+
+          <p v-if="errorMessage"
+            class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
+            {{ errorMessage }}
+          </p>
 
           <!-- Submit Button -->
           <div class="pt-2">

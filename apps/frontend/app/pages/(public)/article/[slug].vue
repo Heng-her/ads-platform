@@ -27,13 +27,12 @@ const { data: campaign, pending: isLoading, error: asyncError } = await useAsync
         const targetId = extractIdFromSlug(slug.value)
         authStore.initAuth()
         const headers: Record<string, string> = {}
-        if (authStore.token) {
-            headers['Authorization'] = `Bearer ${authStore.token}`
-        }
-        const response = await api.campaigns[':id'].$get(
-            { param: { id: targetId } },
-            { headers }
-        )
+        const response = await api.action.$post({
+            json: {
+                action: 'campaigns/get',
+                data: { id: targetId }
+            }
+        })
         const json = await response.json()
         if (response.ok && json.code === 1 && json.data) {
             return json.data
