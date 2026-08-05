@@ -1,0 +1,300 @@
+<script setup lang="ts">
+import { ref, onMounted, watch } from 'vue'
+import { useCampaigns, type CampaignData } from '~/composables/useCampaigns'
+import { useCategories } from '~/composables/useCategories'
+
+definePageMeta({
+  layout: 'admin'
+})
+
+const { campaignsList, totalItems, isLoading, fetchCampaigns, updateCampaignStatus, deleteCampaign } = useCampaigns()
+const { categories } = useCategories()
+
+const searchQuery = ref('')
+const selectedCategory = ref('')
+const selectedStatus = ref<'ALL' | 'DRAFT' | 'PUBLIC'>('ALL')
+const currentPage = ref(1)
+
+const deleteModalOpen = ref(false)
+const selectedCampaignToDelete = ref<CampaignData | null>(null)
+const isDeleting = ref(false)
+
+async function loadData() {
+  await fetchCampaigns({
+    page: currentPage.value,
+    limit: 15,
+    search: searchQuery.value || undefined,
+    category: selectedCategory.value || undefined,
+    status: selectedStatus.value === 'ALL' ? undefined : selectedStatus.value,
+  })
+}
+
+watch([searchQuery, selectedCategory, selectedStatus], () => {
+  currentPage.value = 1
+  loadData()
+})
+
+async function handleStatusToggle(campaign: CampaignData) {
+  const newStatus = campaign.status === 'PUBLIC' ? 'DRAFT' : 'PUBLIC'
+  try {
+    await updateCampaignStatus(campaign.id, newStatus)
+    campaign.status = newStatus
+  } catch (err: any) {
+    alert(err.message || 'Failed to update status')
+  }
+}
+
+function confirmDelete(campaign: CampaignData) {
+  selectedCampaignToDelete.value = campaign
+  deleteModalOpen.value = true
+}
+
+async function executeDelete() {
+  if (!selectedCampaignToDelete.value) return
+  isDeleting.value = true
+  try {
+    await deleteCampaign(selectedCampaignToDelete.value.id)
+    deleteModalOpen.value = false
+    selectedCampaignToDelete.value = null
+  } catch (err: any) {
+    alert(err.message || 'Failed to delete campaign')
+  } finally {
+    isDeleting.value = false
+  }
+}
+
+onMounted(() => {
+  loadData()
+})
+</script>
+
+<template>
+  <div class="space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-800 pb-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">
+            System Admin - Campaigns Control
+          </h1>
+          <UBadge color="error" variant="soft" size="sm" class="font-mono text-[10px]">
+            x-api-bypass Active
+          </UBadge>
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Full system oversight over all creator campaigns, unlimited media bypass uploads up to 2GB, and status approvals.
+        </p>
+      </div>
+
+      <UButton
+        to="/creator/campaigns/create"
+        color="primary"
+        icon="i-heroicons-plus"
+        size="sm"
+      >
+        New Campaign (Admin Bypass)
+      </UButton>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-800">
+      <div class="flex-1 max-w-sm">
+        <UInput
+          v-model="searchQuery"
+          icon="i-heroicons-magnifying-glass"
+          placeholder="Search all campaigns..."
+          size="sm"
+          class="w-full"
+        />
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Status Filter Tabs -->
+        <div class="inline-flex p-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs">
+          <button
+            class="px-3 py-1 rounded transition-colors"
+            :class="selectedStatus === 'ALL' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-semibold shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'"
+            @click="selectedStatus = 'ALL'"
+          >
+            All System
+          </button>
+          <button
+            class="px-3 py-1 rounded transition-colors"
+            :class="selectedStatus === 'PUBLIC' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-semibold shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'"
+            @click="selectedStatus = 'PUBLIC'"
+          >
+            Public
+          </button>
+          <button
+            class="px-3 py-1 rounded transition-colors"
+            :class="selectedStatus === 'DRAFT' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-semibold shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'"
+            @click="selectedStatus = 'DRAFT'"
+          >
+            Drafts
+          </button>
+        </div>
+
+        <!-- Category Dropdown Filter -->
+        <select
+          v-model="selectedCategory"
+          class="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-2.5 py-1.5 text-gray-700 dark:text-gray-200 focus:outline-none"
+        >
+          <option value="">All Categories</option>
+          <option v-for="cat in categories" :key="cat.id" :value="cat.name">
+            {{ cat.name }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Loading state -->
+    <div v-if="isLoading && campaignsList.length === 0" class="py-12 text-center text-gray-500 text-sm">
+      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin mx-auto mb-2 text-gray-400" />
+      Loading system campaigns...
+    </div>
+
+    <!-- Empty State -->
+    <div
+      v-else-if="campaignsList.length === 0"
+      class="py-12 text-center bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6"
+    >
+      <UIcon name="i-heroicons-megaphone" class="w-10 h-10 text-gray-400 mx-auto mb-3" />
+      <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">No campaigns found</h3>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
+        No campaigns match your search or filter parameters.
+      </p>
+    </div>
+
+    <!-- Admin Campaigns List Table -->
+    <div v-else class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-gray-600 dark:text-gray-300">
+          <thead class="bg-gray-50 dark:bg-gray-950 text-gray-500 dark:text-gray-400 uppercase font-semibold border-b border-gray-200 dark:border-gray-800">
+            <tr>
+              <th class="py-3 px-4">Campaign &amp; Creator</th>
+              <th class="py-3 px-4">Category</th>
+              <th class="py-3 px-4">Type</th>
+              <th class="py-3 px-4">Status</th>
+              <th class="py-3 px-4">Impressions</th>
+              <th class="py-3 px-4">Created Date</th>
+              <th class="py-3 px-4 text-right">Admin Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+            <tr v-for="item in campaignsList" :key="item.id" class="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
+              <td class="py-3 px-4">
+                <div class="flex items-center gap-3">
+                  <img
+                    v-if="item.imageUrl"
+                    :src="item.imageUrl"
+                    alt="Cover"
+                    class="w-10 h-10 object-cover rounded border border-gray-200 dark:border-gray-700 shrink-0"
+                  />
+                  <div v-else class="w-10 h-10 rounded bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 shrink-0">
+                    <UIcon name="i-heroicons-photo" class="w-5 h-5" />
+                  </div>
+                  <div class="min-w-0">
+                    <NuxtLink
+                      :to="`/creator/campaigns/${item.id}/edit`"
+                      class="font-semibold text-gray-900 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 line-clamp-1"
+                    >
+                      {{ item.title }}
+                    </NuxtLink>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">
+                      User ID: <span class="font-mono text-gray-700 dark:text-gray-300">{{ item.userId }}</span>
+                    </p>
+                  </div>
+                </div>
+              </td>
+
+              <td class="py-3 px-4 font-medium">
+                <span class="inline-block px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                  {{ item.category || 'General' }}
+                </span>
+              </td>
+
+              <td class="py-3 px-4 font-medium">
+                {{ item.contentType || 'ARTICLE' }}
+              </td>
+
+              <td class="py-3 px-4">
+                <button
+                  class="cursor-pointer"
+                  title="Click to toggle status"
+                  @click="handleStatusToggle(item)"
+                >
+                  <UBadge
+                    :color="item.status === 'PUBLIC' ? 'success' : 'neutral'"
+                    variant="soft"
+                    size="sm"
+                  >
+                    {{ item.status }}
+                  </UBadge>
+                </button>
+              </td>
+
+              <td class="py-3 px-4 font-mono font-medium">
+                {{ item.totalImpressions || 0 }}
+              </td>
+
+              <td class="py-3 px-4 text-gray-400">
+                {{ new Date(item.createdAt).toLocaleDateString() }}
+              </td>
+
+              <td class="py-3 px-4 text-right">
+                <div class="flex items-center justify-end gap-1">
+                  <UButton
+                    :to="`/creator/campaigns/${item.id}/edit`"
+                    icon="i-heroicons-pencil-square"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    title="Edit Campaign Details"
+                  />
+                  <UButton
+                    icon="i-heroicons-trash"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    class="text-red-500 hover:text-red-600"
+                    title="Admin Delete Campaign"
+                    @click="confirmDelete(item)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <UModal v-model:open="deleteModalOpen" title="Admin Confirm Deletion">
+      <template #body>
+        <div class="space-y-3 p-4">
+          <p class="text-xs text-gray-600 dark:text-gray-300">
+            As Admin, are you sure you want to soft-delete <strong class="text-gray-900 dark:text-gray-100">{{ selectedCampaignToDelete?.title }}</strong>?
+          </p>
+          <div class="flex justify-end gap-2 pt-2">
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="xs"
+              @click="deleteModalOpen = false"
+            >
+              Cancel
+            </UButton>
+            <UButton
+              color="error"
+              size="xs"
+              :loading="isDeleting"
+              @click="executeDelete"
+            >
+              Confirm Admin Delete
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+  </div>
+</template>

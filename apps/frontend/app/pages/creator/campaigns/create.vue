@@ -5,5 +5,5 @@ definePageMeta({
 </script>
 
 <template>
-  <p>Lorem ipsum</p>
+  <CampaignForm :is-edit="false" />
 </template>

@@ -6,41 +6,59 @@ export const imageItemSchema = z.object({
   description: z.string().optional(),
 });
 
+const optionalStringSchema = z
+  .string()
+  .optional()
+  .or(z.null())
+  .transform((val) => (val === null || val === "" ? undefined : val));
+
+const optionalUrlSchema = z
+  .string()
+  .url("Invalid URL format")
+  .optional()
+  .or(z.literal(""))
+  .or(z.null())
+  .transform((val) => (val === "" || val === null ? undefined : val));
+
 export const createCampaignSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
-  description: z.string().optional(),
-  category: z.string().optional(),
+  description: optionalStringSchema,
+  category: optionalStringSchema,
   contentType: z.string().optional().default("ARTICLE"),
-  content: z.string().optional(),
-  imageUrl: z.string().url("Invalid image URL").optional(),
-  imageTitle: z.string().optional(),
-  imageDescription: z.string().optional(),
-  images: z.array(imageItemSchema).optional(),
+  content: optionalStringSchema,
+  imageUrl: optionalUrlSchema,
+  imageTitle: optionalStringSchema,
+  imageDescription: optionalStringSchema,
+  images: z.array(imageItemSchema).optional().or(z.null()).transform((arr) => arr ?? undefined),
   videoUrls: z
-    .array(z.string().url("Invalid video URL"))
+    .array(optionalUrlSchema)
     .max(2, "Maximum 2 videos allowed")
-    .optional(),
-  adNetwork: z.string().optional(),
-  adUnitCode: z.string().optional(),
+    .optional()
+    .or(z.null())
+    .transform((arr) => arr?.filter((item): item is string => typeof item === "string" && item.length > 0) ?? undefined),
+  adNetwork: optionalStringSchema,
+  adUnitCode: optionalStringSchema,
   status: z.enum(["DRAFT", "PUBLIC"]).optional().default("PUBLIC"),
 });
 
 export const updateCampaignSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").optional(),
-  description: z.string().optional(),
-  category: z.string().optional(),
+  description: optionalStringSchema,
+  category: optionalStringSchema,
   contentType: z.string().optional(),
-  content: z.string().optional(),
-  imageUrl: z.string().url("Invalid image URL").optional(),
-  imageTitle: z.string().optional(),
-  imageDescription: z.string().optional(),
-  images: z.array(imageItemSchema).optional(),
+  content: optionalStringSchema,
+  imageUrl: optionalUrlSchema,
+  imageTitle: optionalStringSchema,
+  imageDescription: optionalStringSchema,
+  images: z.array(imageItemSchema).optional().or(z.null()).transform((arr) => arr ?? undefined),
   videoUrls: z
-    .array(z.string().url("Invalid video URL"))
+    .array(optionalUrlSchema)
     .max(2, "Maximum 2 videos allowed")
-    .optional(),
-  adNetwork: z.string().optional(),
-  adUnitCode: z.string().optional(),
+    .optional()
+    .or(z.null())
+    .transform((arr) => arr?.filter((item): item is string => typeof item === "string" && item.length > 0) ?? undefined),
+  adNetwork: optionalStringSchema,
+  adUnitCode: optionalStringSchema,
   status: z.enum(["DRAFT", "PUBLIC"]).optional(),
 });
 

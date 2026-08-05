@@ -1,4 +1,4 @@
-import { onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import { useApi } from "~/composables/useApi";
 
 export type CategoryItem = {
@@ -8,7 +8,7 @@ export type CategoryItem = {
 };
 
 /**
- * Shared category list composable. Always fetches from GET /api/categories
+ * Shared category list composable. Always fetches from POST /api/action { action: "categories/list" }
  * whenever categories state is empty.
  */
 export function useCategories() {
@@ -16,14 +16,13 @@ export function useCategories() {
     "categories-shared-data",
     () => [],
   );
-  const isLoadingCategories = useState<boolean>(
-    "categories-loading-state",
-    () => false,
-  );
+  // Use a local ref for loading state so it doesn't freeze at true during SSR state serialization
+  const isLoadingCategories = ref(false);
 
   async function fetchCategories(force = false) {
-    if ((categories.value.length > 0 && !force) || isLoadingCategories.value)
+    if ((categories.value.length > 0 && !force) || isLoadingCategories.value) {
       return;
+    }
     isLoadingCategories.value = true;
     try {
       const api = useApi();
@@ -44,16 +43,16 @@ export function useCategories() {
     }
   }
 
-  // Trigger fetch immediately if empty
-  if (categories.value.length === 0 && !isLoadingCategories.value) {
+  // Call fetchCategories during setup if empty
+  if (categories.value.length === 0) {
     fetchCategories();
   }
 
-  // On client side mount, ensure categories are loaded
+  // Ensure categories are fetched on client mount if still empty
   if (import.meta.client) {
     onMounted(() => {
       if (categories.value.length === 0) {
-        fetchCategories();
+        fetchCategories(true);
       }
     });
   }
