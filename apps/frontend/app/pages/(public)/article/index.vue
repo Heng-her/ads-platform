@@ -215,14 +215,14 @@ watch([searchQuery, selectedCategory, selectedContentType, selectedCustomCategor
     <div class="pb-12 pt-2 font-body text-foreground">
         <!-- Mobile Filter Chips (Horizontal Scroll on Mobile) -->
         <div class="lg:hidden flex gap-2 overflow-x-auto pb-3 mb-3 no-scrollbar -mx-1 px-1">
-            <button class="shrink-0 text-xs font-mono px-3.5 py-1.5 rounded-full transition-all"
+            <button class="shrink-0 text-xs px-3.5 py-1.5 rounded-full transition-all"
                 :class="!selectedCategory
                     ? 'bg-primary text-white dark:text-gray-950 font-bold'
                     : 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'" @click="setQuery({ category: undefined })">
                 All Categories
             </button>
             <button v-for="cat in categories" :key="cat.name"
-                class="shrink-0 text-xs font-mono px-3.5 py-1.5 rounded-full transition-all"
+                class="shrink-0 text-xs px-3.5 py-1.5 rounded-full transition-all"
                 :class="selectedCategory === cat.name
                     ? 'bg-primary text-white dark:text-gray-950 font-bold'
                     : 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'" @click="setQuery({ category: cat.name })">
@@ -243,11 +243,11 @@ watch([searchQuery, selectedCategory, selectedContentType, selectedCustomCategor
                 <!-- Active Filter Tags Bar -->
                 <div v-if="activeFilterCount > 0"
                     class="flex flex-wrap items-center gap-2 p-3 rounded-2xl border bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-sm">
-                    <span class="text-[11px] font-mono text-gray-500 dark:text-gray-400 font-semibold">Active
+                    <span class="text-[11px] text-gray-500 dark:text-gray-400 font-semibold">Active
                         Filters:</span>
 
                     <span v-if="searchQuery"
-                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 font-semibold shadow-sm">
+                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 font-semibold shadow-sm">
                         Search: "{{ searchQuery }}"
                         <button @click="setQuery({ search: undefined })"
                             class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
@@ -256,7 +256,7 @@ watch([searchQuery, selectedCategory, selectedContentType, selectedCustomCategor
                     </span>
 
                     <span v-if="selectedCategory"
-                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 font-semibold shadow-sm">
+                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 font-semibold shadow-sm">
                         Category: {{ selectedCategory }}
                         <button @click="setQuery({ category: undefined })"
                             class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
@@ -265,7 +265,7 @@ watch([searchQuery, selectedCategory, selectedContentType, selectedCustomCategor
                     </span>
 
                     <span v-if="selectedContentType"
-                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 font-semibold shadow-sm">
+                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 font-semibold shadow-sm">
                         Type: {{ selectedContentType }}
                         <button @click="setQuery({ contentType: undefined })"
                             class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
@@ -274,17 +274,17 @@ watch([searchQuery, selectedCategory, selectedContentType, selectedCustomCategor
                     </span>
 
                     <button @click="clearAllFilters"
-                        class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-800/80 transition-all cursor-pointer group shadow-sm"
+                        class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-800/80 transition-all cursor-pointer group shadow-sm"
                         title="Clear all filters">
                         <UIcon name="i-heroicons-x-mark"
-                            class="w-5 h-5 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform" />
+                            class="w-5 h-5 group-hover:scale-110 transition-transform" />
                     </button>
                 </div>
 
                 <!-- Error State -->
                 <div v-if="errorMessage && !campaigns.length"
                     class="rounded-2xl p-8 flex flex-col items-center text-center gap-3 border shadow-xl bg-white dark:bg-gray-900 border-red-200 dark:border-red-900/50">
-                    <p class="text-sm font-mono text-red-500 font-medium">{{ errorMessage }}</p>
+                    <p class="text-sm text-red-500 font-medium">{{ errorMessage }}</p>
                     <UButton @click="retry" color="primary" size="xs" font-semibold>
                         Try again
                     </UButton>
@@ -320,7 +320,7 @@ watch([searchQuery, selectedCategory, selectedContentType, selectedCustomCategor
                         class="h-12 w-12 rounded-2xl flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-500">
                         <UIcon name="i-heroicons-magnifying-glass" class="w-6 h-6 text-primary" />
                     </div>
-                    <p class="font-display font-bold text-base text-gray-900 dark:text-white">No campaigns match your
+                    <p class="font-bold text-base text-gray-900 dark:text-white">No campaigns match your
                         search query</p>
                     <p class="text-xs font-medium text-gray-600 dark:text-gray-400 max-w-sm">Try adjusting your filters,
                         category
@@ -337,10 +337,10 @@ watch([searchQuery, selectedCategory, selectedContentType, selectedCustomCategor
                     <!-- ORGANIC RESULTS HEADER -->
                     <div class="flex items-center justify-between pt-2">
                         <h4
-                            class="text-xs font-mono uppercase tracking-wider font-bold text-gray-600 dark:text-gray-300">
+                            class="text-xs uppercase tracking-wider font-bold text-gray-600 dark:text-gray-300">
                             CAMPAIGN SEARCH RESULTS
                         </h4>
-                        <span class="text-xs font-mono font-medium text-gray-500 dark:text-gray-400">{{ totalCount }}
+                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ totalCount }}
                             total results</span>
                     </div>
 
@@ -349,7 +349,7 @@ watch([searchQuery, selectedCategory, selectedContentType, selectedCustomCategor
 
                     <!-- Infinite Scroll / Pagination Controls -->
                     <div v-if="isLoadingMore" class="flex justify-center py-4">
-                        <span class="text-xs font-mono font-semibold text-primary flex items-center gap-2">
+                        <span class="text-xs font-semibold text-primary flex items-center gap-2">
                             <UIcon name="i-lucide-loader-2" class="w-4 h-4 animate-spin text-primary" />
                             Loading more campaigns…
                         </span>
