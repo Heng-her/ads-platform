@@ -46,13 +46,13 @@ function formatText(val?: string) {
         <nav class="flex flex-col gap-1.5">
           <!-- All Categories Option -->
           <button
-            class="text-left text-sm px-3.5 py-2.5 rounded-xl font-semibold transition-all flex items-center justify-between group cursor-pointer"
+            class="text-left text-sm px-3.5 py-2.5 rounded-xl font-medium transition-all flex items-center justify-between group cursor-pointer"
             :class="!selectedCategory
-              ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-950 font-bold shadow-sm'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#0d1c2d] hover:text-gray-900 dark:hover:text-white'"
+              ? 'bg-gray-100 dark:bg-[#18293c] text-gray-900 dark:text-white font-bold'
+              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#0d1c2d] hover:text-gray-900 dark:hover:text-white'"
             @click="emit('select-category', undefined)">
             <span>All Categories</span>
-            <span v-if="!selectedCategory" class="h-2 w-2 rounded-full bg-white dark:bg-gray-950" />
+            <span v-if="!selectedCategory" class="h-2 w-2 rounded-full bg-gray-900 dark:bg-white" />
           </button>
 
           <!-- Dynamic Categories fetched directly from GET /api/categories -->
@@ -60,11 +60,11 @@ function formatText(val?: string) {
             :key="cat.name"
             class="text-left text-sm px-3.5 py-2.5 rounded-xl font-medium transition-all flex items-center justify-between group cursor-pointer"
             :class="selectedCategory === cat.name
-              ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-950 font-bold shadow-sm'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#0d1c2d] hover:text-gray-900 dark:hover:text-white'"
+              ? 'bg-gray-100 dark:bg-[#18293c] text-gray-900 dark:text-white font-bold'
+              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#0d1c2d] hover:text-gray-900 dark:hover:text-white'"
             @click="emit('select-category', cat.name)">
             <span>{{ formatText(cat.name) }}</span>
-            <span v-if="selectedCategory === cat.name" class="h-2 w-2 rounded-full bg-white dark:bg-gray-950" />
+            <span v-if="selectedCategory === cat.name" class="h-2 w-2 rounded-full bg-gray-900 dark:bg-white" />
           </button>
         </nav>
       </div>

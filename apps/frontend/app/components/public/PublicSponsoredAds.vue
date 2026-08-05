@@ -12,7 +12,7 @@ const props = defineProps<{
     class="rounded-2xl border p-4 shadow-sm space-y-3 bg-white dark:bg-[#122131] border-gray-200 dark:border-[#273647]">
     <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-[#273647]">
       <span
-        class="text-[10px] font-mono uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-950 flex items-center gap-1.5 shadow-sm">
+        class="text-[10px] font-mono uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-[#18293c] text-gray-900 dark:text-white border border-gray-200/60 dark:border-[#273647] flex items-center gap-1.5 shadow-sm">
         <UIcon name="i-heroicons-megaphone" class="w-3.5 h-3.5" /> Sponsored Ads
       </span>
       <span class="text-[10px] font-mono font-bold text-gray-400 dark:text-gray-500">Ad Network</span>
@@ -54,15 +54,15 @@ const props = defineProps<{
     <div v-else
       class="p-4 rounded-xl bg-gray-50 dark:bg-[#0d1c2d] border border-gray-200 dark:border-[#273647] text-center space-y-2.5">
       <div
-        class="h-10 w-10 rounded-xl bg-gray-900 text-white dark:bg-white dark:text-gray-950 flex items-center justify-center mx-auto shadow-sm">
-        <UIcon name="i-heroicons-cursor-arrow-rays" class="w-5 h-5" />
+        class="h-10 w-10 rounded-xl bg-gray-100 dark:bg-[#18293c] text-gray-900 dark:text-white border border-gray-200/60 dark:border-[#273647] flex items-center justify-center mx-auto shadow-sm">
+        <UIcon name="i-heroicons-cursor-arrow-rays" class="w-5 h-5 text-gray-900 dark:text-white" />
       </div>
       <h5 class="text-xs font-extrabold text-gray-900 dark:text-white">Place Your Ad Unit Here</h5>
       <p class="text-[11px] font-medium text-gray-600 dark:text-gray-400 leading-relaxed">
         Reach targeted audiences across the Signal Network with instant campaign placement.
       </p>
       <NuxtLink to="/creator"
-        class="inline-flex items-center gap-1 text-[11px] font-mono font-bold px-3 py-1.5 rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-950 hover:opacity-90 transition-all shadow-sm">
+        class="inline-flex items-center gap-1 text-[11px] font-mono font-bold px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-[#18293c] text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#20344b] border border-gray-200/60 dark:border-[#273647] transition-all shadow-sm">
         <span>Promote Campaign</span>
         <UIcon name="i-heroicons-arrow-right" class="w-3.5 h-3.5" />
       </NuxtLink>
