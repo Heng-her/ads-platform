@@ -135,11 +135,11 @@ export class AuthService {
         id: userId,
         username,
         email,
-
         passwordHash,
         avatar: payload.picture || null,
         portfolioLink: null,
         country: null,
+        apiKeys: null,
         role: "CREATOR",
         status: "ACTIVE",
         createdAt: new Date(),

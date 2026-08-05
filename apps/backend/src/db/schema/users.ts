@@ -8,6 +8,7 @@ export const users = sqliteTable("users", {
   avatar: text("avatar"), // Profile avatar image URL
   portfolioLink: text("portfolio_link"), // Optional portfolio / website URL
   country: text("country"), // ISO 3166-1 alpha-2 country code (e.g. "US", "NG")
+  apiKeys: text("api_keys", { mode: "json" }).$type<Record<string, string>>(), // JSON object storing API keys e.g. { "create_admin": "...", "upload_image": "..." }
   role: text("role", { enum: ["ADMIN", "CREATOR"] })
     .default("CREATOR")
     .notNull(),

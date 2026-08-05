@@ -7,8 +7,11 @@ import { CampaignService } from "../services/campaignService";
 import { AuditLogService } from "../services/auditLogService";
 import { DashboardService } from "../services/dashboardService";
 import { registerSchema, loginSchema } from "../schemas/auth";
-import { createCampaignSchema, updateCampaignStatusSchema } from "../schemas/campaign";
-import { updateUserStatusSchema } from "../schemas/user";
+import {
+  createCampaignSchema,
+  updateCampaignStatusSchema,
+} from "../schemas/campaign";
+import { updateUserSchema, updateUserStatusSchema } from "../schemas/user";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
 import { checkRateLimit } from "../middlewares/rateLimiter";
@@ -68,7 +71,8 @@ actionRoutes.post("/", async (c) => {
           limit: 2,
           windowSeconds: 86400,
           keyPrefix: "register",
-          message: "Registration limit reached. You can only create a maximum of 2 accounts per day from your IP address."
+          message:
+            "Registration limit reached. You can only create a maximum of 2 accounts per day from your IP address.",
         });
         if (rateLimitErr) return sendError(c, rateLimitErr, null, 429);
 
@@ -110,11 +114,7 @@ actionRoutes.post("/", async (c) => {
         }
         const { email, password } = parseResult.data;
         const authService = new AuthService(db);
-        const res = await authService.login(
-          email,
-          password,
-          getJwtSecret(c),
-        );
+        const res = await authService.login(email, password, getJwtSecret(c));
         await auditLogService.createLog(
           "USER_LOGIN",
           res.user.id,
@@ -184,6 +184,39 @@ actionRoutes.post("/", async (c) => {
         return sendSuccess(c, updated);
       }
 
+      case "users/update": {
+        const currentUser = await authenticate(c);
+        if (currentUser.role !== "ADMIN")
+          return sendError(c, "Forbidden", null, 403);
+        const userId = payloadData?.id;
+        if (!userId) return sendError(c, "User ID is required");
+
+        const parseResult = updateUserSchema.safeParse(payloadData);
+        if (!parseResult.success) {
+          return sendError(
+            c,
+            parseResult.error.errors[0]?.message || "Validation error",
+            parseResult.error.format(),
+          );
+        }
+
+        const userService = new UserService(db);
+        const existingUser = await userService.getUserById(userId);
+        if (!existingUser) return sendError(c, "User not found", null, 404);
+
+        const updated = await userService.updateUser(userId, parseResult.data);
+        await auditLogService.createLog(
+          "USER_UPDATE_DETAILS",
+          currentUser.id,
+          getClientIp(c),
+          JSON.stringify({
+            targetUserId: userId,
+            updatedFields: Object.keys(parseResult.data),
+          }),
+        );
+        return sendSuccess(c, updated);
+      }
+
       // -------------------------------------------------------------
       // Campaign Actions
       // -------------------------------------------------------------
@@ -199,7 +232,10 @@ actionRoutes.post("/", async (c) => {
         const category = payloadData?.category || undefined;
         const contentType = payloadData?.contentType || undefined;
         const search = payloadData?.search || undefined;
-        const status = payloadData?.status === "DRAFT" || payloadData?.status === "PUBLIC" ? payloadData.status : undefined;
+        const status =
+          payloadData?.status === "DRAFT" || payloadData?.status === "PUBLIC"
+            ? payloadData.status
+            : undefined;
 
         const campaignService = new CampaignService(db);
         const result = await campaignService.getCampaignsList({
@@ -219,7 +255,8 @@ actionRoutes.post("/", async (c) => {
           limit: 5,
           windowSeconds: 86400,
           keyPrefix: "campaign_create",
-          message: "Post limit reached. You can only publish a maximum of 5 posts per day from your IP address."
+          message:
+            "Post limit reached. You can only publish a maximum of 5 posts per day from your IP address.",
         });
         if (rateLimitErr) return sendError(c, rateLimitErr, null, 429);
 
@@ -235,7 +272,7 @@ actionRoutes.post("/", async (c) => {
         const campaignService = new CampaignService(db);
         const newCampaign = await campaignService.createCampaign(
           currentUser.id,
-          parseResult.data
+          parseResult.data,
         );
         await auditLogService.createLog(
           "CAMPAIGN_CREATE",

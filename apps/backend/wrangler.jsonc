@@ -1,37 +1,38 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "backend",
-	"main": "src/index.ts",
-	"compatibility_date": "2026-07-20",
-	"dev": {
-		"ip": "0.0.0.0",
-		"port": 8787
-	},
-	"vars": {
-		"ENVIRONMENT": "development"
-	},
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "ads_platform_db",
-			"database_id": "fc0f171e-bf14-4574-8c65-fc7ff2b9b3c3",
-			"migrations_dir": "drizzle"
-		}
-	],
-	"kv_namespaces": [
-		{
-			"binding": "CACHE_KV",
-			"id": "fee0e4c24dec48e9a6f11892665ecad7"
-		}
-	],
-	"r2_buckets": [
-		{
-			"binding": "ASSETS_BUCKET",
-			"bucket_name": "ads-platform-assets"
-		}
-	],
-	"observability": {
-		"enabled": true,
-		"head_sampling_rate": 1
-	}
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "backend",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-20",
+  "dev": {
+    "ip": "0.0.0.0",
+    "port": 8787,
+  },
+  "vars": {
+    // "ENVIRONMENT": "development",
+    "ENVIRONMENT": "development",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ads_platform_db",
+      "database_id": "fc0f171e-bf14-4574-8c65-fc7ff2b9b3c3",
+      "migrations_dir": "drizzle",
+    },
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE_KV",
+      "id": "fee0e4c24dec48e9a6f11892665ecad7",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ASSETS_BUCKET",
+      "bucket_name": "ads-platform-assets",
+    },
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+  },
 }

@@ -12,6 +12,9 @@ export class UserService {
         username: users.username,
         email: users.email,
         avatar: users.avatar,
+        portfolioLink: users.portfolioLink,
+        country: users.country,
+        apiKeys: users.apiKeys,
         role: users.role,
         status: users.status,
         createdAt: users.createdAt,
@@ -30,6 +33,8 @@ export class UserService {
         id: users.id,
         username: users.username,
         avatar: users.avatar,
+        portfolioLink: users.portfolioLink,
+        country: users.country,
         role: users.role,
         createdAt: users.createdAt,
       })
@@ -47,6 +52,9 @@ export class UserService {
         username: users.username,
         email: users.email,
         avatar: users.avatar,
+        portfolioLink: users.portfolioLink,
+        country: users.country,
+        apiKeys: users.apiKeys,
         role: users.role,
         status: users.status,
         createdAt: users.createdAt,
@@ -63,6 +71,26 @@ export class UserService {
     await this.db
       .update(users)
       .set({ status, updatedAt: new Date() })
+      .where(eq(users.id, id));
+    return this.getUserById(id);
+  }
+
+  async updateUser(
+    id: string,
+    data: {
+      username?: string;
+      email?: string;
+      role?: "ADMIN" | "CREATOR";
+      status?: "ACTIVE" | "SUSPENDED" | "PENDING";
+      avatar?: string | null;
+      portfolioLink?: string | null;
+      country?: string | null;
+      apiKeys?: Record<string, string> | null;
+    }
+  ) {
+    await this.db
+      .update(users)
+      .set({ ...data, updatedAt: new Date() })
       .where(eq(users.id, id));
     return this.getUserById(id);
   }

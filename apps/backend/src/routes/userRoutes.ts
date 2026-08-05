@@ -8,10 +8,10 @@ import { authMiddleware, requireRole } from "../middlewares/auth";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
 import { zodErrorHandler } from "../utils/validation";
-import { updateUserStatusSchema } from "../schemas/user";
+import { updateUserStatusSchema, updateUserSchema } from "../schemas/user";
 
 // Re-export schema consumed by actionRoutes.ts
-export { updateUserStatusSchema } from "../schemas/user";
+export { updateUserStatusSchema, updateUserSchema } from "../schemas/user";
 
 export const userRoutes = new Hono<HonoEnv>()
   // 1. Get Current Logged-in User Profile (Authenticated)
@@ -68,4 +68,34 @@ export const userRoutes = new Hono<HonoEnv>()
       );
       return sendSuccess(c, updatedUser);
     },
+  )
+  // 5. Update Full User Details including role, apiKeys (Admin Only)
+  .patch(
+    "/:id",
+    authMiddleware(),
+    requireRole(["ADMIN"]),
+    zValidator("json", updateUserSchema, (result, c) => {
+      if (!result.success) return zodErrorHandler(result, c);
+    }),
+    async (c) => {
+      const id = c.req.param("id");
+      const userPayload = c.get("user")!;
+      const updateData = c.req.valid("json");
+      const db = getDb(c.env.DB);
+      const userService = new UserService(db);
+      const auditLogService = new AuditLogService(db);
+
+      const existingUser = await userService.getUserById(id);
+      if (!existingUser) return sendError(c, "User not found", null, 404);
+
+      const updatedUser = await userService.updateUser(id, updateData);
+      await auditLogService.createLog(
+        "USER_UPDATE_DETAILS",
+        userPayload.id,
+        getClientIp(c),
+        JSON.stringify({ targetUserId: id, updatedFields: Object.keys(updateData) }),
+      );
+      return sendSuccess(c, updatedUser);
+    },
   );
+
