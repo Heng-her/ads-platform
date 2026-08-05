@@ -19,7 +19,7 @@ function stripHtml(html: string | null | undefined) {
   <div class="block">
     <article
       class="bg-white dark:bg-[#122131] rounded-2xl p-4 sm:p-5 border border-gray-200 dark:border-[#273647] hover:border-primary/50 transition-all duration-200 shadow-sm hover:shadow-md group flex flex-col gap-3">
-      
+
       <!-- Top Content & Details Section -->
       <div class="flex flex-col gap-2.5">
         <NuxtLink :to="getArticleUrl(campaign)">
@@ -63,7 +63,8 @@ function stripHtml(html: string | null | undefined) {
         <div
           class="w-full h-36 sm:h-44 bg-gray-100 dark:bg-[#0d1c2d] rounded-xl overflow-hidden shrink-0 border border-gray-200 dark:border-[#273647] flex items-center justify-center shadow-inner relative group/img">
           <img v-if="campaign.imageUrl" :src="campaign.imageUrl" :alt="campaign.imageTitle || campaign.title"
-            loading="lazy" class="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300" />
+            loading="lazy"
+            class="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300" />
           <div v-else class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-600">
             <UIcon name="i-heroicons-photo" class="w-10 h-10" />
             <span class="text-[11px] font-mono font-medium">Image Preview</span>

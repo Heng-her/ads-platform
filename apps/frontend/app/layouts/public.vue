@@ -21,14 +21,6 @@ const router = useRouter()
 const api = useApi()
 const { categories, fetchCategories } = useCategories()
 
-const publicNavLinks = [
-    { label: 'Home', to: '/' },
-    { label: 'Explore Feed', to: '/article' },
-    { label: 'Trending Posts', to: '/trending' },
-    { label: 'Monetization', to: '/pricing' },
-    { label: 'News & Trends', to: '/news' }
-]
-
 // ---- Search & Filter state ----
 const searchQuery = ref((route.query.search as string) || '')
 const isSearchFocused = ref(false)

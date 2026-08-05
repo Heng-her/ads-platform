@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import type { InferResponseType } from 'hono/client'
+import type { InferResponseType } from '@ads-platform/shared'
 import { useApi } from '~/composables/useApi'
 import { useCategories } from '~/composables/useCategories'
 import { useCustomSeoMeta } from '~/lib/seo/metadata'

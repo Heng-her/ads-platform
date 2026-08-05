@@ -7,7 +7,11 @@ export * from "@backend/db/schema/index";
 // Re-export Zod Validation Schemas & DTO Types
 export { registerSchema, loginSchema } from "@backend/routes/authRoutes";
 export { updateUserStatusSchema } from "@backend/routes/userRoutes";
-export { createCampaignSchema, updateCampaignStatusSchema } from "@backend/routes/campaignRoutes";
+export {
+  createCampaignSchema,
+  updateCampaignStatusSchema,
+} from "@backend/routes/campaignRoutes";
 
-// Re-export Hono RPC AppType for Frontend end-to-end type safety
+// Re-export Hono RPC AppType & Helper Utilities for Frontend end-to-end type safety
 export type { AppType } from "@backend/routes/index";
+export type { InferResponseType, InferRequestType } from "hono/client";
