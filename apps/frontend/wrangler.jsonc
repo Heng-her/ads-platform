@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ads-platform",
+  "main": ".output/server/index.mjs",
+  "compatibility_date": "2026-08-03",
+  "assets": {
+    "directory": ".output/public",
+  },
+  "vars": {
+    "NUXT_PUBLIC_API_BASE": "https://backend.crypten.workers.dev/api",
+    "NUXT_PUBLIC_GOOGLE_CLIENT_ID": "865508958638-dnnuh92nlui0i6m3fe96kr6mhhe8vc22.apps.googleusercontent.com",
+  },
+}

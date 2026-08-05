@@ -56,7 +56,8 @@ function formatText(val?: string) {
           </button>
 
           <!-- Dynamic Categories fetched directly from GET /api/categories -->
-          <button v-for="cat in (props.categories && props.categories.length ? props.categories : apiCategories)" :key="cat.name"
+          <button v-for="cat in (props.categories && props.categories.length ? props.categories : apiCategories)"
+            :key="cat.name"
             class="text-left text-sm px-3.5 py-2.5 rounded-xl font-medium transition-all flex items-center justify-between group cursor-pointer"
             :class="selectedCategory === cat.name
               ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-950 font-bold shadow-sm'
@@ -67,7 +68,6 @@ function formatText(val?: string) {
           </button>
         </nav>
       </div>
-
     </div>
   </aside>
 </template>

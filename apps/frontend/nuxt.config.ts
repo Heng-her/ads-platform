@@ -4,6 +4,11 @@ import { defineNuxtConfig } from "nuxt/config";
 
 export default defineNuxtConfig({
   runtimeConfig: {
+    // server secrets (not available in browser or public config)
+    cryptoSecret:
+      process.env.NUXT_CRYPTO_SECRET || "ads-platform-secure-secret-key",
+
+    // public config (available in browser and server)
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:8787/api",
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID,

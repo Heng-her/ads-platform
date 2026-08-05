@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import AdBudgetCalculator from '~/components/AdBudgetCalculator.vue'
-
 const matrixData = [
   { feature: 'Middleman Take Rate', web2: '30% – 45% (Google / Meta)', web3: '0.5% Protocol Fee', advantage: '98% Fee Reduction' },
   { feature: 'Publisher Payout Speed', web2: '30 to 90 Days Net', web3: 'Instant Programmatic Stream', advantage: 'Real-time liquidity' },
@@ -26,7 +24,8 @@ const matrixData = [
     <div class="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
       <table class="w-full text-left border-collapse text-xs sm:text-sm">
         <thead>
-          <tr class="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-850/60 font-mono text-gray-500 uppercase">
+          <tr
+            class="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-850/60 font-mono text-gray-500 uppercase">
             <th class="p-4 font-semibold">Protocol Dimension</th>
             <th class="p-4 font-semibold text-red-500">Traditional Web2 Ad Networks</th>
             <th class="p-4 font-semibold text-emerald-500">DecAds Web3 Smart Protocol</th>
@@ -43,8 +42,5 @@ const matrixData = [
         </tbody>
       </table>
     </div>
-
-    <!-- Embedded Ad Budget Calculator -->
-    <AdBudgetCalculator />
   </section>
 </template>

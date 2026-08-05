@@ -55,7 +55,7 @@ export function useArticleSeo(item: {
   content?: string | null;
   imageUrl?: string | null;
   createdAt: string;
-  creator?: { username?: string } | null;
+  creator?: { username?: string; avatar?: string | null } | null;
 }) {
   const cleanExcerpt = (item.description || item.content || item.title || "")
     .replace(/<[^>]*>/g, "")
