@@ -6,6 +6,7 @@ import { CategoryService } from "../services/categoryService";
 import { AuditLogService } from "../services/auditLogService";
 import {
   createCampaignSchema,
+  updateCampaignSchema,
   updateCampaignStatusSchema,
 } from "../schemas/campaign";
 import { sendSuccess, sendError } from "../utils/response";
@@ -217,6 +218,40 @@ export async function handleCampaignAction(
         JSON.stringify({ campaignId, newStatus: parseResult.data.status }),
       );
       return sendSuccess(c, updated);
+    }
+
+    case "campaigns/update": {
+      const currentUser = await authenticate(c);
+      const campaignId = payloadData?.id;
+      if (!campaignId) return sendError(c, "Campaign ID is required");
+      const parseResult = updateCampaignSchema.safeParse(payloadData);
+      if (!parseResult.success) {
+        return sendError(
+          c,
+          parseResult.error.errors[0]?.message || "Validation error",
+          parseResult.error.format(),
+        );
+      }
+      const campaignService = new CampaignService(db);
+      const campaign = await campaignService.getCampaignById(campaignId);
+      if (!campaign) return sendError(c, "Campaign not found", null, 404);
+      if (
+        currentUser.role !== "ADMIN" &&
+        campaign.userId !== currentUser.id
+      ) {
+        return sendError(c, "Forbidden", null, 403);
+      }
+      const updated = await campaignService.updateCampaign(
+        campaignId,
+        parseResult.data,
+      );
+      await auditLogService.createLog(
+        "CAMPAIGN_UPDATE",
+        currentUser.id,
+        getClientIp(c),
+        JSON.stringify({ campaignId, title: updated?.title }),
+      );
+      return sendSuccess(c, updated, "Campaign updated successfully");
     }
 
     case "campaigns/delete": {

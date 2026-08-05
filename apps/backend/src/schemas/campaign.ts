@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+export const imageItemSchema = z.object({
+  url: z.string().url("Invalid image URL"),
+  title: z.string().optional(),
+  description: z.string().optional(),
+});
+
 export const createCampaignSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().optional(),
@@ -9,6 +15,11 @@ export const createCampaignSchema = z.object({
   imageUrl: z.string().url("Invalid image URL").optional(),
   imageTitle: z.string().optional(),
   imageDescription: z.string().optional(),
+  images: z.array(imageItemSchema).optional(),
+  videoUrls: z
+    .array(z.string().url("Invalid video URL"))
+    .max(2, "Maximum 2 videos allowed")
+    .optional(),
   adNetwork: z.string().optional(),
   adUnitCode: z.string().optional(),
   status: z.enum(["DRAFT", "PUBLIC"]).optional().default("PUBLIC"),
@@ -23,6 +34,11 @@ export const updateCampaignSchema = z.object({
   imageUrl: z.string().url("Invalid image URL").optional(),
   imageTitle: z.string().optional(),
   imageDescription: z.string().optional(),
+  images: z.array(imageItemSchema).optional(),
+  videoUrls: z
+    .array(z.string().url("Invalid video URL"))
+    .max(2, "Maximum 2 videos allowed")
+    .optional(),
   adNetwork: z.string().optional(),
   adUnitCode: z.string().optional(),
   status: z.enum(["DRAFT", "PUBLIC"]).optional(),

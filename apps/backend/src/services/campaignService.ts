@@ -1,6 +1,20 @@
-import { eq, desc, and, count, or, like, notInArray, isNull } from "drizzle-orm";
+import {
+  eq,
+  desc,
+  and,
+  count,
+  or,
+  like,
+  notInArray,
+  isNull,
+} from "drizzle-orm";
 import type { DbClient } from "../db/index";
-import { campaigns, users, systemCategories, type NewCampaign } from "../db/schema/index";
+import {
+  campaigns,
+  users,
+  systemCategories,
+  type NewCampaign,
+} from "../db/schema/index";
 import { parsePagination, buildPaginationMeta } from "../utils/pagination";
 
 // Shared select shape for campaign queries — single source of truth
@@ -20,6 +34,8 @@ const campaignSelectShape = {
   imageUrl: campaigns.imageUrl,
   imageTitle: campaigns.imageTitle,
   imageDescription: campaigns.imageDescription,
+  images: campaigns.images,
+  videoUrls: campaigns.videoUrls,
   adNetwork: campaigns.adNetwork,
   adUnitCode: campaigns.adUnitCode,
   status: campaigns.status,
@@ -43,6 +59,8 @@ export class CampaignService {
       imageUrl?: string;
       imageTitle?: string;
       imageDescription?: string;
+      images?: Array<{ url: string; title?: string; description?: string }>;
+      videoUrls?: string[];
       adNetwork?: string;
       adUnitCode?: string;
       status?: "DRAFT" | "PUBLIC";
@@ -60,6 +78,8 @@ export class CampaignService {
       imageUrl: data.imageUrl,
       imageTitle: data.imageTitle,
       imageDescription: data.imageDescription,
+      images: data.images,
+      videoUrls: data.videoUrls ? data.videoUrls.slice(0, 2) : undefined,
       adNetwork: data.adNetwork,
       adUnitCode: data.adUnitCode,
       status: data.status || "PUBLIC",
@@ -80,15 +100,36 @@ export class CampaignService {
       imageUrl?: string;
       imageTitle?: string;
       imageDescription?: string;
+      images?: Array<{ url: string; title?: string; description?: string }>;
+      videoUrls?: string[];
       adNetwork?: string;
       adUnitCode?: string;
       status?: "DRAFT" | "PUBLIC";
     },
   ) {
-    await this.db
-      .update(campaigns)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(campaigns.id, id));
+    const updateData: Record<string, any> = {
+      updatedAt: new Date(),
+    };
+
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.description !== undefined)
+      updateData.description = data.description;
+    if (data.category !== undefined) updateData.category = data.category;
+    if (data.contentType !== undefined)
+      updateData.contentType = data.contentType;
+    if (data.content !== undefined) updateData.content = data.content;
+    if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
+    if (data.imageTitle !== undefined) updateData.imageTitle = data.imageTitle;
+    if (data.imageDescription !== undefined)
+      updateData.imageDescription = data.imageDescription;
+    if (data.images !== undefined) updateData.images = data.images;
+    if (data.videoUrls !== undefined)
+      updateData.videoUrls = data.videoUrls.slice(0, 2);
+    if (data.adNetwork !== undefined) updateData.adNetwork = data.adNetwork;
+    if (data.adUnitCode !== undefined) updateData.adUnitCode = data.adUnitCode;
+    if (data.status !== undefined) updateData.status = data.status;
+
+    await this.db.update(campaigns).set(updateData).where(eq(campaigns.id, id));
     return this.getCampaignById(id);
   }
 
@@ -118,7 +159,10 @@ export class CampaignService {
     page?: number;
     limit?: number;
   }) {
-    const { page, limit, offset } = parsePagination(options.page, options.limit);
+    const { page, limit, offset } = parsePagination(
+      options.page,
+      options.limit,
+    );
 
     const conditions = [];
 
@@ -161,7 +205,14 @@ export class CampaignService {
         conditions.push(eq(campaigns.userId, options.user.id));
       } else {
         // Unauthenticated users cannot query custom categories
-        return { items: [], pagination: buildPaginationMeta(0, options.page ?? 1, options.limit ?? 10) };
+        return {
+          items: [],
+          pagination: buildPaginationMeta(
+            0,
+            options.page ?? 1,
+            options.limit ?? 10,
+          ),
+        };
       }
     }
 
@@ -192,7 +243,10 @@ export class CampaignService {
         conditions.push(
           or(
             and(eq(campaigns.status, "PUBLIC"), eq(campaigns.isDeleted, false)),
-            and(eq(campaigns.userId, options.user.id), eq(campaigns.isDeleted, false)),
+            and(
+              eq(campaigns.userId, options.user.id),
+              eq(campaigns.isDeleted, false),
+            ),
           ),
         );
       }
@@ -240,7 +294,10 @@ export class CampaignService {
       limit?: number;
     } = {},
   ) {
-    const { page, limit, offset } = parsePagination(options.page, options.limit);
+    const { page, limit, offset } = parsePagination(
+      options.page,
+      options.limit,
+    );
 
     const conditions = [
       eq(campaigns.userId, userId),
@@ -300,13 +357,18 @@ export class CampaignService {
   /**
    * Admin-only: get all campaigns including soft-deleted ones, with optional filters.
    */
-  async getAllCampaigns(options: {
-    status?: "DRAFT" | "PUBLIC";
-    includeDeleted?: boolean;
-    page?: number;
-    limit?: number;
-  } = {}) {
-    const { page, limit, offset } = parsePagination(options.page, options.limit);
+  async getAllCampaigns(
+    options: {
+      status?: "DRAFT" | "PUBLIC";
+      includeDeleted?: boolean;
+      page?: number;
+      limit?: number;
+    } = {},
+  ) {
+    const { page, limit, offset } = parsePagination(
+      options.page,
+      options.limit,
+    );
 
     const conditions = [];
 
