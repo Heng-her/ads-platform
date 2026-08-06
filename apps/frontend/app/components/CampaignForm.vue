@@ -32,6 +32,9 @@ const deletingMediaUrl = ref<string | null>(null)
 const isRestoringDraft = ref(false)
 const draftStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 const hasSubmitted = ref(false)
+const imagePreviewOpen = ref(false)
+const imagePreviewUrl = ref('')
+const imagePreviewTitle = ref('Image preview')
 let draftSaveTimer: ReturnType<typeof setTimeout> | undefined
 
 const form = ref({
@@ -96,6 +99,13 @@ function applyDraft(draft: CampaignDraftForm) {
   }
 }
 
+function openImagePreview(url: string, title = 'Image preview') {
+  if (!url) return
+  imagePreviewUrl.value = url
+  imagePreviewTitle.value = title || 'Image preview'
+  imagePreviewOpen.value = true
+}
+
 async function loadData() {
   if (props.isEdit && props.campaignId) {
     isFetching.value = true
@@ -141,7 +151,8 @@ async function initialiseForm() {
 function handleCoverUploaded(res: CloudinaryUploadResponse) {
   form.value.imageUrl = res.url
   if (!form.value.imageTitle) {
-    form.value.imageTitle = form.value.title || 'Campaign Cover Image'
+    const filename = res.originalFilename?.replace(/\.[^/.]+$/, '').trim()
+    form.value.imageTitle = filename || form.value.title || 'Campaign Cover Image'
   }
 }
 
@@ -451,8 +462,19 @@ onBeforeUnmount(() => {
 
           <div v-if="form.imageUrl" class="space-y-2">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Cover Preview &amp; Metadata</p>
-            <div class="relative group border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden h-28 bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-              <img :src="form.imageUrl" alt="Cover" class="h-full w-full object-cover" />
+            <div
+              class="relative group border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden h-28 bg-gray-50 dark:bg-gray-950 flex items-center justify-center cursor-zoom-in"
+              role="button"
+              tabindex="0"
+              :aria-label="`Open ${form.imageTitle || 'cover image'} preview`"
+              @click="openImagePreview(form.imageUrl, form.imageTitle || 'Cover image')"
+              @keydown.enter.prevent="openImagePreview(form.imageUrl, form.imageTitle || 'Cover image')"
+              @keydown.space.prevent="openImagePreview(form.imageUrl, form.imageTitle || 'Cover image')"
+            >
+              <img :src="form.imageUrl" :alt="form.imageTitle || 'Cover image'" class="h-full w-full object-cover" />
+              <span class="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+                Click to preview
+              </span>
               <button
                 type="button"
                 class="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-80 hover:opacity-100"
@@ -483,8 +505,21 @@ onBeforeUnmount(() => {
           />
 
           <div v-if="form.images.length > 0" class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-            <div v-for="(img, idx) in form.images" :key="idx" class="relative group border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden p-1 bg-gray-50 dark:bg-gray-950">
-              <img :src="img.url" class="w-full h-20 object-cover rounded" />
+            <div
+              v-for="(img, idx) in form.images"
+              :key="idx"
+              class="relative group border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden p-1 bg-gray-50 dark:bg-gray-950 cursor-zoom-in"
+              role="button"
+              tabindex="0"
+              :aria-label="`Open ${img.title || 'gallery image'} preview`"
+              @click="openImagePreview(img.url, img.title || 'Gallery image')"
+              @keydown.enter.prevent="openImagePreview(img.url, img.title || 'Gallery image')"
+              @keydown.space.prevent="openImagePreview(img.url, img.title || 'Gallery image')"
+            >
+              <img :src="img.url" :alt="img.title || 'Gallery image'" class="w-full h-20 object-cover rounded" />
+              <span class="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+                Preview
+              </span>
               <button
                 type="button"
                 class="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-80 hover:opacity-100"
@@ -608,5 +643,22 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
+
+    <!-- Full-size image preview -->
+    <UModal
+      v-model:open="imagePreviewOpen"
+      :title="imagePreviewTitle"
+      :ui="{ content: 'w-[calc(100vw-2rem)] max-w-[90vw] sm:max-w-[86vw] lg:max-w-[84vw]' }"
+    >
+      <template #body>
+        <div class="flex h-[68vh] max-h-[68vh] min-h-[16rem] items-center justify-center overflow-auto bg-gray-950 p-2 sm:h-[72vh] sm:max-h-[72vh] sm:p-4">
+          <img
+            :src="imagePreviewUrl"
+            :alt="imagePreviewTitle"
+            class="max-h-full max-w-full object-contain"
+          />
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>

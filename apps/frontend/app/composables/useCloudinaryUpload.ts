@@ -4,6 +4,8 @@ import { useAuthStore } from "~/stores/auth";
 export interface CloudinaryUploadResponse {
   publicId: string;
   url: string;
+  /** Original browser filename, retained locally for form labels/metadata. */
+  originalFilename?: string;
   resourceType: "image" | "video" | "raw";
   width?: number;
   height?: number;
@@ -158,7 +160,12 @@ export function useCloudinaryUpload() {
 
       const data: CloudinaryUploadResponse = await response.json();
       uploadProgress.value = 100;
-      return data;
+      return {
+        ...data,
+        // The API response does not include the browser's original filename.
+        // Keep it on the client so forms can use it for default metadata.
+        originalFilename: file.name,
+      };
     } catch (err: any) {
       errorMessage.value = err.message || "Upload failed";
       throw err;
