@@ -76,7 +76,7 @@ function onDrop(e: DragEvent) {
 <template>
   <div class="space-y-2">
     <div class="flex items-center justify-between">
-      <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">
+      <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">
         {{ label }}
       </label>
       <UBadge
@@ -122,18 +122,18 @@ function onDrop(e: DragEvent) {
           />
         </div>
 
-        <div class="text-xs">
+        <div class="text-sm">
           <span class="font-medium text-gray-900 dark:text-gray-100">Click to upload</span>
           <span class="text-gray-500 dark:text-gray-400"> or drag and drop</span>
         </div>
 
-        <p class="text-[11px] text-gray-400 dark:text-gray-500">
+        <p class="text-sm text-gray-400 dark:text-gray-500">
           {{ hint || (isAdmin ? 'Admin bypass enabled: Images & Videos up to 2GB' : 'Max 50MB file size per upload') }}
         </p>
 
         <!-- Progress indicator -->
         <div v-if="isUploading" class="w-full max-w-xs mt-2 space-y-1">
-          <div class="flex justify-between text-[10px] text-gray-500 font-mono">
+          <div class="flex justify-between text-xs text-gray-500 font-mono">
             <span>Uploading to Cloudinary...</span>
             <span>{{ uploadProgress }}%</span>
           </div>
@@ -143,7 +143,7 @@ function onDrop(e: DragEvent) {
     </div>
 
     <!-- Error message display -->
-    <p v-if="errorMessage" class="text-xs text-red-500 flex items-center gap-1 font-medium">
+    <p v-if="errorMessage" class="text-sm text-red-500 flex items-center gap-1 font-medium">
       <UIcon name="i-heroicons-exclamation-circle" class="w-4 h-4 shrink-0" />
       <span>{{ errorMessage }}</span>
     </p>

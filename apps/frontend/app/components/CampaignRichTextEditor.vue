@@ -4,6 +4,12 @@ import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
+import {
+  BackgroundColor,
+  Color,
+  FontSize,
+  TextStyle,
+} from '@tiptap/extension-text-style'
 
 const props = defineProps<{
   modelValue?: string
@@ -17,10 +23,21 @@ const emit = defineEmits<{
 const contentHtml = ref(props.modelValue || '')
 const mode = ref<'visual' | 'code'>('visual')
 
+const fontSizes = [
+  { label: 'Small', value: '14px' },
+  { label: 'Normal', value: '16px' },
+  { label: 'Large', value: '20px' },
+  { label: 'Extra large', value: '28px' },
+]
+
 const editor = useEditor({
   content: props.modelValue || '',
   extensions: [
     StarterKit,
+    TextStyle,
+    FontSize,
+    Color,
+    BackgroundColor,
     Link.configure({
       openOnClick: false,
       HTMLAttributes: {
@@ -35,7 +52,7 @@ const editor = useEditor({
   ],
   editorProps: {
     attributes: {
-      class: 'p-4 min-h-[260px] max-h-[500px] overflow-y-auto focus:outline-none prose dark:prose-invert max-w-none text-gray-900 dark:text-gray-100 text-sm leading-relaxed',
+      class: 'p-4 min-h-[260px] max-h-[500px] overflow-y-auto focus:outline-none prose dark:prose-invert max-w-none text-gray-900 dark:text-gray-100 text-base leading-relaxed',
     },
   },
   onUpdate: () => {
@@ -74,6 +91,52 @@ function toggleItalic() {
 
 function toggleStrike() {
   editor.value?.chain().focus().toggleStrike().run()
+}
+
+function getTextStyleAttribute(attribute: 'fontSize' | 'color' | 'backgroundColor') {
+  return editor.value?.getAttributes('textStyle')[attribute] || ''
+}
+
+function setFontSize(fontSize: string) {
+  const chain = editor.value?.chain().focus()
+  if (!chain) return
+
+  if (fontSize) {
+    chain.setFontSize(fontSize).run()
+  } else {
+    chain.unsetFontSize().run()
+  }
+}
+
+function setTextColor(color: string) {
+  const chain = editor.value?.chain().focus()
+  if (!chain) return
+
+  if (color) {
+    chain.setColor(color).run()
+  } else {
+    chain.unsetColor().run()
+  }
+}
+
+function setBackgroundColor(color: string) {
+  const chain = editor.value?.chain().focus()
+  if (!chain) return
+
+  if (color) {
+    chain.setBackgroundColor(color).run()
+  } else {
+    chain.unsetBackgroundColor().run()
+  }
+}
+
+function handleColorInput(event: Event, type: 'text' | 'background') {
+  const input = event.target as HTMLInputElement
+  if (type === 'text') {
+    setTextColor(input.value)
+  } else {
+    setBackgroundColor(input.value)
+  }
 }
 
 function toggleBulletList() {
@@ -184,6 +247,59 @@ onBeforeUnmount(() => {
 
         <div class="w-px h-4 bg-gray-300 dark:bg-gray-700 mx-1"></div>
 
+        <!-- Text Size & Colors -->
+        <select
+          :value="getTextStyleAttribute('fontSize')"
+          aria-label="Font size"
+          title="Font size"
+          class="toolbar-select"
+          @change="setFontSize(($event.target as HTMLSelectElement).value)"
+        >
+          <option value="">Font size</option>
+          <option v-for="fontSize in fontSizes" :key="fontSize.value" :value="fontSize.value">
+            {{ fontSize.label }}
+          </option>
+        </select>
+
+        <div class="color-control" title="Text color">
+          <span class="color-label">A</span>
+          <input
+            type="color"
+            :value="getTextStyleAttribute('color') || '#111827'"
+            aria-label="Text color"
+            @input="handleColorInput($event, 'text')"
+          />
+        </div>
+        <UButton
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          icon="i-heroicons-x-mark"
+          title="Reset text color"
+          aria-label="Reset text color"
+          @click="setTextColor('')"
+        />
+        <div class="color-control" title="Text background color">
+          <span class="color-label color-label-highlight">A</span>
+          <input
+            type="color"
+            :value="getTextStyleAttribute('backgroundColor') || '#fef08a'"
+            aria-label="Text background color"
+            @input="handleColorInput($event, 'background')"
+          />
+        </div>
+        <UButton
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          icon="i-heroicons-x-mark"
+          title="Reset text background color"
+          aria-label="Reset text background color"
+          @click="setBackgroundColor('')"
+        />
+
+        <div class="w-px h-4 bg-gray-300 dark:bg-gray-700 mx-1"></div>
+
         <!-- Lists & Blocks -->
         <UButton size="xs" :color="editor?.isActive('bulletList') ? 'primary' : 'neutral'"
           :variant="editor?.isActive('bulletList') ? 'solid' : 'ghost'" icon="i-heroicons-list-bullet"
@@ -223,12 +339,12 @@ onBeforeUnmount(() => {
     <EditorContent v-show="mode === 'visual'" :editor="editor" />
 
     <!-- HTML / Tailwind Code Editor View -->
-    <div v-show="mode === 'code'" class="p-3 bg-gray-900 text-gray-100 font-mono text-xs">
+      <div v-show="mode === 'code'" class="p-3 bg-gray-900 text-gray-100 font-mono text-sm">
       <textarea v-model="contentHtml" rows="12"
-        class="w-full bg-transparent border-0 text-amber-300 focus:ring-0 focus:outline-none resize-y font-mono"
+        class="w-full bg-transparent border-0 text-amber-300 focus:ring-0 focus:outline-none resize-y font-mono text-sm"
         placeholder="<div class=&quot;p-4 bg-gray-100 text-slate-800 font-bold rounded-lg&quot;>Custom HTML / Tailwind CSS content...</div>"
         @input="handleCodeInput"></textarea>
-      <div class="text-[10px] text-gray-400 mt-1 flex justify-between">
+      <div class="text-xs text-gray-400 mt-1 flex justify-between">
         <span>Write standard HTML tags &amp; Tailwind CSS utility classes directly.</span>
         <span>TipTap + HTML Mode Active</span>
       </div>
@@ -247,5 +363,52 @@ onBeforeUnmount(() => {
   color: #9ca3af;
   pointer-events: none;
   height: 0;
+}
+
+.toolbar-select,
+.color-control {
+  height: 26px;
+  border: 1px solid rgb(209 213 219);
+  border-radius: 0.375rem;
+  background: white;
+  color: rgb(55 65 81);
+  font-size: 0.75rem;
+}
+
+.toolbar-select {
+  padding: 0 0.375rem;
+}
+
+.color-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.25rem;
+}
+
+.color-label {
+  border-bottom: 2px solid currentColor;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.color-label-highlight {
+  background: #fef08a;
+}
+
+.color-control input {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+
+:global(.dark) .toolbar-select,
+:global(.dark) .color-control {
+  border-color: rgb(55 65 81);
+  background: rgb(31 41 55);
+  color: rgb(229 231 235);
 }
 </style>
