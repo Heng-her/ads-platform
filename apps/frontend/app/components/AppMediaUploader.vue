@@ -39,14 +39,16 @@ function triggerSelect() {
 async function handleFiles(files: FileList | null) {
   if (!files || files.length === 0) return
 
-  const fileArray = Array.from(files)
+  const fileArray = Array.from(files).slice(0, props.multiple ? props.maxFiles : 1)
   const uploadedResults: CloudinaryUploadResponse[] = []
 
   for (const file of fileArray) {
     try {
       const result = await uploadMedia(file, props.folder)
       uploadedResults.push(result)
-      emit('uploaded', result)
+      if (!props.multiple) {
+        emit('uploaded', result)
+      }
     } catch (err: any) {
       emit('error', err.message || 'Upload failed')
       break

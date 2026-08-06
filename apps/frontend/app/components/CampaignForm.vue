@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCampaigns, type CampaignImageItem, type CampaignData } from '~/composables/useCampaigns'
 import { useCategories } from '~/composables/useCategories'
-import type { CloudinaryUploadResponse } from '~/composables/useCloudinaryUpload'
+import { useCloudinaryUpload, type CloudinaryUploadResponse } from '~/composables/useCloudinaryUpload'
 
 const props = withDefaults(
   defineProps<{
@@ -19,10 +19,12 @@ const props = withDefaults(
 const router = useRouter()
 const { getCampaign, createCampaign, updateCampaign, isLoading } = useCampaigns()
 const { categories, fetchCategories } = useCategories()
+const { deleteMediaByUrl } = useCloudinaryUpload()
 
 const isFetching = ref(props.isEdit && !!props.campaignId)
 const submitError = ref<string | null>(null)
 const videoInputTemp = ref('')
+const deletingMediaUrl = ref<string | null>(null)
 
 const form = ref({
   title: '',
@@ -91,13 +93,35 @@ function handleSingleGalleryUploaded(res: CloudinaryUploadResponse) {
   })
 }
 
-function removeGalleryImage(index: number) {
-  form.value.images.splice(index, 1)
+async function removeCoverImage() {
+  const url = form.value.imageUrl
+  if (!url) return
+
+  await removeMedia(url, false, () => {
+    form.value.imageUrl = ''
+    form.value.imageTitle = ''
+    form.value.imageDescription = ''
+  })
 }
 
-function handleVideoUploaded(res: CloudinaryUploadResponse) {
+async function removeGalleryImage(index: number) {
+  const image = form.value.images[index]
+  if (!image) return
+
+  await removeMedia(image.url, false, () => {
+    form.value.images.splice(index, 1)
+  })
+}
+
+async function handleVideoUploaded(res: CloudinaryUploadResponse) {
   if (form.value.videoUrls.length >= 2) {
     alert('Maximum 2 videos allowed per campaign.')
+    try {
+      await deleteMediaByUrl(res.url, true)
+    } catch {
+      // The upload is already over the campaign limit. Keep the user-facing
+      // form unchanged if cleanup cannot be completed.
+    }
     return
   }
   form.value.videoUrls.push(res.url)
@@ -113,8 +137,32 @@ function addVideoUrlDirect() {
   videoInputTemp.value = ''
 }
 
-function removeVideoUrl(index: number) {
-  form.value.videoUrls.splice(index, 1)
+async function removeVideoUrl(index: number) {
+  const url = form.value.videoUrls[index]
+  if (!url) return
+
+  await removeMedia(url, true, () => {
+    form.value.videoUrls.splice(index, 1)
+  })
+}
+
+async function removeMedia(
+  url: string,
+  isVideo: boolean,
+  onRemoved: () => void,
+) {
+  if (deletingMediaUrl.value) return
+
+  deletingMediaUrl.value = url
+  submitError.value = null
+  try {
+    await deleteMediaByUrl(url, isVideo)
+    onRemoved()
+  } catch (err: any) {
+    submitError.value = err.message || 'Failed to delete media'
+  } finally {
+    deletingMediaUrl.value = null
+  }
 }
 
 async function handleSubmit(saveStatus?: 'DRAFT' | 'PUBLIC') {
@@ -319,10 +367,16 @@ onMounted(() => {
             <div class="relative group border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden h-28 bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
               <img :src="form.imageUrl" alt="Cover" class="h-full w-full object-cover" />
               <button
+                type="button"
                 class="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-80 hover:opacity-100"
-                @click="form.imageUrl = ''"
+                :disabled="deletingMediaUrl === form.imageUrl"
+                :title="deletingMediaUrl === form.imageUrl ? 'Deleting media...' : 'Delete cover image'"
+                @click.stop="removeCoverImage"
               >
-                <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+                <UIcon
+                  :name="deletingMediaUrl === form.imageUrl ? 'i-heroicons-arrow-path' : 'i-heroicons-x-mark'"
+                  :class="['w-4 h-4', deletingMediaUrl === form.imageUrl ? 'animate-spin' : '']"
+                />
               </button>
             </div>
             <UInput v-model="form.imageTitle" placeholder="Image Title / Alt text" size="sm" />
@@ -345,10 +399,16 @@ onMounted(() => {
             <div v-for="(img, idx) in form.images" :key="idx" class="relative group border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden p-1 bg-gray-50 dark:bg-gray-950">
               <img :src="img.url" class="w-full h-20 object-cover rounded" />
               <button
+                type="button"
                 class="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-80 hover:opacity-100"
-                @click="removeGalleryImage(idx)"
+                :disabled="deletingMediaUrl === img.url"
+                :title="deletingMediaUrl === img.url ? 'Deleting media...' : 'Delete gallery image'"
+                @click.stop="removeGalleryImage(idx)"
               >
-                <UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+                <UIcon
+                  :name="deletingMediaUrl === img.url ? 'i-heroicons-arrow-path' : 'i-heroicons-x-mark'"
+                  :class="['w-3 h-3', deletingMediaUrl === img.url ? 'animate-spin' : '']"
+                />
               </button>
             </div>
           </div>
@@ -388,16 +448,37 @@ onMounted(() => {
                 </UButton>
               </div>
 
-              <!-- List of attached video URLs -->
-              <div v-if="form.videoUrls.length > 0" class="space-y-2 pt-1">
-                <div v-for="(vUrl, idx) in form.videoUrls" :key="idx" class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-sm">
-                  <div class="flex items-center gap-2 truncate">
-                    <UIcon name="i-heroicons-video-camera" class="w-4 h-4 text-amber-500 shrink-0" />
-                    <span class="truncate font-mono text-sm">{{ vUrl }}</span>
-                  </div>
-                  <button class="text-red-500 hover:text-red-600" @click="removeVideoUrl(idx)">
-                    <UIcon name="i-heroicons-trash" class="w-4 h-4" />
+              <!-- Attached video previews -->
+              <div v-if="form.videoUrls.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div
+                  v-for="(vUrl, idx) in form.videoUrls"
+                  :key="vUrl"
+                  class="relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                >
+                  <video
+                    :src="vUrl"
+                    controls
+                    muted
+                    preload="metadata"
+                    class="w-full h-32 object-cover bg-black"
+                  >
+                    Your browser does not support video previews.
+                  </video>
+                  <button
+                    type="button"
+                    class="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-80 hover:opacity-100"
+                    :disabled="deletingMediaUrl === vUrl"
+                    :title="deletingMediaUrl === vUrl ? 'Deleting media...' : 'Delete video'"
+                    @click.stop="removeVideoUrl(idx)"
+                  >
+                    <UIcon
+                      :name="deletingMediaUrl === vUrl ? 'i-heroicons-arrow-path' : 'i-heroicons-x-mark'"
+                      :class="['w-4 h-4', deletingMediaUrl === vUrl ? 'animate-spin' : '']"
+                    />
                   </button>
+                  <p class="truncate px-2 py-1 text-xs text-gray-500 dark:text-gray-400" :title="vUrl">
+                    {{ vUrl }}
+                  </p>
                 </div>
               </div>
             </div>

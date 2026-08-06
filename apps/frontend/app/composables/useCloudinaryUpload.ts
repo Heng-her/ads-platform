@@ -17,6 +17,61 @@ export interface CloudinaryErrorResponse {
   error: string;
 }
 
+export interface CloudinaryMediaInfo {
+  publicId: string;
+  isVideo: boolean;
+}
+
+/**
+ * Extract the Cloudinary public ID from a delivery URL.
+ *
+ * Campaigns currently persist delivery URLs rather than the upload response,
+ * so this also lets edit forms delete media that was uploaded previously.
+ */
+export function getCloudinaryMediaInfo(url: string): CloudinaryMediaInfo | null {
+  try {
+    const parsedUrl = new URL(url);
+    if (
+      parsedUrl.hostname !== "cloudinary.com" &&
+      !parsedUrl.hostname.endsWith(".cloudinary.com")
+    ) {
+      return null;
+    }
+
+    const pathSegments = parsedUrl.pathname.split("/").filter(Boolean);
+    const uploadIndex = pathSegments.indexOf("upload");
+    if (uploadIndex === -1 || uploadIndex === pathSegments.length - 1) {
+      return null;
+    }
+
+    const uploadTail = pathSegments.slice(uploadIndex + 1);
+    const versionIndex = uploadTail.findIndex((segment) => /^v\d+$/.test(segment));
+    const assetSegments =
+      versionIndex >= 0 ? uploadTail.slice(versionIndex + 1) : uploadTail;
+
+    // A version is expected for Cloudinary upload URLs. Without one, accept
+    // only a path that does not look like a transformation expression.
+    if (versionIndex < 0 && assetSegments.some((segment) => segment.includes("_"))) {
+      return null;
+    }
+
+    const encodedPublicId = assetSegments.join("/");
+    if (!encodedPublicId) return null;
+
+    const publicId = decodeURIComponent(encodedPublicId).replace(
+      /\.[^/.]+$/,
+      "",
+    );
+
+    return {
+      publicId,
+      isVideo: pathSegments[uploadIndex - 1] === "video",
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function useCloudinaryUpload() {
   const config = useRuntimeConfig();
   const authStore = useAuthStore();
@@ -151,9 +206,21 @@ export function useCloudinaryUpload() {
     }
   }
 
+  /**
+   * Delete a media asset using its Cloudinary delivery URL. For direct URLs
+   * from another provider, there is no Cloudinary asset to delete.
+   */
+  async function deleteMediaByUrl(url: string, isVideo?: boolean) {
+    const mediaInfo = getCloudinaryMediaInfo(url);
+    if (!mediaInfo) return { skipped: true };
+
+    return deleteMedia(mediaInfo.publicId, isVideo ?? mediaInfo.isVideo);
+  }
+
   return {
     uploadMedia,
     deleteMedia,
+    deleteMediaByUrl,
     isUploading,
     uploadProgress,
     errorMessage,
