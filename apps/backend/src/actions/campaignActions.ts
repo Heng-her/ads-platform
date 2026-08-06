@@ -8,10 +8,12 @@ import {
   createCampaignSchema,
   updateCampaignSchema,
   updateCampaignStatusSchema,
+  listCampaignsQuerySchema,
 } from "../schemas/campaign";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
 import { checkRateLimit } from "../middlewares/rateLimiter";
+import { ImpressionService } from "../services/impressionService";
 
 export async function handleCampaignAction(
   c: Context<HonoEnv>,
@@ -104,22 +106,41 @@ export async function handleCampaignAction(
 
       return sendSuccess(c, suggestions);
     }
-    case "campaigns/list": {
+    // Support both the named action used by the frontend and the path-style
+    // action used by API clients: { action: "/campaigns" }.
+    case "campaigns/list":
+    case "/campaigns": {
       let currentUser: UserJwtPayload | null = null;
       try {
-        currentUser = await authenticate(c);
+        // The list endpoint is public. Passing strict=true prevents the
+        // development-only admin fallback from changing public visibility.
+        currentUser = await authenticate(c, true);
       } catch {
-        // Public access if no token
+        // Public access if no token or if the optional token is invalid.
       }
-      const page = payloadData?.page ? Number(payloadData.page) : 1;
-      const limit = payloadData?.limit ? Number(payloadData.limit) : 10;
-      const category = payloadData?.category || undefined;
-      const contentType = payloadData?.contentType || undefined;
-      const search = payloadData?.search || undefined;
-      const status =
-        payloadData?.status === "DRAFT" || payloadData?.status === "PUBLIC"
-          ? payloadData.status
-          : undefined;
+
+      const parseResult = listCampaignsQuerySchema.safeParse(payloadData ?? {});
+      if (!parseResult.success) {
+        return sendError(
+          c,
+          parseResult.error.errors[0]?.message || "Validation error",
+          parseResult.error.format(),
+        );
+      }
+
+      const {
+        page,
+        limit,
+        category,
+        contentType,
+        search,
+        status,
+        customCategoryId,
+      } = parseResult.data;
+      // The public infinite-scroll feed is intentionally limited to three
+      // campaigns per request. Authenticated management lists keep their
+      // caller-provided page size.
+      const effectiveLimit = currentUser ? limit : Math.min(limit, 3);
 
       const campaignService = new CampaignService(db);
       const result = await campaignService.getCampaignsList({
@@ -128,10 +149,24 @@ export async function handleCampaignAction(
         contentType,
         search,
         status,
+        customCategoryId,
         page,
-        limit,
+        limit: effectiveLimit,
       });
-      return sendSuccess(c, result);
+
+      // Keep the action response aligned with GET /campaigns. The POST
+      // gateway does not record impressions because it is an action/read
+      // dispatcher rather than the public page-list request itself.
+      const impressionService = new ImpressionService(db, c.env.CACHE_KV);
+      const statsMap = await impressionService.getStatsForCampaigns(
+        result.items.map((item) => item.id),
+      );
+      const itemsWithStats = result.items.map((item) => ({
+        ...item,
+        ...(statsMap[item.id] ?? { totalImpressions: 0, uniqueViewers: 0 }),
+      }));
+
+      return sendSuccess(c, { ...result, items: itemsWithStats });
     }
 
     case "campaigns/create": {

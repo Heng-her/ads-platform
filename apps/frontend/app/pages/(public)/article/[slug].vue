@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import type { InferResponseType } from 'hono/client'
+import sanitizeHtml from 'sanitize-html'
 import { useApi } from '~/composables/useApi'
-import { useAuthStore } from '~/stores/auth'
 import { useCustomSeoMeta, useArticleSeo } from '~/lib/seo/metadata'
 import { extractIdFromSlug, getArticleUrl } from '~/lib/utils'
 
@@ -14,24 +13,45 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
-const authStore = useAuthStore()
-
-type SingleCampaignResponse = InferResponseType<typeof api.campaigns[':id']['$get']>
 
 const slug = computed(() => (route.params.slug as string) || '')
+
+const renderedContent = computed(() => {
+    const content = campaign.value?.content || campaign.value?.description || ''
+    if (!content) return ''
+
+    return sanitizeHtml(content, {
+        allowedTags: [
+            'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'mark',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+            'a', 'img', 'div', 'span', 'video'
+        ],
+        allowedAttributes: {
+            a: ['href', 'target', 'rel', 'class'],
+            img: ['src', 'alt', 'title', 'width', 'height', 'class'],
+            video: ['src', 'controls', 'class'],
+            '*': ['class', 'style']
+        },
+        allowedSchemes: ['http', 'https', 'mailto'],
+        allowedStyles: {
+            '*': {
+                color: [/^#[0-9a-f]{3,8}$/i, /^rgba?\([\d\s,.%]+\)$/i],
+                'background-color': [/^#[0-9a-f]{3,8}$/i, /^rgba?\([\d\s,.%]+\)$/i],
+                'font-size': [/^\d+(?:\.\d+)?(?:px|rem|em|%)$/i],
+                'text-align': [/^(?:left|center|right|justify)$/i]
+            }
+        }
+    })
+})
 
 const { data: campaign, pending: isLoading, error: asyncError } = await useAsyncData(
     `campaign-${slug.value}`,
     async () => {
         if (!slug.value) return null
         const targetId = extractIdFromSlug(slug.value)
-        authStore.initAuth()
-        const headers: Record<string, string> = {}
-        const response = await api.action.$post({
-            json: {
-                action: 'campaigns/get',
-                data: { id: targetId }
-            }
+        const response = await api.campaigns[':id'].$get({
+            param: { id: targetId }
         })
         const json = await response.json()
         if (response.ok && json.code === 1 && json.data) {
@@ -234,10 +254,11 @@ function giveFeedback(val: boolean) {
                     </h3>
 
                     <!-- Render Content / Description -->
-                    <div
-                        class="prose dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed whitespace-pre-line font-medium text-gray-700 dark:text-gray-200">
-                        {{ campaign.content || campaign.description || 'No detailed content provided for this campaign.'
-                        }}
+                    <div v-if="renderedContent" v-html="renderedContent"
+                        class="article-content prose dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed font-medium text-gray-700 dark:text-gray-200">
+                    </div>
+                    <div v-else class="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-200">
+                        No detailed content provided for this campaign.
                     </div>
                 </div>
 
@@ -249,8 +270,6 @@ function giveFeedback(val: boolean) {
             <aside class="lg:col-span-4 space-y-6 sticky top-20">
                 <PublicPerformanceStats :total-impressions="campaign.totalImpressions"
                     :unique-viewers="campaign.uniqueViewers" />
-
-                <PublicPublisherCard :creator="campaign.creator" />
 
                 <PublicAdIntegrationCard :ad-network="campaign.adNetwork" :ad-unit-code="campaign.adUnitCode" />
 
@@ -271,5 +290,25 @@ function giveFeedback(val: boolean) {
 <style scoped>
 .prose {
     color: var(--text);
+}
+
+.article-content :deep(img),
+.article-content :deep(video) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+}
+
+.article-content :deep(a) {
+    color: var(--color-primary-600);
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+.article-content :deep(pre) {
+    overflow-x: auto;
+    border-radius: 0.5rem;
+    padding: 1rem;
 }
 </style>

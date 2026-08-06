@@ -25,7 +25,9 @@ const { categories, fetchCategories } = useCategories()
 
 // ---- Query state, driven entirely by the URL ----
 const page = ref(1)
-const limit = ref(10)
+// Public article feed loads three campaigns at a time. The next page is only
+// requested after the user scrolls to the end of the current response.
+const limit = ref(3)
 
 const searchQuery = computed(() => (route.query.search as string) || '')
 const selectedCategory = computed(() => (route.query.category as string) || '')
@@ -182,9 +184,18 @@ function retry() {
 }
 
 const sentinel = ref<HTMLElement | null>(null)
+const sentinelIsVisible = ref(false)
+const userScrolledSinceLastPage = ref(false)
+
 function loadNextPage() {
-    if (isLoading.value || !hasMore.value) return
+    if (!userScrolledSinceLastPage.value || isLoading.value || !hasMore.value) return
+    userScrolledSinceLastPage.value = false
     fetchCampaigns(page.value + 1, true)
+}
+
+function handleWindowScroll() {
+    userScrolledSinceLastPage.value = true
+    if (sentinelIsVisible.value) loadNextPage()
 }
 
 // Fetch initial campaigns and categories immediately when page setup runs
@@ -192,22 +203,35 @@ fetchCampaigns(1, false)
 fetchCategories()
 
 onMounted(() => {
+    window.addEventListener('scroll', handleWindowScroll, { passive: true })
+
     if (typeof IntersectionObserver !== 'undefined' && sentinel.value) {
         sentinelObserver = new IntersectionObserver((entries) => {
-            if (entries[0]?.isIntersecting) loadNextPage()
-        }, { rootMargin: '400px' })
+            sentinelIsVisible.value = Boolean(entries[0]?.isIntersecting)
+            if (sentinelIsVisible.value) loadNextPage()
+        })
         sentinelObserver.observe(sentinel.value)
     }
 })
 
 onUnmounted(() => {
+    window.removeEventListener('scroll', handleWindowScroll)
     sentinelObserver?.disconnect()
 })
 
 // React to changes in route parameters
 watch([searchQuery, selectedCategory, selectedContentType, selectedCustomCategoryId], () => {
     hasMore.value = true
+    userScrolledSinceLastPage.value = false
     fetchCampaigns(1, false)
+})
+
+// If the user reaches the end while a request is finishing, complete the
+// scroll-triggered request once loading ends. Visibility alone is not enough.
+watch([isLoading, sentinelIsVisible, hasMore], ([loading, isVisible, more]) => {
+    if (!loading && isVisible && more && userScrolledSinceLastPage.value) {
+        loadNextPage()
+    }
 })
 </script>
 
