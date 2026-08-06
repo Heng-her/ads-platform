@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCampaigns, type CampaignImageItem, type CampaignData } from '~/composables/useCampaigns'
 import { useCategories } from '~/composables/useCategories'
 import { useCloudinaryUpload, type CloudinaryUploadResponse } from '~/composables/useCloudinaryUpload'
+import { useCampaignDraft, type CampaignDraftForm } from '~/composables/useCampaignDraft'
+import { useAuthStore } from '~/stores/auth'
 
 const props = withDefaults(
   defineProps<{
@@ -20,11 +22,17 @@ const router = useRouter()
 const { getCampaign, createCampaign, updateCampaign, isLoading } = useCampaigns()
 const { categories, fetchCategories } = useCategories()
 const { deleteMediaByUrl } = useCloudinaryUpload()
+const authStore = useAuthStore()
+const { getDraft, saveDraft, removeDraft } = useCampaignDraft()
 
 const isFetching = ref(props.isEdit && !!props.campaignId)
 const submitError = ref<string | null>(null)
 const videoInputTemp = ref('')
 const deletingMediaUrl = ref<string | null>(null)
+const isRestoringDraft = ref(false)
+const draftStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
+const hasSubmitted = ref(false)
+let draftSaveTimer: ReturnType<typeof setTimeout> | undefined
 
 const form = ref({
   title: '',
@@ -41,6 +49,52 @@ const form = ref({
   adUnitCode: '',
   status: 'PUBLIC' as 'DRAFT' | 'PUBLIC',
 })
+
+const draftKey = computed(() => {
+  const ownerId = authStore.user?.id || 'anonymous'
+  const target = props.isEdit && props.campaignId ? `edit:${props.campaignId}` : 'create'
+  return `creator:${ownerId}:${target}`
+})
+
+function getDraftForm() {
+  return JSON.parse(JSON.stringify(form.value)) as CampaignDraftForm
+}
+
+async function persistDraft() {
+  if (!import.meta.client || isRestoringDraft.value || hasSubmitted.value) return
+
+  draftStatus.value = 'saving'
+  const saved = await saveDraft(draftKey.value, getDraftForm())
+  draftStatus.value = saved ? 'saved' : 'error'
+}
+
+function scheduleDraftSave() {
+  if (!import.meta.client || isRestoringDraft.value) return
+
+  if (draftSaveTimer) clearTimeout(draftSaveTimer)
+  draftSaveTimer = setTimeout(() => {
+    draftSaveTimer = undefined
+    void persistDraft()
+  }, 500)
+}
+
+function applyDraft(draft: CampaignDraftForm) {
+  form.value = {
+    title: draft.title || '',
+    description: draft.description || '',
+    category: draft.category || 'GENERAL',
+    contentType: draft.contentType || 'ARTICLE',
+    content: draft.content || '',
+    imageUrl: draft.imageUrl || '',
+    imageTitle: draft.imageTitle || '',
+    imageDescription: draft.imageDescription || '',
+    images: Array.isArray(draft.images) ? draft.images : [],
+    videoUrls: Array.isArray(draft.videoUrls) ? draft.videoUrls : [],
+    adNetwork: draft.adNetwork || '',
+    adUnitCode: draft.adUnitCode || '',
+    status: draft.status === 'DRAFT' ? 'DRAFT' : 'PUBLIC',
+  }
+}
 
 async function loadData() {
   if (props.isEdit && props.campaignId) {
@@ -67,6 +121,20 @@ async function loadData() {
     } finally {
       isFetching.value = false
     }
+  }
+}
+
+async function initialiseForm() {
+  isRestoringDraft.value = true
+  authStore.initAuth()
+
+  try {
+    await loadData()
+    const draft = await getDraft(draftKey.value)
+    if (draft) applyDraft(draft)
+  } finally {
+    await nextTick()
+    isRestoringDraft.value = false
   }
 }
 
@@ -206,15 +274,25 @@ async function handleSubmit(saveStatus?: 'DRAFT' | 'PUBLIC') {
     } else {
       await createCampaign(payload)
     }
+    hasSubmitted.value = true
+    if (draftSaveTimer) clearTimeout(draftSaveTimer)
+    await removeDraft(draftKey.value)
     router.push('/creator/campaigns')
   } catch (err: any) {
     submitError.value = err.message || 'Failed to save campaign'
   }
 }
 
+watch(form, scheduleDraftSave, { deep: true })
+
 onMounted(() => {
   fetchCategories()
-  loadData()
+  void initialiseForm()
+})
+
+onBeforeUnmount(() => {
+  if (draftSaveTimer) clearTimeout(draftSaveTimer)
+  void persistDraft()
 })
 </script>
 
@@ -237,6 +315,15 @@ onMounted(() => {
         </div>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
           {{ isEdit ? 'Update campaign information, content, and attached media assets.' : 'Compose your campaign content, attach media, and publish to the network.' }}
+        </p>
+        <p v-if="draftStatus === 'saving'" class="text-xs text-gray-400 mt-1">
+          Saving your progress locally...
+        </p>
+        <p v-else-if="draftStatus === 'saved'" class="text-xs text-green-600 dark:text-green-400 mt-1">
+          Progress saved locally. It will return after a page reload.
+        </p>
+        <p v-else-if="draftStatus === 'error'" class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+          Local draft saving is unavailable; keep this page open until you save the campaign.
         </p>
       </div>
 
