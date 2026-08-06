@@ -21,7 +21,7 @@ const { isCollapsed, toggleCollapse } = useSidebar()
 
 <template>
   <aside
-    class="hidden md:flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out shrink-0"
+    class="hidden md:flex h-screen max-h-screen sticky top-0 flex-col overflow-hidden border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out shrink-0"
     :class="[isCollapsed ? 'w-18' : 'w-18 lg:w-64']"
   >
     <!-- Sidebar Header -->
@@ -45,7 +45,7 @@ const { isCollapsed, toggleCollapse } = useSidebar()
     </div>
 
     <!-- Navigation Links -->
-    <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+    <nav class="flex-1 min-h-0 p-3 space-y-1 overflow-y-auto">
       <UTooltip
         v-for="item in links"
         :key="item.to"

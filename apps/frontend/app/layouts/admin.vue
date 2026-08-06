@@ -14,7 +14,7 @@ const { isMobileOpen } = useSidebar()
 </script>
 
 <template>
-  <div class="min-h-screen flex bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+  <div class="h-screen flex overflow-hidden bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
     <!-- Admin Sidebar (Desktop/Tablet) -->
     <AppSidebar
       :links="adminNav"
@@ -25,7 +25,7 @@ const { isMobileOpen } = useSidebar()
     />
 
     <!-- Admin Content Area -->
-    <div class="flex-1 flex flex-col min-w-0">
+    <div class="flex-1 flex flex-col min-w-0 min-h-0">
       <AppHeader class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
         <template #left>
           <!-- Mobile Sidebar Toggle -->
@@ -60,7 +60,7 @@ const { isMobileOpen } = useSidebar()
         </template>
       </AppHeader>
 
-      <main class="flex-1 p-6 bg-gray-50 dark:bg-gray-950 overflow-y-auto">
+      <main class="flex-1 min-h-0 p-6 bg-gray-50 dark:bg-gray-950 overflow-y-auto">
         <slot />
       </main>
     </div>
