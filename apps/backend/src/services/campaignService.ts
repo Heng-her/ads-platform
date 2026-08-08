@@ -89,6 +89,7 @@ export class CampaignService {
       adUnitCode?: string;
       status?: "DRAFT" | "PUBLIC";
     },
+    allowUnlimitedVideos = false,
   ) {
     const campaignId = crypto.randomUUID();
     const newRecord: NewCampaign = {
@@ -103,7 +104,9 @@ export class CampaignService {
       imageTitle: data.imageTitle,
       imageDescription: data.imageDescription,
       images: data.images,
-      videoUrls: data.videoUrls ? data.videoUrls.slice(0, 2) : undefined,
+      videoUrls: data.videoUrls
+        ? (allowUnlimitedVideos ? data.videoUrls : data.videoUrls.slice(0, 2))
+        : undefined,
       adNetwork: data.adNetwork,
       adUnitCode: data.adUnitCode,
       status: data.status || "PUBLIC",
@@ -130,6 +133,7 @@ export class CampaignService {
       adUnitCode?: string;
       status?: "DRAFT" | "PUBLIC";
     },
+    allowUnlimitedVideos = false,
   ) {
     const updateData: Record<string, any> = {
       updatedAt: new Date(),
@@ -148,7 +152,7 @@ export class CampaignService {
       updateData.imageDescription = data.imageDescription;
     if (data.images !== undefined) updateData.images = data.images;
     if (data.videoUrls !== undefined)
-      updateData.videoUrls = data.videoUrls.slice(0, 2);
+      updateData.videoUrls = allowUnlimitedVideos ? data.videoUrls : data.videoUrls.slice(0, 2);
     if (data.adNetwork !== undefined) updateData.adNetwork = data.adNetwork;
     if (data.adUnitCode !== undefined) updateData.adUnitCode = data.adUnitCode;
     if (data.status !== undefined) updateData.status = data.status;

@@ -8,6 +8,7 @@ import { actionRoutes } from "./actionRoutes";
 import { categoryRoutes, contentTypeRoutes } from "./categoryRoutes";
 import { myRoutes } from "./myRoutes";
 import { dashboardRoutes } from "./dashboardRoutes";
+import { mediaRoutes } from "./mediaRoutes";
 
 export const routes = new Hono<HonoEnv>()
   .route("/action", actionRoutes)             // Single Gateway Action Dispatcher
@@ -18,6 +19,7 @@ export const routes = new Hono<HonoEnv>()
   .route("/categories", categoryRoutes)       // System categories (public GET, ADMIN write)
   .route("/content-types", contentTypeRoutes) // Content types (public GET, ADMIN write)
   .route("/my", myRoutes)                     // Creator-scoped: /my/categories
-  .route("/dashboard", dashboardRoutes);      // Dashboard stats: /dashboard/me/stats, /dashboard/admin/stats
+  .route("/dashboard", dashboardRoutes)       // Dashboard stats: /dashboard/me/stats, /dashboard/admin/stats
+  .route("/media", mediaRoutes);
 
 export type AppType = typeof routes;

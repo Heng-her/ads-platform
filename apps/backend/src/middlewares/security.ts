@@ -47,9 +47,15 @@ export const securityHeadersMiddleware = () =>
   });
 
 export const payloadLimitMiddleware = () =>
-  bodyLimit({
-    maxSize: 2 * 1024 * 1024,
-    onError: (c) => {
-      return sendError(c, "Payload size too large. Maximum allowed size is 2MB.", null, 413);
+  async (c: Parameters<MiddlewareHandler<HonoEnv>>[0], next: Parameters<MiddlewareHandler<HonoEnv>>[1]) => {
+    if (new URL(c.req.url).pathname === "/api/media/upload") {
+      return next();
     }
-  });
+
+    return bodyLimit({
+      maxSize: 2 * 1024 * 1024,
+      onError: (context) => {
+        return sendError(context, "Payload size too large. Maximum allowed size is 2MB.", null, 413);
+      },
+    })(c, next);
+  };

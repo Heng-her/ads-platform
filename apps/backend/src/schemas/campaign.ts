@@ -32,7 +32,6 @@ export const createCampaignSchema = z.object({
   images: z.array(imageItemSchema).optional().or(z.null()).transform((arr) => arr ?? undefined),
   videoUrls: z
     .array(optionalUrlSchema)
-    .max(2, "Maximum 2 videos allowed")
     .optional()
     .or(z.null())
     .transform((arr) => arr?.filter((item): item is string => typeof item === "string" && item.length > 0) ?? undefined),
@@ -53,7 +52,6 @@ export const updateCampaignSchema = z.object({
   images: z.array(imageItemSchema).optional().or(z.null()).transform((arr) => arr ?? undefined),
   videoUrls: z
     .array(optionalUrlSchema)
-    .max(2, "Maximum 2 videos allowed")
     .optional()
     .or(z.null())
     .transform((arr) => arr?.filter((item): item is string => typeof item === "string" && item.length > 0) ?? undefined),

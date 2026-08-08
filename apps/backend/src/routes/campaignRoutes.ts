@@ -288,11 +288,14 @@ export const campaignRoutes = new Hono<HonoEnv>()
     async (c) => {
       const userPayload = c.get("user")!;
       const body = c.req.valid("json");
+      if (userPayload.role !== "ADMIN" && body.videoUrls && body.videoUrls.length > 2) {
+        return sendError(c, "Maximum 2 videos allowed per campaign", null, 400);
+      }
       const db = getDb(c.env.DB);
       const campaignService = new CampaignService(db);
       const auditLogService = new AuditLogService(db);
 
-      const campaign = await campaignService.createCampaign(userPayload.id, body);
+      const campaign = await campaignService.createCampaign(userPayload.id, body, userPayload.role === "ADMIN");
       await auditLogService.createLog(
         "CAMPAIGN_CREATE",
         userPayload.id,
@@ -325,11 +328,15 @@ export const campaignRoutes = new Hono<HonoEnv>()
         return sendError(c, "Forbidden", null, 403);
       }
 
+      if (userPayload.role !== "ADMIN" && body.videoUrls && body.videoUrls.length > 2) {
+        return sendError(c, "Maximum 2 videos allowed per campaign", null, 400);
+      }
+
       if (Object.keys(body).length === 0) {
         return sendError(c, "No fields provided for update", null, 400);
       }
 
-      const updated = await campaignService.updateCampaign(id, body);
+      const updated = await campaignService.updateCampaign(id, body, userPayload.role === "ADMIN");
       await auditLogService.createLog(
         "CAMPAIGN_UPDATE",
         userPayload.id,

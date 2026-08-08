@@ -15,6 +15,10 @@ import { getClientIp } from "../utils/ip";
 import { checkRateLimit } from "../middlewares/rateLimiter";
 import { ImpressionService } from "../services/impressionService";
 
+function validateVideoLimit(videoUrls: string[] | undefined, isAdmin: boolean) {
+  return isAdmin || !videoUrls || videoUrls.length <= 2;
+}
+
 export async function handleCampaignAction(
   c: Context<HonoEnv>,
   db: DbClient,
@@ -188,10 +192,14 @@ export async function handleCampaignAction(
           parseResult.error.format(),
         );
       }
+      if (!validateVideoLimit(parseResult.data.videoUrls, currentUser.role === "ADMIN")) {
+        return sendError(c, "Maximum 2 videos allowed per campaign", null, 400);
+      }
       const campaignService = new CampaignService(db);
       const newCampaign = await campaignService.createCampaign(
         currentUser.id,
         parseResult.data,
+        currentUser.role === "ADMIN",
       );
       await auditLogService.createLog(
         "CAMPAIGN_CREATE",
@@ -295,6 +303,9 @@ export async function handleCampaignAction(
           parseResult.error.format(),
         );
       }
+      if (!validateVideoLimit(parseResult.data.videoUrls, currentUser.role === "ADMIN")) {
+        return sendError(c, "Maximum 2 videos allowed per campaign", null, 400);
+      }
       const campaignService = new CampaignService(db);
       const campaign = await campaignService.getCampaignById(campaignId);
       if (!campaign) return sendError(c, "Campaign not found", null, 404);
@@ -307,6 +318,7 @@ export async function handleCampaignAction(
       const updated = await campaignService.updateCampaign(
         campaignId,
         parseResult.data,
+        currentUser.role === "ADMIN",
       );
       await auditLogService.createLog(
         "CAMPAIGN_UPDATE",

@@ -7,6 +7,9 @@ export interface CloudflareBindings {
   JWT_SECRET: string;
   ADMIN_SECRET: string;
   ENVIRONMENT: string;
+  UPLOAD_API_BASE_URL: string;
+  UPLOAD_API_KEY: string;
+  UPLOAD_API_BYPASS_SECRET: string;
 }
 
 export interface UserJwtPayload {

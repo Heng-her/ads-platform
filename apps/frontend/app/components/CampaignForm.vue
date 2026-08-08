@@ -36,6 +36,7 @@ const imagePreviewOpen = ref(false)
 const imagePreviewUrl = ref('')
 const imagePreviewTitle = ref('Image preview')
 let draftSaveTimer: ReturnType<typeof setTimeout> | undefined
+const isAdmin = computed(() => authStore.user?.role === 'admin')
 
 const form = ref({
   title: '',
@@ -193,7 +194,7 @@ async function removeGalleryImage(index: number) {
 }
 
 async function handleVideoUploaded(res: CloudinaryUploadResponse) {
-  if (form.value.videoUrls.length >= 2) {
+  if (!isAdmin.value && form.value.videoUrls.length >= 2) {
     alert('Maximum 2 videos allowed per campaign.')
     try {
       await deleteMediaByUrl(res.url, true)
@@ -208,7 +209,7 @@ async function handleVideoUploaded(res: CloudinaryUploadResponse) {
 
 function addVideoUrlDirect() {
   if (!videoInputTemp.value.trim()) return
-  if (form.value.videoUrls.length >= 2) {
+  if (!isAdmin.value && form.value.videoUrls.length >= 2) {
     alert('Maximum 2 videos allowed per campaign.')
     return
   }
@@ -539,7 +540,7 @@ onBeforeUnmount(() => {
         <!-- Video Upload / Video URLs -->
         <div class="space-y-2 pt-2">
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-            Campaign Videos (Up to 2 MP4 / WebM Videos)
+            Campaign Videos {{ isAdmin ? '(Unlimited MP4 / WebM Videos)' : '(Up to 2 MP4 / WebM Videos)' }}
           </label>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -547,7 +548,7 @@ onBeforeUnmount(() => {
               label="Upload Video"
               accept="video"
               folder="campaigns/videos"
-              hint="Allowed: MP4, MOV, WEBM. (Max 50MB for creators)"
+              :hint="isAdmin ? 'Admin uploads are securely proxied with no campaign video-count limit.' : 'Allowed: MP4, MOV, WEBM. (Max 50MB for creators)'"
               @uploaded="handleVideoUploaded"
             />
 

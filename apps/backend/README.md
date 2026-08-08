@@ -12,6 +12,23 @@ pnpm --filter backend dev
 
 Base URL: `http://localhost:8787`
 
+### Admin Upload Proxy
+
+`POST /api/media/upload?folder=campaigns` and
+`POST /api/media/upload?folder=campaigns/videos` are available only to
+authenticated `ADMIN` users. The proxy forwards the file to the upload service
+with its bypass header held only in Worker secrets; browsers never receive it.
+
+Configure these Worker secrets before deploying:
+
+```bash
+wrangler secret put UPLOAD_API_BASE_URL
+wrangler secret put UPLOAD_API_KEY
+wrangler secret put UPLOAD_API_BYPASS_SECRET
+```
+
+Set `UPLOAD_API_BASE_URL` to the upload service origin, without `/api`.
+
 ---
 
 ## Authentication

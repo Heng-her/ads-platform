@@ -1,4 +1,5 @@
-import { ref } from "vue";
+import { computed, ref } from "vue";
+import { useApi } from "~/composables/useApi";
 import { useAuthStore } from "~/stores/auth";
 
 export interface CloudinaryUploadResponse {
@@ -86,9 +87,8 @@ export function useCloudinaryUpload() {
     (config.public as any)?.cloudinaryBaseUrl ||
     "https://api-upload-image-8ym9.onrender.com";
   const apiKey = (config.public as any)?.cloudinaryApiKey || "crypten-api-key";
-  const bypassSecret = (config.public as any)?.cloudinaryBypassSecret || "";
-
   const isAdmin = computed(() => authStore.user?.role === "admin");
+  const api = useApi();
 
   /**
    * Upload image or video to Cloudinary API
@@ -133,17 +133,17 @@ export function useCloudinaryUpload() {
       "x-api-key": apiKey,
     };
 
-    // If Admin, inject x-api-bypass header for unlimited upload / size limit bypass
-    if (isAdmin.value && bypassSecret) {
-      headers["x-api-bypass"] = bypassSecret;
-    }
-
     try {
-      const response = await fetch(`${baseUrl}/api/${folder}`, {
-        method: "POST",
-        headers,
-        body: formData,
-      });
+      const response = isAdmin.value
+        ? await api.media.upload.$post({
+            query: { folder },
+            body: formData,
+          })
+        : await fetch(`${baseUrl}/api/${folder}`, {
+            method: "POST",
+            headers,
+            body: formData,
+          });
 
       if (!response.ok) {
         let errJson: CloudinaryErrorResponse | null = null;
@@ -184,10 +184,6 @@ export function useCloudinaryUpload() {
     const headers: Record<string, string> = {
       "x-api-key": apiKey,
     };
-
-    if (isAdmin.value && bypassSecret) {
-      headers["x-api-bypass"] = bypassSecret;
-    }
 
     try {
       const encodedId = encodeURIComponent(publicId);
