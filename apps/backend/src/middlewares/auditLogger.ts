@@ -43,17 +43,13 @@ export const globalAuditLogger = (): MiddlewareHandler<HonoEnv> => {
       // Write log asynchronously
       const logPromise = auditLogService.createLog(action, userId, ip, details);
 
-      // Auto-cleanup logs older than 30 days
-      const cleanupPromise = auditLogService.cleanupOldLogs(30);
-
       if (c.executionCtx?.waitUntil) {
-        c.executionCtx.waitUntil(Promise.all([logPromise, cleanupPromise]));
+        c.executionCtx.waitUntil(logPromise);
       } else {
-        await Promise.all([logPromise, cleanupPromise]);
+        await logPromise;
       }
     } catch (err) {
       console.error("Global audit logger error:", err);
     }
   };
 };
-
