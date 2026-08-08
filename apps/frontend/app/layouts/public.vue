@@ -25,6 +25,8 @@ const { categories } = useCategories()
 const searchQuery = ref((route.query.search as string) || '')
 const isSearchFocused = ref(false)
 const searchInputRef = ref<HTMLInputElement | null>(null)
+const isHeaderHidden = ref(false)
+let lastScrollY = 0
 
 // Suggestions state from backend GET /api/campaigns/search/suggestions?q=
 type SuggestionItem = {
@@ -159,20 +161,40 @@ function onKeyDown(e: KeyboardEvent) {
     }
 }
 
+function onWindowScroll() {
+    const currentScrollY = window.scrollY
+
+    if (currentScrollY <= 12) {
+        isHeaderHidden.value = false
+    } else if (currentScrollY > lastScrollY + 8) {
+        isHeaderHidden.value = true
+    } else if (currentScrollY < lastScrollY - 8) {
+        isHeaderHidden.value = false
+    }
+
+    lastScrollY = currentScrollY
+}
+
 onMounted(() => {
+    lastScrollY = window.scrollY
     window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('scroll', onWindowScroll, { passive: true })
 })
 
 onUnmounted(() => {
     if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
     window.removeEventListener('keydown', onKeyDown)
+    window.removeEventListener('scroll', onWindowScroll)
 })
 </script>
 
 <template>
     <div class="min-h-screen w-full flex flex-col bg-background text-foreground">
         <!-- ================= TOP HEADER / NAVIGATION ================= -->
-        <AppHeader>
+        <AppHeader :class="[
+            'will-change-transform transition-transform duration-300 ease-out',
+            isHeaderHidden ? '-translate-y-full' : 'translate-y-0'
+        ]">
             <template #left>
                 <NuxtLink to="/article" class="flex items-center gap-2 text-xl font-bold text-primary group">
                     <div
@@ -196,30 +218,30 @@ onUnmounted(() => {
             <template #right>
                 <div class="flex items-center gap-2 md:gap-3">
                     <!-- Search Input Wrapper -->
-                    <div class="relative w-48 sm:w-64 lg:w-72">
+                    <div class="relative w-52 sm:w-72 lg:w-[22rem]">
                         <div
-                            class="relative flex items-center rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 transition-all duration-200 focus-within:ring-2 focus-within:ring-primary/50">
+                            class="relative flex h-11 items-center rounded-2xl border border-gray-200 bg-gray-50 shadow-sm transition-all duration-200 focus-within:border-primary/50 focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/10 dark:border-gray-800 dark:bg-gray-900 dark:focus-within:bg-gray-950">
                             <!-- Search Icon -->
-                            <span class="pl-3 pr-2 text-gray-400 flex items-center shrink-0">
-                                <UIcon name="i-heroicons-magnifying-glass" class="w-4 h-4 text-primary" />
+                            <span class="flex shrink-0 items-center pl-4 pr-2.5 text-gray-400">
+                                <UIcon name="i-heroicons-magnifying-glass" class="h-4.5 w-4.5 text-primary" />
                             </span>
 
                             <!-- Input -->
                             <input ref="searchInputRef" v-model="searchQuery" type="text"
                                 placeholder="Search campaigns... (/)"
-                                class="w-full bg-transparent py-1.5 pr-7 text-xs outline-none text-gray-900 dark:text-white placeholder-gray-400 font-body"
+                                class="w-full bg-transparent py-2 pr-7 text-sm font-medium text-gray-900 outline-none placeholder:text-gray-400 dark:text-white font-body"
                                 @input="onSearchInput" @focus="isSearchFocused = true" @blur="onSearchBlur"
                                 @keydown.enter="handleSearchSubmit" />
 
                             <!-- Clear button or shortcut -->
-                            <div class="pr-2.5 flex items-center shrink-0">
+                            <div class="flex shrink-0 items-center pr-3">
                                 <button v-if="searchQuery" type="button" @click="clearSearch"
-                                    class="h-4 w-4 rounded-full flex items-center justify-center text-xs text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
+                                    class="flex h-6 w-6 items-center justify-center rounded-lg text-gray-400 transition-all hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white"
                                     title="Clear search">
                                     <UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
                                 </button>
                                 <kbd v-else
-                                    class="hidden md:inline-block px-1 py-0.2 text-[10px] font-mono text-gray-400 bg-gray-200/50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded">
+                                    class="hidden rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-mono text-gray-400 shadow-sm dark:border-gray-700 dark:bg-gray-800 md:inline-block">
                                     /
                                 </kbd>
                             </div>
