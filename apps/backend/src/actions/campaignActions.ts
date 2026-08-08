@@ -206,15 +206,30 @@ export async function handleCampaignAction(
     }
 
     case "campaigns/admin-users": {
-      const currentUser = await authenticate(c);
+      const currentUser = await authenticate(c, true);
       if (currentUser.role !== "ADMIN") return sendError(c, "Forbidden", null, 403);
 
       const campaignService = new CampaignService(db);
       const result = await campaignService.getAdminCampaignUsers({
         page: Number(payloadData?.page) || 1,
-        limit: Math.min(Math.max(Number(payloadData?.limit) || 12, 1), 100),
+        limit: 3,
         search: typeof payloadData?.search === "string" ? payloadData.search.trim() || undefined : undefined,
       });
+      return sendSuccess(c, { ...result, total: result.pagination.total, totalPages: result.pagination.totalPages });
+    }
+
+    case "campaigns/admin-user-campaigns": {
+      const currentUser = await authenticate(c, true);
+      if (currentUser.role !== "ADMIN") return sendError(c, "Forbidden", null, 403);
+      if (typeof payloadData?.userId !== "string" || !payloadData.userId) {
+        return sendError(c, "User ID is required");
+      }
+
+      const campaignService = new CampaignService(db);
+      const result = await campaignService.getAdminUserCampaigns(
+        payloadData.userId,
+        Number(payloadData?.page) || 1,
+      );
       return sendSuccess(c, { ...result, total: result.pagination.total, totalPages: result.pagination.totalPages });
     }
 

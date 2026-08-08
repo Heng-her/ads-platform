@@ -5,7 +5,6 @@ import {
   count,
   or,
   like,
-  inArray,
   notInArray,
   isNull,
 } from "drizzle-orm";
@@ -415,8 +414,9 @@ export class CampaignService {
   }
 
   /**
-   * Admin overview grouped by user. Each user includes their three newest
-   * public posts plus every campaign for the expandable management view.
+   * Lightweight admin overview. It loads three users at a time and only the
+   * three newest public posts for each user. Full campaign lists are fetched
+   * separately when an admin opens a user's campaign panel.
    */
   async getAdminCampaignUsers(options: { page?: number; limit?: number; search?: string } = {}) {
     const { page, limit, offset } = parsePagination(options.page, options.limit);
@@ -448,32 +448,18 @@ export class CampaignService {
       .offset(offset)
       .all();
 
-    const userIds = userItems.map((user) => user.id);
-    const campaignItems = userIds.length
-      ? await this.db
-          .select(campaignSelectShape)
-          .from(campaigns)
-          .leftJoin(users, eq(campaigns.userId, users.id))
-          .where(inArray(campaigns.userId, userIds))
-          .orderBy(desc(campaigns.createdAt))
-          .all()
-      : [];
-
-    const campaignsByUser = new Map<string, typeof campaignItems>();
-    for (const campaign of campaignItems) {
-      const userCampaigns = campaignsByUser.get(campaign.userId) ?? [];
-      userCampaigns.push(campaign);
-      campaignsByUser.set(campaign.userId, userCampaigns);
-    }
+    const publicPostsByUser = await Promise.all(
+      userItems.map(async (user) => ({
+        userId: user.id,
+        posts: (await this.getUserCampaigns(user.id, { page: 1, limit: 3, status: "PUBLIC" })).items,
+      })),
+    );
+    const publicPostsMap = new Map(publicPostsByUser.map(({ userId, posts }) => [userId, posts]));
 
     const items = userItems.map((user) => {
-      const userCampaigns = campaignsByUser.get(user.id) ?? [];
       return {
         ...user,
-        campaigns: userCampaigns,
-        publicPosts: userCampaigns
-          .filter((campaign) => campaign.status === "PUBLIC" && !campaign.isDeleted)
-          .slice(0, 3),
+        publicPosts: publicPostsMap.get(user.id) ?? [],
       };
     });
 
@@ -481,5 +467,10 @@ export class CampaignService {
       items,
       pagination: buildPaginationMeta(countResult?.total || 0, page, limit),
     };
+  }
+
+  /** Admin-only caller uses this paginated method after expanding one user. */
+  async getAdminUserCampaigns(userId: string, page = 1) {
+    return this.getUserCampaigns(userId, { page, limit: 3 });
   }
 }

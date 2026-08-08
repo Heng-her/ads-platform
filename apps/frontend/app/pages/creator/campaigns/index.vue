@@ -8,7 +8,7 @@ definePageMeta({
   layout: 'creator'
 })
 
-const { campaignsList, isLoading, fetchMyCampaigns, updateCampaignStatus, deleteCampaign } = useCampaigns()
+const { campaignsList, totalPages, isLoading, fetchMyCampaigns, updateCampaignStatus, deleteCampaign } = useCampaigns()
 const { categories } = useCategories()
 
 const searchQuery = ref('')
@@ -24,7 +24,7 @@ const updatingStatusIds = ref<Set<string>>(new Set())
 async function loadData() {
   await fetchMyCampaigns({
     page: currentPage.value,
-    limit: 10,
+    limit: 3,
     search: searchQuery.value || undefined,
     category: selectedCategory.value || undefined,
     status: selectedStatus.value === 'ALL' ? undefined : selectedStatus.value,
@@ -218,6 +218,14 @@ onMounted(() => {
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div v-if="totalPages > 1" class="flex items-center justify-between">
+      <span class="text-xs text-gray-500 dark:text-gray-400">Page {{ currentPage }} of {{ totalPages }}</span>
+      <div class="flex gap-2">
+        <UButton color="neutral" variant="outline" size="xs" :disabled="currentPage === 1" @click="currentPage--; loadData()">Previous</UButton>
+        <UButton color="neutral" variant="outline" size="xs" :disabled="currentPage === totalPages" @click="currentPage++; loadData()">Next</UButton>
       </div>
     </div>
 

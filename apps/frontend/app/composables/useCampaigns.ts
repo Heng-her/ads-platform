@@ -42,7 +42,6 @@ export interface AdminCampaignUser {
   role: 'ADMIN' | 'CREATOR';
   status: 'ACTIVE' | 'SUSPENDED' | 'PENDING';
   createdAt: string;
-  campaigns: CampaignData[];
   publicPosts: CampaignData[];
 }
 
@@ -139,7 +138,7 @@ export function useCampaigns() {
     }
   }
 
-  async function fetchAdminCampaignUsers(options: { page?: number; limit?: number; search?: string } = {}) {
+  async function fetchAdminCampaignUsers(options: { page?: number; search?: string } = {}) {
     isLoading.value = true;
     error.value = null;
     try {
@@ -147,6 +146,24 @@ export function useCampaigns() {
       const body = await response.json();
       if (!response.ok || body.code !== 1 || !body.data) throw new Error(body.msg || 'Failed to load users');
       return body.data as { items: AdminCampaignUser[]; total: number; totalPages: number };
+    } catch (err: any) {
+      error.value = err.message || 'An error occurred';
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function fetchAdminUserCampaigns(userId: string, page = 1) {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const response = await api.action.$post({
+        json: { action: 'campaigns/admin-user-campaigns', data: { userId, page } },
+      });
+      const body = await response.json();
+      if (!response.ok || body.code !== 1 || !body.data) throw new Error(body.msg || 'Failed to load user campaigns');
+      return body.data as { items: CampaignData[]; total: number; totalPages: number };
     } catch (err: any) {
       error.value = err.message || 'An error occurred';
       throw err;
@@ -316,6 +333,7 @@ export function useCampaigns() {
     fetchCampaigns,
     fetchMyCampaigns,
     fetchAdminCampaignUsers,
+    fetchAdminUserCampaigns,
     getCampaign,
     createCampaign,
     updateCampaign,

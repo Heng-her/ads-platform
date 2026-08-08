@@ -5,13 +5,15 @@ import { getArticleUrl } from '~/lib/utils'
 
 definePageMeta({ layout: 'admin' })
 
-const { isLoading, fetchAdminCampaignUsers, updateCampaignStatus, deleteCampaign } = useCampaigns()
+const { isLoading, fetchAdminCampaignUsers, fetchAdminUserCampaigns, updateCampaignStatus, deleteCampaign } = useCampaigns()
 const users = ref<AdminCampaignUser[]>([])
 const searchQuery = ref('')
 const currentPage = ref(1)
 const totalUsers = ref(0)
 const totalPages = ref(1)
 const expandedUserIds = ref<Set<string>>(new Set())
+const campaignPages = ref<Record<string, { items: CampaignData[]; page: number; totalPages: number }>>({})
+const loadingCampaignUserIds = ref<Set<string>>(new Set())
 const updatingStatusIds = ref<Set<string>>(new Set())
 const deletingCampaignIds = ref<Set<string>>(new Set())
 
@@ -20,7 +22,6 @@ const userLabel = computed(() => `${totalUsers.value} ${totalUsers.value === 1 ?
 async function loadData() {
   const data = await fetchAdminCampaignUsers({
     page: currentPage.value,
-    limit: 12,
     search: searchQuery.value || undefined,
   })
   users.value = data.items
@@ -28,9 +29,34 @@ async function loadData() {
   totalPages.value = data.totalPages
 }
 
-function toggleUser(userId: string) {
+function campaignsFor(userId: string) {
+  return campaignPages.value[userId]?.items ?? []
+}
+
+function campaignPageFor(userId: string) {
+  return campaignPages.value[userId]
+}
+
+async function loadUserCampaigns(userId: string, page = 1) {
+  loadingCampaignUserIds.value = new Set(loadingCampaignUserIds.value).add(userId)
+  try {
+    const data = await fetchAdminUserCampaigns(userId, page)
+    campaignPages.value = { ...campaignPages.value, [userId]: { items: data.items, page, totalPages: data.totalPages } }
+  } finally {
+    const next = new Set(loadingCampaignUserIds.value)
+    next.delete(userId)
+    loadingCampaignUserIds.value = next
+  }
+}
+
+async function toggleUser(userId: string) {
   const next = new Set(expandedUserIds.value)
-  next.has(userId) ? next.delete(userId) : next.add(userId)
+  if (next.has(userId)) {
+    next.delete(userId)
+  } else {
+    next.add(userId)
+    if (!campaignPages.value[userId]) await loadUserCampaigns(userId)
+  }
   expandedUserIds.value = next
 }
 
@@ -55,7 +81,10 @@ async function removeCampaign(user: AdminCampaignUser, campaign: CampaignData) {
   deletingCampaignIds.value = new Set(deletingCampaignIds.value).add(campaign.id)
   try {
     await deleteCampaign(campaign.id)
-    user.campaigns = user.campaigns.filter((item) => item.id !== campaign.id)
+    const userCampaignPage = campaignPages.value[user.id]
+    if (userCampaignPage) {
+      campaignPages.value = { ...campaignPages.value, [user.id]: { ...userCampaignPage, items: userCampaignPage.items.filter((item) => item.id !== campaign.id) } }
+    }
     user.publicPosts = user.publicPosts.filter((item) => item.id !== campaign.id)
   } catch (err: any) {
     alert(err.message || 'Failed to delete campaign')
@@ -68,6 +97,8 @@ async function removeCampaign(user: AdminCampaignUser, campaign: CampaignData) {
 
 watch(searchQuery, () => {
   currentPage.value = 1
+  expandedUserIds.value = new Set()
+  campaignPages.value = {}
   loadData()
 })
 
@@ -112,11 +143,11 @@ onMounted(loadData)
                 <h2 class="truncate font-semibold text-gray-900 dark:text-gray-100">{{ user.username }}</h2>
                 <UBadge :color="user.status === 'ACTIVE' ? 'success' : 'warning'" variant="soft" size="xs">{{ user.status }}</UBadge>
               </div>
-              <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ user.email }} · {{ user.campaigns.length }} campaigns</p>
+              <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ user.email }} · Campaigns load on demand</p>
             </div>
           </div>
           <UButton color="neutral" variant="outline" size="sm" :icon="expandedUserIds.has(user.id) ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" @click="toggleUser(user.id)">
-            {{ expandedUserIds.has(user.id) ? 'Hide all campaigns' : `View all campaigns (${user.campaigns.length})` }}
+            {{ expandedUserIds.has(user.id) ? 'Hide campaigns' : 'View campaigns' }}
           </UButton>
         </header>
 
@@ -143,16 +174,24 @@ onMounted(loadData)
             <table class="w-full min-w-[720px] text-left text-xs">
               <thead class="bg-gray-50 text-gray-500 dark:bg-gray-950 dark:text-gray-400"><tr><th class="px-4 py-3">Campaign</th><th class="px-4 py-3">Category</th><th class="px-4 py-3">Created</th><th class="px-4 py-3">Visibility</th><th class="px-4 py-3 text-right">Actions</th></tr></thead>
               <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                <tr v-for="campaign in user.campaigns" :key="campaign.id" class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <tr v-for="campaign in campaignsFor(user.id)" :key="campaign.id" class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
                   <td class="px-4 py-3"><div class="flex items-center gap-3"><img v-if="campaign.imageUrl" :src="campaign.imageUrl" alt="" class="h-9 w-9 rounded object-cover" /><div v-else class="h-9 w-9 rounded bg-gray-100 dark:bg-gray-800" /><span class="max-w-64 truncate font-medium text-gray-900 dark:text-gray-100">{{ campaign.title }}</span></div></td>
                   <td class="px-4 py-3 text-gray-500">{{ campaign.category || 'General' }}</td>
                   <td class="px-4 py-3 text-gray-500">{{ new Date(campaign.createdAt).toLocaleDateString() }}</td>
                   <td class="px-4 py-3"><CampaignStatusToggle :title="campaign.title" :status="campaign.status" :disabled="updatingStatusIds.has(campaign.id)" size="xs" @change="handleStatusToggle(campaign, $event)" /></td>
                   <td class="px-4 py-3"><CampaignRowActions :article-url="getArticleUrl(campaign)" :edit-url="`/creator/campaigns/${campaign.id}/edit`" :deleting="deletingCampaignIds.has(campaign.id)" @delete="removeCampaign(user, campaign)" /></td>
                 </tr>
-                <tr v-if="!user.campaigns.length"><td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">No campaigns created by this user.</td></tr>
+                <tr v-if="loadingCampaignUserIds.has(user.id)"><td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">Loading campaigns...</td></tr>
+                <tr v-else-if="!campaignsFor(user.id).length"><td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">No campaigns created by this user.</td></tr>
               </tbody>
             </table>
+          </div>
+          <div v-if="campaignPageFor(user.id) && campaignPageFor(user.id)!.totalPages > 1" class="flex items-center justify-between border-t border-gray-100 px-4 py-3 text-xs dark:border-gray-800">
+            <span class="text-gray-500">Campaign page {{ campaignPageFor(user.id)!.page }} of {{ campaignPageFor(user.id)!.totalPages }}</span>
+            <div class="flex gap-2">
+              <UButton color="neutral" variant="outline" size="xs" :disabled="campaignPageFor(user.id)!.page === 1" @click="loadUserCampaigns(user.id, campaignPageFor(user.id)!.page - 1)">Previous</UButton>
+              <UButton color="neutral" variant="outline" size="xs" :disabled="campaignPageFor(user.id)!.page === campaignPageFor(user.id)!.totalPages" @click="loadUserCampaigns(user.id, campaignPageFor(user.id)!.page + 1)">Next</UButton>
+            </div>
           </div>
         </section>
       </article>
