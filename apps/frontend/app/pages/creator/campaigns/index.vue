@@ -20,6 +20,21 @@ const deleteModalOpen = ref(false)
 const selectedCampaignToDelete = ref<CampaignData | null>(null)
 const isDeleting = ref(false)
 const updatingStatusIds = ref<Set<string>>(new Set())
+const imagePreviewOpen = ref(false)
+const imagePreviewUrl = ref('')
+const imagePreviewTitle = ref('Campaign image')
+
+function getPreviewImage(item: CampaignData) {
+  return item.imageUrl || item.images?.[0]?.url || ''
+}
+
+function openImagePreview(item: CampaignData) {
+  const imageUrl = getPreviewImage(item)
+  if (!imageUrl) return
+  imagePreviewUrl.value = imageUrl
+  imagePreviewTitle.value = item.imageTitle || item.images?.[0]?.title || item.title || 'Campaign image'
+  imagePreviewOpen.value = true
+}
 
 async function loadData() {
   await fetchMyCampaigns({
@@ -175,8 +190,15 @@ onMounted(() => {
               class="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
               <td class="py-3 px-4">
                 <div class="flex items-center gap-3">
-                  <img v-if="item.imageUrl" :src="item.imageUrl" alt="Cover"
-                    class="w-10 h-10 object-cover rounded border border-gray-200 dark:border-gray-700 shrink-0" />
+                  <button v-if="getPreviewImage(item)" type="button" @click="openImagePreview(item)"
+                    class="group relative h-10 w-10 shrink-0 overflow-hidden rounded border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    :aria-label="`Open ${item.title} image preview`">
+                    <img :src="getPreviewImage(item)" :alt="item.imageTitle || item.title"
+                      class="h-full w-full object-cover transition-transform duration-200 group-hover:scale-110" />
+                    <span class="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity group-hover:opacity-100">
+                      <UIcon name="i-heroicons-magnifying-glass-plus" class="h-4 w-4 text-white" />
+                    </span>
+                  </button>
                   <div v-else
                     class="w-10 h-10 rounded bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 shrink-0">
                     <UIcon name="i-heroicons-photo" class="w-5 h-5" />
@@ -245,6 +267,15 @@ onMounted(() => {
               Confirm Delete
             </UButton>
           </div>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="imagePreviewOpen" :title="imagePreviewTitle"
+      :ui="{ content: 'w-[calc(100vw-2rem)] max-w-[90vw] sm:max-w-3xl' }">
+      <template #body>
+        <div class="flex h-[68vh] min-h-[16rem] items-center justify-center overflow-auto bg-gray-950 p-2 sm:p-4">
+          <img :src="imagePreviewUrl" :alt="imagePreviewTitle" class="max-h-full max-w-full object-contain" />
         </div>
       </template>
     </UModal>
