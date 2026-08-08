@@ -371,7 +371,7 @@ watch([isLoading, sentinelIsVisible, hasMore], ([loading, isVisible, more]) => {
             </section>
 
             <!-- ================= RIGHT RAIL: ADS & SPONSORED CAMPAIGNS (Desktop Sticky) ================= -->
-            <aside class="hidden lg:flex lg:flex-col lg:w-[280px] shrink-0 gap-5 sticky top-20">
+            <aside class="hidden lg:flex lg:flex-col lg:w-[350px] shrink-0 gap-5 sticky top-20">
                 <PublicSponsoredAds :sponsored-ads="sponsoredAds" />
                 <PublicTrendingWidget :item="trendingItem" />
                 <PublicRelatedTopics :topics="relatedTopics" @select-topic="(t) => setQuery({ category: t })" />
