@@ -1,4 +1,4 @@
-import { ref, onMounted } from "vue";
+import { onMounted } from "vue";
 import { useApi } from "~/composables/useApi";
 
 export type CategoryItem = {
@@ -8,16 +8,20 @@ export type CategoryItem = {
 };
 
 /**
- * Shared category list composable. Always fetches from POST /api/action { action: "categories/list" }
- * whenever categories state is empty.
+ * Shared category list composable. Categories are loaded once in the browser and
+ * retained in Nuxt state for the rest of the session.
  */
 export function useCategories() {
   const categories = useState<CategoryItem[]>(
     "categories-shared-data",
     () => [],
   );
-  // Use a local ref for loading state so it doesn't freeze at true during SSR state serialization
-  const isLoadingCategories = ref(false);
+  // Loading state must be shared too: several components can use this composable
+  // during the same page render.
+  const isLoadingCategories = useState<boolean>(
+    "categories-shared-loading",
+    () => false,
+  );
 
   async function fetchCategories(force = false) {
     if ((categories.value.length > 0 && !force) || isLoadingCategories.value) {
@@ -43,16 +47,13 @@ export function useCategories() {
     }
   }
 
-  // Call fetchCategories during setup if empty
-  if (categories.value.length === 0) {
-    fetchCategories();
-  }
-
-  // Ensure categories are fetched on client mount if still empty
+  // Do not request during SSR: this asynchronous request is not awaited by SSR,
+  // so hydration would request it again. Mounted components share the loading
+  // guard above, leaving one request per refresh.
   if (import.meta.client) {
     onMounted(() => {
       if (categories.value.length === 0) {
-        fetchCategories(true);
+        fetchCategories();
       }
     });
   }
