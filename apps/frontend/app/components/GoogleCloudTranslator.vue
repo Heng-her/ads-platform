@@ -1,13 +1,10 @@
 <template>
   <ClientOnly>
-    <div
-      v-if="isTranslating"
+    <div v-if="isTranslating"
       class="fixed bottom-5 left-1/2 z-[9999] flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#0F75BC] px-4 py-2 text-sm font-medium text-white shadow-lg"
-      data-no-google-translate
-      role="status"
-      aria-live="polite"
-    >
-      <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />
+      data-no-google-translate role="status" aria-live="polite">
+      <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+        aria-hidden="true" />
       <span>Translating...</span>
     </div>
   </ClientOnly>
@@ -35,6 +32,76 @@ const DEBOUNCE_MS = 250
 const TEXT_CACHE = new Map<string, string>()
 const originalTextValues = new WeakMap<Text, string>()
 const originalAttributeValues = new WeakMap<Element, Partial<Record<(typeof ATTRIBUTES_TO_TRANSLATE)[number], string>>>()
+
+// ============================================================================
+// IndexedDB Persistent Storage Engine for Fast Refresh & Instant Load
+// ============================================================================
+const DB_NAME = "translation_cache_db"
+const STORE_NAME = "translations"
+const DB_VERSION = 1
+
+function openTranslationDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined" || !("indexedDB" in window)) {
+      return reject(new Error("IndexedDB not supported"))
+    }
+    const request = indexedDB.open(DB_NAME, DB_VERSION)
+
+    request.onupgradeneeded = () => {
+      const db = request.result
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME)
+      }
+    }
+
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+}
+
+async function loadFromIndexedDbKeys(keys: string[]): Promise<Map<string, string>> {
+  const result = new Map<string, string>()
+  if (keys.length === 0) return result
+  try {
+    const db = await openTranslationDb()
+    const tx = db.transaction(STORE_NAME, "readonly")
+    const store = tx.objectStore(STORE_NAME)
+
+    await Promise.all(
+      keys.map(
+        (key) =>
+          new Promise<void>((resolve) => {
+            const req = store.get(key)
+            req.onsuccess = () => {
+              if (req.result) {
+                result.set(key, req.result)
+              }
+              resolve()
+            }
+            req.onerror = () => resolve()
+          })
+      )
+    )
+  } catch {
+    // Fallback gracefully if IndexedDB is restricted or unavailable
+  }
+  return result
+}
+
+async function saveToIndexedDbEntries(entries: Map<string, string>): Promise<void> {
+  if (entries.size === 0) return
+  try {
+    const db = await openTranslationDb()
+    const tx = db.transaction(STORE_NAME, "readwrite")
+    const store = tx.objectStore(STORE_NAME)
+
+    entries.forEach((value, key) => {
+      store.put(value, key)
+    })
+  } catch {
+    // Fallback gracefully
+  }
+}
 
 let timeoutId: ReturnType<typeof setTimeout> | null = null
 let requestId = 0
@@ -115,28 +182,53 @@ function collectAttributeElements(root: ParentNode) {
 
 async function translateTexts(texts: string[], target: string) {
   const translations = new Map<string, string>()
+  const keysNeeded = Array.from(new Set(texts.map((t) => `${target}:${t}`)))
+
+  // 1. Check in-memory cache first
+  const missingKeysForMem = keysNeeded.filter((key) => !TEXT_CACHE.has(key))
+
+  // 2. Load missing keys from IndexedDB if available
+  if (missingKeysForMem.length > 0) {
+    const dbResults = await loadFromIndexedDbKeys(missingKeysForMem)
+    dbResults.forEach((val, key) => {
+      TEXT_CACHE.set(key, val)
+    })
+  }
+
+  // 3. Determine remaining texts that still need API translation
   const missingTexts = Array.from(new Set(texts.filter((text) => !TEXT_CACHE.has(`${target}:${text}`))))
 
-  for (let index = 0; index < missingTexts.length; index += BATCH_SIZE) {
-    const batch = missingTexts.slice(index, index + BATCH_SIZE)
-    try {
-      const data = await $fetch<{ translations?: string[]; error?: string }>("/api/translate", {
-        method: "POST",
-        body: {
-          texts: batch,
-          target,
-        },
-      })
+  // 4. If any texts are missing, translate via API in background batches and save to IndexedDB
+  if (missingTexts.length > 0) {
+    const newDbEntries = new Map<string, string>()
+    for (let index = 0; index < missingTexts.length; index += BATCH_SIZE) {
+      const batch = missingTexts.slice(index, index + BATCH_SIZE)
+      try {
+        const data = await $fetch<{ translations?: string[]; error?: string }>("/api/translate", {
+          method: "POST",
+          body: {
+            texts: batch,
+            target,
+          },
+        })
 
-      if (data.error) {
-        throw new Error(data.error)
+        if (data.error) {
+          throw new Error(data.error)
+        }
+
+        batch.forEach((text, batchIndex) => {
+          const translated = decodeHtmlEntities(data.translations?.[batchIndex] || text)
+          const cacheKey = `${target}:${text}`
+          TEXT_CACHE.set(cacheKey, translated)
+          newDbEntries.set(cacheKey, translated)
+        })
+      } catch (error) {
+        console.error("Translation batch failed:", error)
       }
+    }
 
-      batch.forEach((text, batchIndex) => {
-        TEXT_CACHE.set(`${target}:${text}`, decodeHtmlEntities(data.translations?.[batchIndex] || text))
-      })
-    } catch (error) {
-      console.error("Translation batch failed:", error)
+    if (newDbEntries.size > 0) {
+      void saveToIndexedDbEntries(newDbEntries)
     }
   }
 
@@ -222,12 +314,16 @@ async function translatePage() {
   }
 
   try {
-    isTranslating.value = true
+    // Only show translating indicator if there are texts missing in cache
+    const uncachedTexts = sourceValues.filter((text) => !TEXT_CACHE.has(`${targetLang}:${text}`))
+    if (uncachedTexts.length > 0) {
+      isTranslating.value = true
+    }
+
     if (typeof document !== "undefined") {
       document.documentElement.lang = targetLang
     }
 
-    // Translate page title and head meta tags if present
     if (typeof document !== "undefined" && document.title && isMeaningfulText(document.title)) {
       sourceValues.push(document.title.trim())
     }

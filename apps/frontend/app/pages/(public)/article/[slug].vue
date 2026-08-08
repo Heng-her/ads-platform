@@ -209,7 +209,7 @@ watch(campaign, (currentCampaign) => {
 
             <div v-if="campaign"
                 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-600 dark:text-gray-300">
-                <LanguageSwitcher v-model="selectedLocale" />
+                <!-- <LanguageSwitcher v-model="selectedLocale" /> -->
                 <span>Category:</span>
                 <NuxtLink :to="`/article?category=${encodeURIComponent(campaign.category || '')}`"
                     class="text-primary hover:underline font-bold">
