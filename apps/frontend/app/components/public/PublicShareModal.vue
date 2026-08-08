@@ -67,79 +67,77 @@ async function triggerNativeShare() {
       <!-- Backdrop click to close -->
       <div class="absolute inset-0" @click="closeModal" />
 
-      <!-- Modal Card -->
-      <div
-        class="relative w-full max-w-md bg-white dark:bg-[#122131] border border-gray-200 dark:border-[#273647] rounded-3xl p-6 shadow-2xl space-y-5 z-10 text-gray-900 dark:text-white">
+      <section role="dialog" aria-modal="true" aria-labelledby="share-modal-title"
+        class="relative z-10 w-full max-w-lg overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-2xl dark:border-white/10 dark:bg-[#102131]">
+        <div class="absolute inset-x-0 top-0 h-28 bg-gradient-to-br from-primary/25 via-primary/10 to-transparent" />
 
-        <!-- Modal Header -->
-        <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-[#273647]">
-          <h3 class="font-extrabold text-base flex items-center gap-2">
-            <UIcon name="i-heroicons-share" class="w-5 h-5 text-primary" />
-            Share to Social Platforms
-          </h3>
-          <button @click="closeModal"
-            class="p-1 rounded-xl text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-            <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
-          </button>
-        </div>
-
-        <!-- Article Title Preview -->
-        <div class="p-3 rounded-2xl bg-gray-50 dark:bg-[#0d1c2d] border border-gray-100 dark:border-[#273647]/60">
-          <p class="text-xs font-semibold line-clamp-2 text-gray-700 dark:text-gray-300">
-            {{ articleTitle }}
-          </p>
-        </div>
-
-        <!-- Social Platforms Grid (Using Image Assets from /icon) -->
-        <div>
-          <span class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 block">
-            Select Platform
-          </span>
-          <div class="grid grid-cols-5 gap-3">
-            <a v-for="platform in sharePlatforms" :key="platform.name" :href="platform.shareUrl" target="_blank"
-              rel="noopener noreferrer"
-              class="flex flex-col items-center gap-2 p-2 rounded-2xl transition-all duration-200 group hover:scale-105"
-              :title="`Share on ${platform.name}`">
-              <div
-                class="w-12 h-12 rounded-2xl flex items-center justify-center bg-gray-100 dark:bg-[#0d1c2d] border border-gray-200 dark:border-[#273647] shadow-sm transition-all group-hover:shadow-md group-hover:border-primary/50 overflow-hidden p-2">
-                <img :src="platform.iconImg" :alt="platform.name"
-                  class="w-full h-full object-contain transition-transform group-hover:scale-110" />
+        <div class="relative p-5 sm:p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-gray-950 shadow-lg shadow-primary/20">
+                <UIcon name="i-heroicons-share" class="h-5 w-5" />
               </div>
-              <span
-                class="text-[10px] font-bold text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
-                {{ platform.name.split(' ')[0] }}
-              </span>
-            </a>
-          </div>
-        </div>
-
-        <!-- Native Share Button (Mobile/Supported devices) -->
-        <button v-if="hasNativeShare" @click="triggerNativeShare"
-          class="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-[#1c2b3c] hover:bg-gray-200 dark:hover:bg-gray-700/80 border border-gray-200 dark:border-[#273647] flex items-center justify-center gap-2 transition-all shadow-sm">
-          <UIcon name="i-heroicons-device-phone-mobile" class="w-4 h-4 text-primary" />
-          <span>Share via Device Apps (Telegram, etc.)</span>
-        </button>
-
-        <!-- Copy Link Section -->
-        <div class="pt-2 border-t border-gray-100 dark:border-[#273647]">
-          <span class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 block">
-            Direct Link
-          </span>
-          <div class="flex items-center gap-2">
-            <input readonly :value="fullUrl"
-              class="flex-1 bg-gray-50 dark:bg-[#0d1c2d] border border-gray-200 dark:border-[#273647] text-xs font-medium rounded-xl px-3 py-2 text-gray-700 dark:text-gray-300 focus:outline-none select-all" />
-            <button @click="copyLink"
-              class="px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 shadow-sm"
-              :class="copied
-                ? 'bg-emerald-500 text-white'
-                : 'bg-primary text-gray-950 hover:bg-primary-400'">
-              <UIcon :name="copied ? 'i-heroicons-check' : 'i-heroicons-link'" class="w-4 h-4" />
-              <span>{{ copied ? 'Copied!' : 'Copy' }}</span>
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Send it onward</p>
+                <h3 id="share-modal-title" class="mt-0.5 text-lg font-extrabold text-gray-950 dark:text-white">Share this article</h3>
+              </div>
+            </div>
+            <button @click="closeModal" aria-label="Close share dialog"
+              class="rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white">
+              <UIcon name="i-heroicons-x-mark" class="h-5 w-5" />
             </button>
           </div>
-        </div>
 
-      </div>
+          <div class="mt-6 rounded-2xl border border-gray-200/80 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
+            <div class="flex items-start gap-3">
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                <UIcon name="i-heroicons-document-text" class="h-4 w-4" />
+              </div>
+              <div class="min-w-0">
+                <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">You’re sharing</p>
+                <p class="mt-1 line-clamp-2 text-sm font-bold leading-5 text-gray-800 dark:text-gray-100">{{ articleTitle }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <p class="text-xs font-bold text-gray-700 dark:text-gray-200">Choose a platform</p>
+            <div class="mt-3 grid grid-cols-5 gap-2 sm:gap-3">
+              <a v-for="platform in sharePlatforms" :key="platform.name" :href="platform.shareUrl" target="_blank"
+                rel="noopener noreferrer" :title="`Share on ${platform.name}`"
+                class="group flex min-w-0 flex-col items-center gap-2 rounded-2xl px-1 py-2 text-center transition-all duration-200 hover:-translate-y-1 hover:bg-gray-50 dark:hover:bg-white/5">
+                <span class="flex h-12 w-12 items-center justify-center rounded-2xl border border-gray-200 bg-white p-2 shadow-sm transition-all group-hover:border-primary/40 group-hover:shadow-md dark:border-white/10 dark:bg-[#162a3d]">
+                  <img :src="platform.iconImg" :alt="platform.name" class="h-full w-full object-contain" />
+                </span>
+                <span class="truncate text-[10px] font-bold text-gray-500 group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white">{{ platform.name }}</span>
+              </a>
+            </div>
+          </div>
+
+          <button v-if="hasNativeShare" @click="triggerNativeShare"
+            class="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm font-bold text-primary transition-colors hover:bg-primary/15">
+            <UIcon name="i-heroicons-arrow-up-tray" class="h-4 w-4" />
+            Share with an app on this device
+          </button>
+
+          <div class="mt-5 border-t border-gray-100 pt-5 dark:border-white/10">
+            <div class="mb-2 flex items-center justify-between">
+              <label class="text-xs font-bold text-gray-700 dark:text-gray-200">Copy a link</label>
+              <span v-if="copied" class="text-xs font-bold text-emerald-600 dark:text-emerald-400">Copied to clipboard</span>
+            </div>
+            <div class="flex rounded-2xl border border-gray-200 bg-gray-50 p-1.5 focus-within:border-primary/50 dark:border-white/10 dark:bg-white/5">
+              <input readonly :value="fullUrl" aria-label="Article link"
+                class="min-w-0 flex-1 bg-transparent px-2.5 text-xs font-medium text-gray-600 outline-none dark:text-gray-300" />
+              <button @click="copyLink"
+                class="inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all"
+                :class="copied ? 'bg-emerald-500 text-white' : 'bg-primary text-gray-950 hover:bg-primary-400'">
+                <UIcon :name="copied ? 'i-heroicons-check' : 'i-heroicons-clipboard-document'" class="h-4 w-4" />
+                {{ copied ? 'Copied' : 'Copy link' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </Teleport>
 </template>
