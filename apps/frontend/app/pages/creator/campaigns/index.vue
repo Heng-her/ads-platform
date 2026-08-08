@@ -2,12 +2,13 @@
 import { ref, onMounted, watch } from 'vue'
 import { useCampaigns, type CampaignData } from '~/composables/useCampaigns'
 import { useCategories } from '~/composables/useCategories'
+import { getArticleUrl } from '~/lib/utils'
 
 definePageMeta({
   layout: 'creator'
 })
 
-const { campaignsList, totalItems, isLoading, fetchCampaigns, updateCampaignStatus, deleteCampaign } = useCampaigns()
+const { campaignsList, isLoading, fetchCampaigns, updateCampaignStatus, deleteCampaign } = useCampaigns()
 const { categories } = useCategories()
 
 const searchQuery = ref('')
@@ -18,6 +19,7 @@ const currentPage = ref(1)
 const deleteModalOpen = ref(false)
 const selectedCampaignToDelete = ref<CampaignData | null>(null)
 const isDeleting = ref(false)
+const updatingStatusIds = ref<Set<string>>(new Set())
 
 async function loadData() {
   await fetchCampaigns({
@@ -34,13 +36,23 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
   loadData()
 })
 
-async function handleStatusToggle(campaign: CampaignData) {
-  const newStatus = campaign.status === 'PUBLIC' ? 'DRAFT' : 'PUBLIC'
+async function handleStatusToggle(campaign: CampaignData, event: Event) {
+  const checked = (event.target as HTMLInputElement).checked
+  const newStatus = checked ? 'PUBLIC' : 'DRAFT'
+  if (updatingStatusIds.value.has(campaign.id)) return
+
+  updatingStatusIds.value = new Set(updatingStatusIds.value).add(campaign.id)
   try {
     await updateCampaignStatus(campaign.id, newStatus)
     campaign.status = newStatus
   } catch (err: any) {
+    // Keep the switch in sync with the server when the update fails.
+    ;(event.target as HTMLInputElement).checked = campaign.status === 'PUBLIC'
     alert(err.message || 'Failed to update status')
+  } finally {
+    const nextUpdatingIds = new Set(updatingStatusIds.value)
+    nextUpdatingIds.delete(campaign.id)
+    updatingStatusIds.value = nextUpdatingIds
   }
 }
 
@@ -197,11 +209,29 @@ onMounted(() => {
               </td>
 
               <td class="py-3 px-4">
-                <button class="cursor-pointer" @click="handleStatusToggle(item)">
+                <div class="flex items-center gap-2">
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      class="peer sr-only"
+                      :checked="item.status === 'PUBLIC'"
+                      :disabled="updatingStatusIds.has(item.id)"
+                      :aria-label="`Make ${item.title} ${item.status === 'PUBLIC' ? 'draft' : 'public'}`"
+                      @change="handleStatusToggle(item, $event)"
+                    />
+                    <span
+                      class="h-5 w-9 rounded-full bg-gray-300 transition-colors peer-checked:bg-emerald-500 peer-checked:[&>span]:translate-x-4 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 dark:bg-gray-700"
+                    >
+                      <span
+                        class="block h-4 w-4 translate-x-0.5 translate-y-0.5 rounded-full bg-white shadow-sm transition-transform"
+                      />
+                    </span>
+                  </label>
                   <UBadge :color="item.status === 'PUBLIC' ? 'success' : 'neutral'" variant="soft" size="sm">
                     {{ item.status }}
                   </UBadge>
-                </button>
+                </div>
               </td>
 
               <td class="py-3 px-4 font-mono font-medium">
@@ -214,6 +244,16 @@ onMounted(() => {
 
               <td class="py-3 px-4 text-right">
                 <div class="flex items-center justify-end gap-1">
+                  <UButton
+                    :to="getArticleUrl(item)"
+                    icon="i-heroicons-arrow-top-right-on-square"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    title="Open Campaign Details in New Tab"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
                   <UButton :to="`/creator/campaigns/${item.id}/edit`" icon="i-heroicons-pencil-square" color="neutral"
                     variant="ghost" size="xs" title="Edit Campaign" />
                   <UButton icon="i-heroicons-trash" color="neutral" variant="ghost" size="xs"

@@ -28,6 +28,22 @@ export interface CampaignData {
   uniqueViewers?: number;
   createdAt: string;
   updatedAt: string;
+  creator?: {
+    username: string | null;
+    avatar: string | null;
+  } | null;
+}
+
+export interface AdminCampaignUser {
+  id: string;
+  username: string;
+  email: string;
+  avatar?: string | null;
+  role: 'ADMIN' | 'CREATOR';
+  status: 'ACTIVE' | 'SUSPENDED' | 'PENDING';
+  createdAt: string;
+  campaigns: CampaignData[];
+  publicPosts: CampaignData[];
 }
 
 export interface CampaignFormInput {
@@ -90,6 +106,22 @@ export function useCampaigns() {
       }
     } catch (err: any) {
       error.value = err.message || "An error occurred";
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function fetchAdminCampaignUsers(options: { page?: number; limit?: number; search?: string } = {}) {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const response = await api.action.$post({ json: { action: 'campaigns/admin-users', data: options } });
+      const body = await response.json();
+      if (!response.ok || body.code !== 1 || !body.data) throw new Error(body.msg || 'Failed to load users');
+      return body.data as { items: AdminCampaignUser[]; total: number; totalPages: number };
+    } catch (err: any) {
+      error.value = err.message || 'An error occurred';
       throw err;
     } finally {
       isLoading.value = false;
@@ -255,6 +287,7 @@ export function useCampaigns() {
     isLoading,
     error,
     fetchCampaigns,
+    fetchAdminCampaignUsers,
     getCampaign,
     createCampaign,
     updateCampaign,

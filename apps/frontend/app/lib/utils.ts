@@ -1,5 +1,16 @@
 import type { CampaignItem } from '~/types/campaign'
 
+export type CampaignSort = 'newest' | 'impressions' | 'viewers'
+
+export interface CampaignListQueryOptions {
+  page: number
+  limit: number
+  category?: string
+  contentType?: string
+  customCategoryId?: string
+  search?: string
+}
+
 /**
  * Convert text into a clean, SEO-friendly URL slug
  */
@@ -32,6 +43,68 @@ export function getArticleUrl(campaign: { id?: string; title?: string } | null |
   if (!campaign || !campaign.id) return '/article'
   const titleSlug = slugify(campaign.title || '')
   return titleSlug ? `/article/${titleSlug}-${campaign.id}` : `/article/${campaign.id}`
+}
+
+/** Build the query payload used by the public campaign list action. */
+export function buildCampaignListQuery(options: CampaignListQueryOptions): Record<string, string> {
+  const query: Record<string, string> = {
+    page: options.page.toString(),
+    limit: options.limit.toString(),
+  }
+
+  if (options.category) query.category = options.category
+  if (options.contentType) query.contentType = options.contentType
+  if (options.customCategoryId) query.customCategoryId = options.customCategoryId
+  if (options.search?.trim()) query.search = options.search.trim()
+
+  return query
+}
+
+/** Return a sorted copy so the fetched campaign array is not mutated. */
+export function sortCampaigns(campaigns: CampaignItem[], sortBy: CampaignSort): CampaignItem[] {
+  const sorted = [...campaigns]
+
+  if (sortBy === 'impressions') {
+    return sorted.sort((a, b) => (b.totalImpressions ?? 0) - (a.totalImpressions ?? 0))
+  }
+
+  if (sortBy === 'viewers') {
+    return sorted.sort((a, b) => (b.uniqueViewers ?? 0) - (a.uniqueViewers ?? 0))
+  }
+
+  return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+}
+
+/** Select campaigns that can be displayed in the sponsored-ads rail. */
+export function getSponsoredCampaigns(campaigns: CampaignItem[]): CampaignItem[] {
+  return campaigns.filter(campaign => (
+    campaign.contentType === 'SPONSORED' || campaign.adNetwork || campaign.adUnitCode
+  ))
+}
+
+/** Count related category names from the campaigns currently loaded in the feed. */
+export function getRelatedTopics(
+  campaigns: CampaignItem[],
+  selectedCategory: string,
+  maxTopics = 6,
+): string[] {
+  const counts: Record<string, number> = {}
+
+  for (const campaign of campaigns) {
+    const category = campaign.category || 'General'
+    if (category === selectedCategory) continue
+    counts[category] = (counts[category] || 0) + 1
+  }
+
+  return Object.entries(counts)
+    .sort(([, countA], [, countB]) => countB - countA)
+    .slice(0, maxTopics)
+    .map(([category]) => category)
+}
+
+/** Count the active URL filters without coupling the page to route state. */
+export function countActiveFilters(filters: Array<string | null | undefined>): number {
+  return filters.filter(Boolean).length
 }
 
 /**

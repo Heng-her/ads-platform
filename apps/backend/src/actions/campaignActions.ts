@@ -205,6 +205,19 @@ export async function handleCampaignAction(
       return sendSuccess(c, newCampaign, "Campaign created successfully");
     }
 
+    case "campaigns/admin-users": {
+      const currentUser = await authenticate(c);
+      if (currentUser.role !== "ADMIN") return sendError(c, "Forbidden", null, 403);
+
+      const campaignService = new CampaignService(db);
+      const result = await campaignService.getAdminCampaignUsers({
+        page: Number(payloadData?.page) || 1,
+        limit: Math.min(Math.max(Number(payloadData?.limit) || 12, 1), 100),
+        search: typeof payloadData?.search === "string" ? payloadData.search.trim() || undefined : undefined,
+      });
+      return sendSuccess(c, { ...result, total: result.pagination.total, totalPages: result.pagination.totalPages });
+    }
+
     case "campaigns/get": {
       const currentUser = await authenticate(c);
       const campaignId = payloadData?.id;

@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import type { InferResponseType } from '@ads-platform/shared'
 import { useApi } from '~/composables/useApi'
 import { useCategories } from '~/composables/useCategories'
 import { useCustomSeoMeta } from '~/lib/seo/metadata'
-import { getArticleUrl } from '~/lib/utils'
+import {
+    buildCampaignListQuery,
+    countActiveFilters,
+    getArticleUrl,
+    getRelatedTopics,
+    getSponsoredCampaigns,
+    sortCampaigns,
+} from '~/lib/utils'
 import type { CampaignItem } from '~/types/campaign'
 
 definePageMeta({
@@ -39,16 +45,12 @@ const sortBy = ref<'newest' | 'impressions' | 'viewers'>('newest')
 const feedbackGiven = ref<null | boolean>(null)
 const copiedId = ref<string | null>(null)
 
-// ---- Available Content Types list ----
-const contentTypes = ['ARTICLE', 'BANNER', 'VIDEO', 'SPONSORED', 'NATIVE']
-
 // ---- Data state ----
 const campaigns = ref<CampaignItem[]>([])
 const isLoading = ref(false)
 const isLoadingMore = ref(false)
 const hasMore = ref(true)
 const totalCount = ref(0)
-const totalPages = ref(0)
 const errorMessage = ref('')
 
 let sentinelObserver: IntersectionObserver | null = null
@@ -66,15 +68,12 @@ function copyCampaignLink(campaign: CampaignItem) {
 
 // Client-side sort — cheap reordering of fetched campaigns
 const sortedCampaigns = computed(() => {
-    const list = [...campaigns.value]
-    if (sortBy.value === 'impressions') return list.sort((a, b) => (b.totalImpressions ?? 0) - (a.totalImpressions ?? 0))
-    if (sortBy.value === 'viewers') return list.sort((a, b) => (b.uniqueViewers ?? 0) - (a.uniqueViewers ?? 0))
-    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    return sortCampaigns(campaigns.value, sortBy.value)
 })
 
 // Sponsored Ads filtering for the right sidebar
 const sponsoredAds = computed(() => {
-    return campaigns.value.filter(c => c.contentType === 'SPONSORED' || c.adNetwork || c.adUnitCode)
+    return getSponsoredCampaigns(campaigns.value)
 })
 
 // First item becomes the "Spotlight Answer" box, rest are standard search results
@@ -86,23 +85,15 @@ const trendingItem = computed(() => sortedCampaigns.value[1] || sortedCampaigns.
 
 // Related topics: category counts across loaded data
 const relatedTopics = computed(() => {
-    const counts: Record<string, number> = {}
-    for (const c of campaigns.value) {
-        const key = c.category || 'General'
-        if (key === selectedCategory.value) continue
-        counts[key] = (counts[key] || 0) + 1
-    }
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name]) => name)
+    return getRelatedTopics(campaigns.value, selectedCategory.value)
 })
 
-const activeFilterCount = computed(() => {
-    let count = 0
-    if (searchQuery.value) count++
-    if (selectedCategory.value) count++
-    if (selectedContentType.value) count++
-    if (selectedCustomCategoryId.value) count++
-    return count
-})
+const activeFilterCount = computed(() => countActiveFilters([
+    searchQuery.value,
+    selectedCategory.value,
+    selectedContentType.value,
+    selectedCustomCategoryId.value,
+]))
 
 function setQuery(patch: Record<string, string | undefined>) {
     router.push({ path: route.path, query: { ...route.query, ...patch } })
@@ -125,15 +116,14 @@ async function fetchCampaigns(targetPage: number, isAppend = false) {
     if (isAppend) isLoadingMore.value = true
     errorMessage.value = ''
 
-    const queryObj: Record<string, string> = {
-        page: targetPage.toString(),
-        limit: limit.value.toString(),
-    }
-
-    if (selectedCategory.value) queryObj.category = selectedCategory.value
-    if (selectedContentType.value) queryObj.contentType = selectedContentType.value
-    if (selectedCustomCategoryId.value) queryObj.customCategoryId = selectedCustomCategoryId.value
-    if (searchQuery.value.trim()) queryObj.search = searchQuery.value.trim()
+    const queryObj = buildCampaignListQuery({
+        page: targetPage,
+        limit: limit.value,
+        category: selectedCategory.value,
+        contentType: selectedContentType.value,
+        customCategoryId: selectedCustomCategoryId.value,
+        search: searchQuery.value,
+    })
 
     try {
         const res = await api.action.$post({
@@ -156,7 +146,6 @@ async function fetchCampaigns(targetPage: number, isAppend = false) {
 
         if (pagination) {
             totalCount.value = pagination.total ?? campaigns.value.length
-            totalPages.value = pagination.totalPages ?? 0
             hasMore.value = Boolean(pagination.hasNextPage)
         } else {
             totalCount.value = campaigns.value.length

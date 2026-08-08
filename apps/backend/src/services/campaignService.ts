@@ -5,6 +5,7 @@ import {
   count,
   or,
   like,
+  inArray,
   notInArray,
   isNull,
 } from "drizzle-orm";
@@ -402,6 +403,75 @@ export class CampaignService {
     return {
       items,
       pagination: buildPaginationMeta(total, page, limit),
+    };
+  }
+
+  /**
+   * Admin overview grouped by user. Each user includes their three newest
+   * public posts plus every campaign for the expandable management view.
+   */
+  async getAdminCampaignUsers(options: { page?: number; limit?: number; search?: string } = {}) {
+    const { page, limit, offset } = parsePagination(options.page, options.limit);
+    const conditions = options.search
+      ? [or(like(users.username, `%${options.search}%`), like(users.email, `%${options.search}%`))]
+      : [];
+    const whereClause = conditions.length ? and(...conditions) : undefined;
+
+    const countResult = await this.db
+      .select({ total: count() })
+      .from(users)
+      .where(whereClause)
+      .get();
+
+    const userItems = await this.db
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        avatar: users.avatar,
+        role: users.role,
+        status: users.status,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(whereClause)
+      .orderBy(desc(users.createdAt))
+      .limit(limit)
+      .offset(offset)
+      .all();
+
+    const userIds = userItems.map((user) => user.id);
+    const campaignItems = userIds.length
+      ? await this.db
+          .select(campaignSelectShape)
+          .from(campaigns)
+          .leftJoin(users, eq(campaigns.userId, users.id))
+          .where(inArray(campaigns.userId, userIds))
+          .orderBy(desc(campaigns.createdAt))
+          .all()
+      : [];
+
+    const campaignsByUser = new Map<string, typeof campaignItems>();
+    for (const campaign of campaignItems) {
+      const userCampaigns = campaignsByUser.get(campaign.userId) ?? [];
+      userCampaigns.push(campaign);
+      campaignsByUser.set(campaign.userId, userCampaigns);
+    }
+
+    const items = userItems.map((user) => {
+      const userCampaigns = campaignsByUser.get(user.id) ?? [];
+      return {
+        ...user,
+        campaigns: userCampaigns,
+        publicPosts: userCampaigns
+          .filter((campaign) => campaign.status === "PUBLIC" && !campaign.isDeleted)
+          .slice(0, 3),
+      };
+    });
+
+    return {
+      items,
+      pagination: buildPaginationMeta(countResult?.total || 0, page, limit),
     };
   }
 }
