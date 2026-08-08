@@ -166,7 +166,7 @@ onMounted(loadData)
               </div>
             </NuxtLink>
           </div>
-          <p v-else class="rounded-lg border border-dashed border-gray-200 bg-white px-3 py-5 text-center text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900">This user has no public posts yet.</p>
+          <p v-else class="rounded-lg border border-dashed border-gray-200 bg-white px-3 py-2 text-center text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900">This user has no public posts yet.</p>
         </section>
 
         <section v-if="expandedUserIds.has(user.id)" class="border-t border-gray-200 dark:border-gray-800">
