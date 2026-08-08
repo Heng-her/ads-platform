@@ -17,9 +17,30 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
+const runtimeConfig = useRuntimeConfig()
 const { categories } = useCategories()
 
 const slug = computed(() => (route.params.slug as string) || '')
+const localeCookie = useCookie<string>('article-locale', { default: () => 'en' })
+const selectedLocale = ref('en')
+
+function normalizeLocale(value: unknown) {
+    return value === 'km' ? 'km' : 'en'
+}
+
+selectedLocale.value = normalizeLocale(route.query.locale || localeCookie.value)
+
+watch(() => route.query.locale, (locale) => {
+    selectedLocale.value = normalizeLocale(locale)
+})
+
+watch(selectedLocale, async (locale) => {
+    localeCookie.value = locale
+    const query = { ...route.query }
+    if (locale === 'en') delete query.locale
+    else query.locale = locale
+    if (route.query.locale !== query.locale) await router.replace({ query })
+})
 
 const renderedContent = computed(() => {
     const content = campaign.value?.content || campaign.value?.description || ''
@@ -51,20 +72,20 @@ const renderedContent = computed(() => {
 })
 
 const { data: campaign, pending: isLoading, error: asyncError } = await useAsyncData(
-    `campaign-${slug.value}`,
+    () => `campaign-${slug.value}-${selectedLocale.value}`,
     async () => {
         if (!slug.value) return null
         const targetId = extractIdFromSlug(slug.value)
-        const response = await api.campaigns[':id'].$get({
-            param: { id: targetId }
+        const response = await $fetch.raw<any>(`${runtimeConfig.public.apiBase}/campaigns/${targetId}`, {
+            query: selectedLocale.value === 'en' ? {} : { locale: selectedLocale.value }
         })
-        const json = await response.json()
+        const json = response._data
         if (response.ok && json.code === 1 && json.data) {
             return json.data
         }
         throw new Error(json.msg || `Campaign with ID "${slug.value}" was not found.`)
     },
-    { watch: [slug] }
+    { watch: [slug, selectedLocale] }
 )
 
 const errorMessage = computed(() => {
@@ -184,6 +205,7 @@ watch(campaign, (currentCampaign) => {
 
             <div v-if="campaign"
                 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-600 dark:text-gray-300">
+                <LanguageSwitcher v-model="selectedLocale" />
                 <span>Category:</span>
                 <NuxtLink :to="`/article?category=${encodeURIComponent(campaign.category || '')}`"
                     class="text-primary hover:underline font-bold">
