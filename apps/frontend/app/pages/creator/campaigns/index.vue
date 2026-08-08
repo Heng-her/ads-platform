@@ -171,6 +171,13 @@ onMounted(() => {
     <!-- Campaigns List Table -->
     <div v-else
       class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <div v-if="totalPages > 1" class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-800">
+        <span class="text-xs text-gray-500 dark:text-gray-400">Page {{ currentPage }} of {{ totalPages }}</span>
+        <div class="flex gap-2">
+          <UButton color="neutral" variant="outline" size="xs" :disabled="currentPage === 1" @click="currentPage--; loadData()">Previous</UButton>
+          <UButton color="neutral" variant="outline" size="xs" :disabled="currentPage === totalPages" @click="currentPage++; loadData()">Next</UButton>
+        </div>
+      </div>
       <div class="no-scrollbar overflow-x-auto">
         <table class="w-full text-left text-xs text-gray-600 dark:text-gray-300">
           <thead
@@ -240,14 +247,6 @@ onMounted(() => {
             </tr>
           </tbody>
         </table>
-      </div>
-    </div>
-
-    <div v-if="totalPages > 1" class="flex items-center justify-between">
-      <span class="text-xs text-gray-500 dark:text-gray-400">Page {{ currentPage }} of {{ totalPages }}</span>
-      <div class="flex gap-2">
-        <UButton color="neutral" variant="outline" size="xs" :disabled="currentPage === 1" @click="currentPage--; loadData()">Previous</UButton>
-        <UButton color="neutral" variant="outline" size="xs" :disabled="currentPage === totalPages" @click="currentPage++; loadData()">Next</UButton>
       </div>
     </div>
 
