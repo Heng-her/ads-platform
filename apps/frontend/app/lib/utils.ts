@@ -18,9 +18,10 @@ export function slugify(text: string): string {
   if (!text) return ''
   return text
     .toString()
+    .normalize('NFC')
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '')    // Remove all non-word chars
+    .replace(/[^\p{L}\p{M}\p{N}\s-]/gu, '') // Keep letters, marks, numbers, spaces, and hyphens
     .replace(/[\s_-]+/g, '-')     // Replace spaces & underscores with -
     .replace(/^-+|-+$/g, '')       // Trim leading & trailing hyphens
 }
