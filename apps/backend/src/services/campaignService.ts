@@ -14,6 +14,7 @@ import {
 import type { DbClient } from "../db/index";
 import {
   campaigns,
+  campaignTranslations,
   users,
   systemCategories,
   type NewCampaign,
@@ -175,6 +176,17 @@ export class CampaignService {
       .get();
 
     return result || null;
+  }
+
+  async saveGoogleTranslation(campaignId: string, locale: string, values: { title: string; description: string | null; content: string | null; imageTitle: string | null; imageDescription: string | null }) {
+    const now = new Date();
+    await this.db.insert(campaignTranslations).values({ id: crypto.randomUUID(), campaignId, locale, ...values, provider: "google", createdAt: now, updatedAt: now })
+      .onConflictDoUpdate({ target: [campaignTranslations.campaignId, campaignTranslations.locale], set: { ...values, provider: "google", updatedAt: now } });
+    return this.db.select().from(campaignTranslations).where(and(eq(campaignTranslations.campaignId, campaignId), eq(campaignTranslations.locale, locale))).get();
+  }
+
+  async getTranslation(campaignId: string, locale: string) {
+    return this.db.select().from(campaignTranslations).where(and(eq(campaignTranslations.campaignId, campaignId), eq(campaignTranslations.locale, locale))).get();
   }
 
   private async buildPublicFeedConditions(options: {

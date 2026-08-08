@@ -7,6 +7,7 @@ import { useCloudinaryUpload, type CloudinaryUploadResponse } from '~/composable
 import { useCampaignDraft, type CampaignDraftForm } from '~/composables/useCampaignDraft'
 import { useAuthStore } from '~/stores/auth'
 import { getVideoEmbedUrl } from '~/lib/videoEmbed'
+import { useApi } from '~/composables/useApi'
 
 const props = withDefaults(
   defineProps<{
@@ -25,6 +26,7 @@ const { categories, fetchCategories } = useCategories()
 const { deleteMediaByUrl } = useCloudinaryUpload()
 const authStore = useAuthStore()
 const { getDraft, saveDraft, removeDraft } = useCampaignDraft()
+const api = useApi()
 
 const isFetching = ref(props.isEdit && !!props.campaignId)
 const submitError = ref<string | null>(null)
@@ -36,6 +38,9 @@ const hasSubmitted = ref(false)
 const imagePreviewOpen = ref(false)
 const imagePreviewUrl = ref('')
 const imagePreviewTitle = ref('Image preview')
+const translationLocale = ref('km')
+const isTranslating = ref(false)
+const translationMessage = ref<string | null>(null)
 let draftSaveTimer: ReturnType<typeof setTimeout> | undefined
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 
@@ -300,6 +305,25 @@ async function handleSubmit(saveStatus?: 'DRAFT' | 'PUBLIC') {
   }
 }
 
+async function translateWithGoogle() {
+  if (!props.campaignId) return
+  isTranslating.value = true
+  translationMessage.value = null
+  try {
+    const response = await api.campaigns[':id'].translations.google.$post({
+      param: { id: props.campaignId },
+      json: { locale: translationLocale.value, sourceLocale: 'en' },
+    })
+    const json = await response.json()
+    if (!response.ok || json.code !== 1) throw new Error(json.msg || 'Google Translate failed')
+    translationMessage.value = `Google translation saved in ${translationLocale.value}.`
+  } catch (error: any) {
+    translationMessage.value = error.message || 'Google Translate failed'
+  } finally {
+    isTranslating.value = false
+  }
+}
+
 watch(form, scheduleDraftSave, { deep: true })
 
 onMounted(() => {
@@ -345,6 +369,16 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="flex items-center gap-2">
+        <template v-if="isEdit">
+          <select v-model="translationLocale" class="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900">
+            <option value="km">ខ្មែរ</option>
+            <option value="th">ไทย</option>
+            <option value="vi">Tiếng Việt</option>
+          </select>
+          <UButton color="neutral" variant="outline" size="sm" :loading="isTranslating" @click="translateWithGoogle">
+            Translate with Google
+          </UButton>
+        </template>
         <UButton
           color="neutral"
           variant="outline"
@@ -364,6 +398,8 @@ onBeforeUnmount(() => {
         </UButton>
       </div>
     </div>
+
+    <p v-if="translationMessage" class="text-sm" :class="translationMessage.startsWith('Google translation') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ translationMessage }}</p>
 
     <!-- Loading State -->
     <div v-if="isFetching" class="py-12 text-center text-gray-500 text-base">

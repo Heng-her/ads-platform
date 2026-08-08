@@ -6,6 +6,7 @@ import { CampaignService } from "../services/campaignService";
 import { AuditLogService } from "../services/auditLogService";
 import { ImpressionService } from "../services/impressionService";
 import { CategoryService } from "../services/categoryService";
+import { GoogleTranslateService } from "../services/googleTranslateService";
 import { authMiddleware, requireRole } from "../middlewares/auth";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
@@ -21,6 +22,7 @@ import {
   meCampaignsQuerySchema,
   publicCampaignFeedQuerySchema,
   newCampaignCountQuerySchema,
+  createCampaignTranslationSchema,
 } from "../schemas/campaign";
 
 // Re-export schemas consumed by actionRoutes.ts
@@ -55,6 +57,30 @@ function canMutateCampaign(user: UserJwtPayload, campaignUserId: string): boolea
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
 export const campaignRoutes = new Hono<HonoEnv>()
+
+  .post("/:id/translations/google", authMiddleware(), zValidator("json", createCampaignTranslationSchema, (result, c) => {
+    if (!result.success) return zodErrorHandler(result, c);
+  }), async (c) => {
+    const id = extractId(c.req.param("id"));
+    const user = c.get("user")!;
+    const campaignService = new CampaignService(getDb(c.env.DB));
+    const campaign = await campaignService.getCampaignById(id);
+    if (!campaign) return sendError(c, "Campaign not found", null, 404);
+    if (!canMutateCampaign(user, campaign.userId)) return sendError(c, "Forbidden", null, 403);
+    const { locale, sourceLocale } = c.req.valid("json");
+    if (locale === sourceLocale) return sendError(c, "Target language must differ from the source language", null, 400);
+    try {
+      const translated = await new GoogleTranslateService(c.env.GOOGLE_TRANSLATE_API_KEY).translate(
+        [campaign.title, campaign.description, campaign.content, campaign.imageTitle, campaign.imageDescription], sourceLocale, locale,
+      );
+      const saved = await campaignService.saveGoogleTranslation(id, locale, {
+        title: translated[0] || campaign.title, description: translated[1] ?? null, content: translated[2] ?? null, imageTitle: translated[3] ?? null, imageDescription: translated[4] ?? null,
+      });
+      return sendSuccess(c, saved, "Google translation saved");
+    } catch (error) {
+      return sendError(c, error instanceof Error ? error.message : "Translation failed", null, 502);
+    }
+  })
 
   // ── GET /api/campaigns — Stable public cursor feed ─────────────────────────
   .get(
@@ -273,6 +299,22 @@ export const campaignRoutes = new Hono<HonoEnv>()
       return sendError(c, "Campaign not found", null, 404);
     }
 
+    const locale = c.req.query("locale");
+    if (locale && /^[a-z]{2,3}(?:-[A-Z]{2})?$/.test(locale)) {
+      const translation = await campaignService.getTranslation(id, locale);
+      if (translation) {
+        return sendSuccess(c, {
+          ...campaign,
+          title: translation.title,
+          description: translation.description,
+          content: translation.content,
+          imageTitle: translation.imageTitle,
+          imageDescription: translation.imageDescription,
+          locale,
+          sourceLocale: "en",
+        });
+      }
+    }
     return sendSuccess(c, campaign);
   })
 

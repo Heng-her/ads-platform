@@ -64,6 +64,11 @@ export const updateCampaignStatusSchema = z.object({
   status: z.enum(["DRAFT", "PUBLIC"]),
 });
 
+export const createCampaignTranslationSchema = z.object({
+  locale: z.string().regex(/^[a-z]{2,3}(?:-[A-Z]{2})?$/, "Use a language code such as km, th, or vi"),
+  sourceLocale: z.string().regex(/^[a-z]{2,3}(?:-[A-Z]{2})?$/).optional().default("en"),
+});
+
 const campaignFeedFiltersSchema = z.object({
   category: z.string().optional(),
   contentType: z.string().optional(),

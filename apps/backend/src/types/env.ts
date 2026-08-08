@@ -10,6 +10,7 @@ export interface CloudflareBindings {
   UPLOAD_API_BASE_URL: string;
   UPLOAD_API_KEY: string;
   UPLOAD_API_BYPASS_SECRET: string;
+  GOOGLE_TRANSLATE_API_KEY?: string;
 }
 
 export interface UserJwtPayload {
