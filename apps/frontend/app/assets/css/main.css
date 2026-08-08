@@ -26,3 +26,13 @@
 body {
   font-family: var(--font-sans);
 }
+
+/* iOS Safari zooms the viewport when a focused form field uses a font smaller
+   than 16px. Keep compact desktop fields while preventing that zoom on phones. */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
