@@ -3,6 +3,9 @@ import { fileURLToPath } from "node:url";
 import { defineNuxtConfig } from "nuxt/config";
 
 export default defineNuxtConfig({
+  future: {
+    compatibilityVersion: 4,
+  },
   runtimeConfig: {
     // server secrets (not available in browser or public config)
     cryptoSecret:

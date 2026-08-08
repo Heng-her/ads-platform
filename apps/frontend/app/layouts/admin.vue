@@ -47,6 +47,7 @@ const { isMobileOpen } = useSidebar()
         </template>
 
         <template #right>
+          <LanguageSwitcher />
           <UButton
             to="/creator"
             color="neutral"

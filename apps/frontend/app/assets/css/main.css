@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,400..700;1,400..700&family=Prompt:ital,wght@0,400..700;1,400..700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap");
 @import "tailwindcss";
 @import "@nuxt/ui";
 
@@ -6,9 +7,13 @@
 }
 
 @theme static {
-  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans:
+    "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display:
+    "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 
   --color-green-50: #effdf5;
   --color-green-100: #d9fbe8;
@@ -35,4 +40,67 @@ body {
   select {
     font-size: 16px !important;
   }
+}
+
+/* ==========================================================================
+   Language-Specific Font Typography Overrides
+   ========================================================================== */
+
+/* Khmer Typography */
+html[lang="km"] body,
+html[lang="km"] button,
+html[lang="km"] input,
+html[lang="km"] select,
+html[lang="km"] textarea,
+html[lang="km"] .font-display,
+html[lang="km"] .font-body {
+  font-family: "Kantumruy Pro", var(--font-sans), sans-serif !important;
+}
+
+/* Thai Typography */
+html[lang="th"] body,
+html[lang="th"] button,
+html[lang="th"] input,
+html[lang="th"] select,
+html[lang="th"] textarea,
+html[lang="th"] .font-display,
+html[lang="th"] .font-body {
+  font-family: "Prompt", var(--font-sans), sans-serif !important;
+}
+
+/* Chinese Simplified Typography */
+html[lang="zh"] body,
+html[lang="zh"] button,
+html[lang="zh"] input,
+html[lang="zh"] select,
+html[lang="zh"] textarea,
+html[lang="zh"] .font-display,
+html[lang="zh"] .font-body {
+  font-family:
+    "Noto Sans SC", "PingFang SC", "Microsoft YaHei", var(--font-sans),
+    sans-serif !important;
+}
+
+/* Japanese Typography */
+html[lang="ja"] body,
+html[lang="ja"] button,
+html[lang="ja"] input,
+html[lang="ja"] select,
+html[lang="ja"] textarea,
+html[lang="ja"] .font-display,
+html[lang="ja"] .font-body {
+  font-family:
+    "Noto Sans JP", "Hiragino Sans", "Meiryo", var(--font-sans), sans-serif !important;
+}
+
+/* Korean Typography */
+html[lang="ko"] body,
+html[lang="ko"] button,
+html[lang="ko"] input,
+html[lang="ko"] select,
+html[lang="ko"] textarea,
+html[lang="ko"] .font-display,
+html[lang="ko"] .font-body {
+  font-family:
+    "Noto Sans KR", "Malgun Gothic", var(--font-sans), sans-serif !important;
 }

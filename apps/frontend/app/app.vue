@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
+const localeCookie = useCookie<string>('locale', { default: () => 'en' })
+
 useHead({
   meta: [
     { name: 'viewport', content: 'width=device-width, initial-scale=1' }
@@ -7,7 +11,7 @@ useHead({
     { rel: 'icon', href: '/favicon.ico' }
   ],
   htmlAttrs: {
-    lang: 'en'
+    lang: computed(() => localeCookie.value || 'en')
   }
 })
 
@@ -27,5 +31,6 @@ useSeoMeta({
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
+    <GoogleCloudTranslator />
   </UApp>
 </template>

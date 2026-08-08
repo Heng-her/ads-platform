@@ -196,6 +196,7 @@ onUnmounted(() => {
           <UButton icon="i-heroicons-magnifying-glass" color="neutral" variant="ghost" class="md:hidden"
             aria-label="Search" @click="showMobileSearch = true" />
 
+          <LanguageSwitcher />
           <UColorModeButton />
 
           <!-- Logged In User Controls: Show Avatar popup on mobile & desktop -->

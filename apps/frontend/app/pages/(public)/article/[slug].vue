@@ -21,14 +21,17 @@ const runtimeConfig = useRuntimeConfig()
 const { categories } = useCategories()
 
 const slug = computed(() => (route.params.slug as string) || '')
-const localeCookie = useCookie<string>('article-locale', { default: () => 'en' })
+const localeCookie = useCookie<string>('locale', { default: () => 'en' })
+const articleLocaleCookie = useCookie<string>('article-locale', { default: () => 'en' })
 const selectedLocale = ref('en')
 
+const SUPPORTED_LOCALES = ['km', 'zh', 'ja', 'fr', 'ko', 'th', 'vi', 'lo', 'my', 'id', 'ms', 'hi', 'tl']
+
 function normalizeLocale(value: unknown) {
-    return ['km', 'th', 'vi'].includes(String(value)) ? String(value) : 'en'
+    return SUPPORTED_LOCALES.includes(String(value)) ? String(value) : 'en'
 }
 
-selectedLocale.value = normalizeLocale(route.query.locale || localeCookie.value)
+selectedLocale.value = normalizeLocale(route.query.locale || localeCookie.value || articleLocaleCookie.value)
 
 watch(() => route.query.locale, (locale) => {
     selectedLocale.value = normalizeLocale(locale)
@@ -36,6 +39,7 @@ watch(() => route.query.locale, (locale) => {
 
 watch(selectedLocale, async (locale) => {
     localeCookie.value = locale
+    articleLocaleCookie.value = locale
     const query = { ...route.query }
     if (locale === 'en') delete query.locale
     else query.locale = locale
@@ -242,138 +246,167 @@ watch(campaign, (currentCampaign) => {
 
         <!-- Main Content Grid -->
         <div v-else class="flex gap-6 items-start">
-            <PublicFilterSidebar :categories="categories" :selected-category="campaign.category || ''" :active-filter-count="campaign.category ? 1 : 0"
+            <PublicFilterSidebar :categories="categories" :selected-category="campaign.category || ''"
+                :active-filter-count="campaign.category ? 1 : 0"
                 @select-category="(category) => router.push({ path: '/article', query: category ? { category } : {} })"
                 @reset-filters="router.push('/article')" />
             <div class="min-w-0 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-            <!-- Left Main Column (Details & Article Content) -->
-            <article class="lg:col-span-8 space-y-6">
+                <!-- Left Main Column (Details & Article Content) -->
+                <article class="lg:col-span-8 space-y-6">
 
-                <!-- Hero Header Card -->
-                <header
-                    class="rounded-2xl p-6 sm:p-8 border shadow-xl relative overflow-hidden bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                    <!-- Hero Header Card -->
+                    <header
+                        class="rounded-2xl p-6 sm:p-8 border shadow-xl relative overflow-hidden bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
 
-                    <!-- Glow decoration -->
-                    <div
-                        class="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-primary/10 blur-3xl pointer-events-none">
-                    </div>
+                        <!-- Glow decoration -->
+                        <div
+                            class="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-primary/10 blur-3xl pointer-events-none">
+                        </div>
 
-                    <!-- Campaign Title -->
-                    <h1
-                        class="font-display font-extrabold text-2xl sm:text-4xl text-gray-900 dark:text-white leading-tight mb-4 tracking-tight">
-                        {{ campaign.title }}
-                    </h1>
+                        <!-- Campaign Title -->
+                        <h1
+                            class="font-display font-extrabold text-2xl sm:text-4xl text-gray-900 dark:text-white leading-tight mb-4 tracking-tight">
+                            {{ campaign.title }}
+                        </h1>
 
-                    <!-- Author Metadata & Publication Info -->
-                    <div
-                        class="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-                        <div class="flex items-center gap-3">
-                            <img v-if="campaign.creator?.avatar" :src="campaign.creator.avatar"
-                                :alt="campaign.creator?.username"
-                                class="h-8 w-8 rounded-full object-cover ring-2 ring-primary/40" />
-                            <span v-else
-                                class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold bg-primary-100 dark:bg-primary-950/60 text-primary ring-2 ring-primary/30">
-                                {{ initials(campaign.creator?.username) }}
-                            </span>
-                            <div>
-                                <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                                    {{ campaign.creator?.username || 'Verified Creator' }}
-                                    <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-primary shrink-0"
-                                        title="Verified Publisher" />
-                                </div>
-                                <div class="text-[11px] font-mono font-medium text-gray-600 dark:text-gray-400">
-                                    Published {{ formatDate(campaign.createdAt) }} ({{ timeAgo(campaign.createdAt) }})
+                        <!-- Author Metadata & Publication Info -->
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                            <div class="flex items-center gap-3">
+                                <img v-if="campaign.creator?.avatar" :src="campaign.creator.avatar"
+                                    :alt="campaign.creator?.username"
+                                    class="h-8 w-8 rounded-full object-cover ring-2 ring-primary/40" />
+                                <span v-else
+                                    class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold bg-primary-100 dark:bg-primary-950/60 text-primary ring-2 ring-primary/30">
+                                    {{ initials(campaign.creator?.username) }}
+                                </span>
+                                <div>
+                                    <div
+                                        class="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                        {{ campaign.creator?.username || 'Verified Creator' }}
+                                        <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-primary shrink-0"
+                                            title="Verified Publisher" />
+                                    </div>
+                                    <div class="text-[11px] font-mono font-medium text-gray-600 dark:text-gray-400">
+                                        Published {{ formatDate(campaign.createdAt) }} ({{ timeAgo(campaign.createdAt)
+                                        }})
+                                    </div>
                                 </div>
                             </div>
+
+                            <!-- Action Controls -->
+                            <div class="flex items-center gap-2">
+                                <button @click="isShareModalOpen = true"
+                                    class="px-3.5 py-1.5 rounded-xl bg-[#1c2b3c] hover:bg-gray-700 text-white text-xs font-mono font-bold transition-all flex items-center gap-1.5 shadow-sm border border-gray-700/60">
+                                    <UIcon name="i-heroicons-share" class="w-4 h-4 text-primary shrink-0" />
+                                    <span>Share / Copy Link</span>
+                                </button>
+                            </div>
                         </div>
+                    </header>
 
-                        <!-- Action Controls -->
-                        <div class="flex items-center gap-2">
-                            <button @click="isShareModalOpen = true"
-                                class="px-3.5 py-1.5 rounded-xl bg-[#1c2b3c] hover:bg-gray-700 text-white text-xs font-mono font-bold transition-all flex items-center gap-1.5 shadow-sm border border-gray-700/60">
-                                <UIcon name="i-heroicons-share" class="w-4 h-4 text-primary shrink-0" />
-                                <span>Share / Copy Link</span>
-                            </button>
+                    <!-- Full media gallery -->
+                    <section v-if="galleryImages.length || campaign.videoUrls?.length" class="space-y-3">
+                        <div v-if="galleryImages.length" class="grid gap-3"
+                            :class="galleryImages.length > 1 ? 'sm:grid-cols-2' : ''">
+                            <figure v-for="(image, index) in galleryImages" :key="image"
+                                class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+                                <img :src="image"
+                                    :alt="index === 0 ? (campaign.imageTitle || campaign.title) : `${campaign.title} image ${index + 1}`"
+                                    class="h-full max-h-[480px] w-full object-cover" />
+                                <figcaption v-if="index === 0 && (campaign.imageTitle || campaign.imageDescription)"
+                                    class="border-t border-gray-200 bg-gray-50 p-3 text-xs font-medium text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+                                    <strong v-if="campaign.imageTitle" class="text-gray-900 dark:text-white">{{
+                                        campaign.imageTitle }}: </strong>{{ campaign.imageDescription }}
+                                </figcaption>
+                            </figure>
+                        </div>
+                        <div v-if="campaign.videoUrls?.length" class="grid gap-3 sm:grid-cols-2">
+                            <template v-for="videoUrl in campaign.videoUrls" :key="videoUrl">
+                                <iframe v-if="getVideoEmbedUrl(videoUrl)" :src="getVideoEmbedUrl(videoUrl)"
+                                    :title="`${campaign.title} video`"
+                                    class="aspect-video w-full rounded-2xl border border-gray-200 bg-black shadow-sm dark:border-gray-800"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowfullscreen />
+                                <video v-else :src="videoUrl" controls preload="metadata"
+                                    class="w-full rounded-2xl border border-gray-200 bg-black shadow-sm dark:border-gray-800" />
+                            </template>
+                        </div>
+                    </section>
+
+                    <!-- Main Content Body -->
+                    <div
+                        class="rounded-2xl p-6 sm:p-8 border leading-relaxed text-gray-800 dark:text-gray-200 font-body space-y-4 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+
+                        <h3 class="font-display font-bold text-sm uppercase tracking-wider text-primary mb-2">
+                            Campaign Overview
+                        </h3>
+
+                        <!-- Render Content / Description -->
+                        <div v-if="renderedContent" v-html="renderedContent"
+                            class="article-content prose dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed font-medium text-gray-700 dark:text-gray-200">
+                        </div>
+                        <div v-else class="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-200">
+                            No detailed content provided for this campaign.
                         </div>
                     </div>
-                </header>
 
-                <!-- Full media gallery -->
-                <section v-if="galleryImages.length || campaign.videoUrls?.length" class="space-y-3">
-                    <div v-if="galleryImages.length" class="grid gap-3" :class="galleryImages.length > 1 ? 'sm:grid-cols-2' : ''">
-                        <figure v-for="(image, index) in galleryImages" :key="image" class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 shadow-sm dark:border-gray-800 dark:bg-gray-950">
-                            <img :src="image" :alt="index === 0 ? (campaign.imageTitle || campaign.title) : `${campaign.title} image ${index + 1}`" class="h-full max-h-[480px] w-full object-cover" />
-                            <figcaption v-if="index === 0 && (campaign.imageTitle || campaign.imageDescription)" class="border-t border-gray-200 bg-gray-50 p-3 text-xs font-medium text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
-                                <strong v-if="campaign.imageTitle" class="text-gray-900 dark:text-white">{{ campaign.imageTitle }}: </strong>{{ campaign.imageDescription }}
-                            </figcaption>
-                        </figure>
-                    </div>
-                    <div v-if="campaign.videoUrls?.length" class="grid gap-3 sm:grid-cols-2">
-                        <template v-for="videoUrl in campaign.videoUrls" :key="videoUrl">
-                            <iframe
-                                v-if="getVideoEmbedUrl(videoUrl)"
-                                :src="getVideoEmbedUrl(videoUrl)"
-                                :title="`${campaign.title} video`"
-                                class="aspect-video w-full rounded-2xl border border-gray-200 bg-black shadow-sm dark:border-gray-800"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                allowfullscreen
-                            />
-                            <video v-else :src="videoUrl" controls preload="metadata" class="w-full rounded-2xl border border-gray-200 bg-black shadow-sm dark:border-gray-800" />
-                        </template>
-                    </div>
-                </section>
+                    <!-- Interactive Feedback Widget -->
+                    <PublicFeedbackWidget :feedback-given="feedbackGiven" @give-feedback="giveFeedback" />
 
-                <!-- Main Content Body -->
-                <div
-                    class="rounded-2xl p-6 sm:p-8 border leading-relaxed text-gray-800 dark:text-gray-200 font-body space-y-4 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                    <section v-if="campaign.category"
+                        class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+                        <div class="mb-4 flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-primary">More to explore
+                                </p>
+                                <h2 class="mt-1 font-display text-lg font-bold text-gray-900 dark:text-white">More {{
+                                    campaign.category }}
+                                    campaigns</h2>
+                            </div>
+                            <NuxtLink :to="`/article?category=${encodeURIComponent(campaign.category)}`"
+                                class="text-xs font-semibold text-primary hover:underline">View category</NuxtLink>
+                        </div>
+                        <div v-if="relatedCampaigns.length" class="grid gap-3 sm:grid-cols-3">
+                            <NuxtLink v-for="item in relatedCampaigns" :key="item.id" :to="getArticleUrl(item)"
+                                class="group overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+                                <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.title"
+                                    class="h-24 w-full object-cover" />
+                                <div v-else
+                                    class="flex h-24 items-center justify-center bg-gray-100 text-gray-400 dark:bg-gray-800">
+                                    <UIcon name="i-heroicons-photo" class="h-5 w-5" />
+                                </div>
+                                <p
+                                    class="line-clamp-2 p-3 text-sm font-semibold text-gray-900 group-hover:text-primary dark:text-white">
+                                    {{
+                                        item.title }}</p>
+                            </NuxtLink>
+                        </div>
+                        <p v-else-if="!isLoadingRelated" class="text-sm text-gray-500">No other campaigns in this
+                            category yet.</p>
+                        <div v-if="relatedHasMore" class="mt-4 text-center">
+                            <UButton color="neutral" variant="outline" size="sm" :loading="isLoadingRelated"
+                                @click="loadRelatedCampaigns(relatedPage + 1, true)">Load more {{ campaign.category }}
+                                campaigns</UButton>
+                        </div>
+                    </section>
+                </article>
 
-                    <h3 class="font-display font-bold text-sm uppercase tracking-wider text-primary mb-2">
-                        Campaign Overview
-                    </h3>
+                <!-- Right Sidebar Column (Metrics & Ad Info) -->
+                <aside class="lg:col-span-4 space-y-6 sticky top-20">
+                    <PublicPerformanceStats :total-impressions="campaign.totalImpressions"
+                        :unique-viewers="campaign.uniqueViewers" />
 
-                    <!-- Render Content / Description -->
-                    <div v-if="renderedContent" v-html="renderedContent"
-                        class="article-content prose dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed font-medium text-gray-700 dark:text-gray-200">
-                    </div>
-                    <div v-else class="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-200">
-                        No detailed content provided for this campaign.
-                    </div>
-                </div>
+                    <PublicAdIntegrationCard :ad-network="campaign.adNetwork" :ad-unit-code="campaign.adUnitCode" />
 
-                <!-- Interactive Feedback Widget -->
-                <PublicFeedbackWidget :feedback-given="feedbackGiven" @give-feedback="giveFeedback" />
-
-                <section v-if="campaign.category" class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-                    <div class="mb-4 flex items-center justify-between gap-3">
-                        <div><p class="text-xs font-semibold uppercase tracking-wider text-primary">More to explore</p><h2 class="mt-1 font-display text-lg font-bold text-gray-900 dark:text-white">More {{ campaign.category }} campaigns</h2></div>
-                        <NuxtLink :to="`/article?category=${encodeURIComponent(campaign.category)}`" class="text-xs font-semibold text-primary hover:underline">View category</NuxtLink>
-                    </div>
-                    <div v-if="relatedCampaigns.length" class="grid gap-3 sm:grid-cols-3">
-                        <NuxtLink v-for="item in relatedCampaigns" :key="item.id" :to="getArticleUrl(item)" class="group overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
-                            <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.title" class="h-24 w-full object-cover" /><div v-else class="flex h-24 items-center justify-center bg-gray-100 text-gray-400 dark:bg-gray-800"><UIcon name="i-heroicons-photo" class="h-5 w-5" /></div>
-                            <p class="line-clamp-2 p-3 text-sm font-semibold text-gray-900 group-hover:text-primary dark:text-white">{{ item.title }}</p>
-                        </NuxtLink>
-                    </div>
-                    <p v-else-if="!isLoadingRelated" class="text-sm text-gray-500">No other campaigns in this category yet.</p>
-                    <div v-if="relatedHasMore" class="mt-4 text-center"><UButton color="neutral" variant="outline" size="sm" :loading="isLoadingRelated" @click="loadRelatedCampaigns(relatedPage + 1, true)">Load more {{ campaign.category }} campaigns</UButton></div>
-                </section>
-            </article>
-
-            <!-- Right Sidebar Column (Metrics & Ad Info) -->
-            <aside class="lg:col-span-4 space-y-6 sticky top-20">
-                <PublicPerformanceStats :total-impressions="campaign.totalImpressions"
-                    :unique-viewers="campaign.uniqueViewers" />
-
-                <PublicAdIntegrationCard :ad-network="campaign.adNetwork" :ad-unit-code="campaign.adUnitCode" />
-
-                <!-- Explore Category Button -->
-                <NuxtLink :to="`/article?category=${encodeURIComponent(campaign.category || '')}`"
-                    class="w-full text-center flex items-center justify-center gap-1.5 text-xs font-mono font-bold py-3 rounded-xl transition-all text-white bg-primary hover:bg-primary-600 shadow-md">
-                    <span>Explore {{ campaign.category || 'General' }} Campaigns</span>
-                    <UIcon name="i-heroicons-arrow-right" class="w-4 h-4" />
-                </NuxtLink>
-            </aside>
+                    <!-- Explore Category Button -->
+                    <NuxtLink :to="`/article?category=${encodeURIComponent(campaign.category || '')}`"
+                        class="w-full text-center flex items-center justify-center gap-1.5 text-xs font-mono font-bold py-3 rounded-xl transition-all text-white bg-primary hover:bg-primary-600 shadow-md">
+                        <span>Explore {{ campaign.category || 'General' }} Campaigns</span>
+                        <UIcon name="i-heroicons-arrow-right" class="w-4 h-4" />
+                    </NuxtLink>
+                </aside>
             </div>
         </div>
 

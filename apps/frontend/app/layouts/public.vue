@@ -322,7 +322,8 @@ onUnmounted(() => {
                         </transition>
                     </div>
 
-                    <!-- Color Mode Toggle Button (Matching Home Page) -->
+                    <!-- Language Selector & Color Mode Toggle -->
+                    <LanguageSwitcher />
                     <UColorModeButton />
 
                     <!-- Action Buttons -->
