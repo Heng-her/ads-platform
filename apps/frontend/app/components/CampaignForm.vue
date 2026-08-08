@@ -6,6 +6,7 @@ import { useCategories } from '~/composables/useCategories'
 import { useCloudinaryUpload, type CloudinaryUploadResponse } from '~/composables/useCloudinaryUpload'
 import { useCampaignDraft, type CampaignDraftForm } from '~/composables/useCampaignDraft'
 import { useAuthStore } from '~/stores/auth'
+import { getVideoEmbedUrl } from '~/lib/videoEmbed'
 
 const props = withDefaults(
   defineProps<{
@@ -215,6 +216,10 @@ function addVideoUrlDirect() {
   }
   form.value.videoUrls.push(videoInputTemp.value.trim())
   videoInputTemp.value = ''
+}
+
+function getEmbedUrl(videoUrl: string) {
+  return getVideoEmbedUrl(videoUrl)
 }
 
 async function removeVideoUrl(index: number) {
@@ -553,11 +558,11 @@ onBeforeUnmount(() => {
             />
 
             <div class="space-y-2">
-              <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Or Add Direct Video URL</p>
+              <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Or Add YouTube, TikTok, or Direct Video URL</p>
               <div class="flex gap-2">
                 <UInput
                   v-model="videoInputTemp"
-                  placeholder="https://res.cloudinary.com/..."
+                  placeholder="https://youtube.com/watch?v=..."
                   size="sm"
                   class="flex-1"
                 />
@@ -578,7 +583,16 @@ onBeforeUnmount(() => {
                   :key="vUrl"
                   class="relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
                 >
+                  <iframe
+                    v-if="getEmbedUrl(vUrl)"
+                    :src="getEmbedUrl(vUrl)"
+                    :title="`Video preview ${idx + 1}`"
+                    class="h-32 w-full bg-black"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen
+                  />
                   <video
+                    v-else
                     :src="vUrl"
                     controls
                     muted

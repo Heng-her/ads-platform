@@ -5,6 +5,7 @@ import sanitizeHtml from 'sanitize-html'
 import { useApi } from '~/composables/useApi'
 import { useCategories } from '~/composables/useCategories'
 import { useCustomSeoMeta, useArticleSeo } from '~/lib/seo/metadata'
+import { getVideoEmbedUrl } from '~/lib/videoEmbed'
 import { extractIdFromSlug, getArticleUrl } from '~/lib/utils'
 import type { CampaignItem } from '~/types/campaign'
 
@@ -288,7 +289,17 @@ fetchCategories()
                         </figure>
                     </div>
                     <div v-if="campaign.videoUrls?.length" class="grid gap-3 sm:grid-cols-2">
-                        <video v-for="videoUrl in campaign.videoUrls" :key="videoUrl" :src="videoUrl" controls preload="metadata" class="w-full rounded-2xl border border-gray-200 bg-black shadow-sm dark:border-gray-800" />
+                        <template v-for="videoUrl in campaign.videoUrls" :key="videoUrl">
+                            <iframe
+                                v-if="getVideoEmbedUrl(videoUrl)"
+                                :src="getVideoEmbedUrl(videoUrl)"
+                                :title="`${campaign.title} video`"
+                                class="aspect-video w-full rounded-2xl border border-gray-200 bg-black shadow-sm dark:border-gray-800"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowfullscreen
+                            />
+                            <video v-else :src="videoUrl" controls preload="metadata" class="w-full rounded-2xl border border-gray-200 bg-black shadow-sm dark:border-gray-800" />
+                        </template>
                     </div>
                 </section>
 
