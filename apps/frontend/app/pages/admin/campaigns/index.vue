@@ -34,8 +34,7 @@ function toggleUser(userId: string) {
   expandedUserIds.value = next
 }
 
-async function handleStatusToggle(campaign: CampaignData, event: Event) {
-  const status = (event.target as HTMLInputElement).checked ? 'PUBLIC' : 'DRAFT'
+async function handleStatusToggle(campaign: CampaignData, status: 'DRAFT' | 'PUBLIC') {
   if (updatingStatusIds.value.has(campaign.id)) return
 
   updatingStatusIds.value = new Set(updatingStatusIds.value).add(campaign.id)
@@ -43,7 +42,6 @@ async function handleStatusToggle(campaign: CampaignData, event: Event) {
     await updateCampaignStatus(campaign.id, status)
     campaign.status = status
   } catch (err: any) {
-    ;(event.target as HTMLInputElement).checked = campaign.status === 'PUBLIC'
     alert(err.message || 'Failed to update campaign status')
   } finally {
     const next = new Set(updatingStatusIds.value)
@@ -141,7 +139,7 @@ onMounted(loadData)
         </section>
 
         <section v-if="expandedUserIds.has(user.id)" class="border-t border-gray-200 dark:border-gray-800">
-          <div class="overflow-x-auto">
+          <div class="no-scrollbar overflow-x-auto">
             <table class="w-full min-w-[720px] text-left text-xs">
               <thead class="bg-gray-50 text-gray-500 dark:bg-gray-950 dark:text-gray-400"><tr><th class="px-4 py-3">Campaign</th><th class="px-4 py-3">Category</th><th class="px-4 py-3">Created</th><th class="px-4 py-3">Visibility</th><th class="px-4 py-3 text-right">Actions</th></tr></thead>
               <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -149,8 +147,8 @@ onMounted(loadData)
                   <td class="px-4 py-3"><div class="flex items-center gap-3"><img v-if="campaign.imageUrl" :src="campaign.imageUrl" alt="" class="h-9 w-9 rounded object-cover" /><div v-else class="h-9 w-9 rounded bg-gray-100 dark:bg-gray-800" /><span class="max-w-64 truncate font-medium text-gray-900 dark:text-gray-100">{{ campaign.title }}</span></div></td>
                   <td class="px-4 py-3 text-gray-500">{{ campaign.category || 'General' }}</td>
                   <td class="px-4 py-3 text-gray-500">{{ new Date(campaign.createdAt).toLocaleDateString() }}</td>
-                  <td class="px-4 py-3"><label class="inline-flex cursor-pointer items-center gap-2"><input type="checkbox" class="peer sr-only" :checked="campaign.status === 'PUBLIC'" :disabled="updatingStatusIds.has(campaign.id)" :aria-label="`Make ${campaign.title} ${campaign.status === 'PUBLIC' ? 'draft' : 'public'}`" @change="handleStatusToggle(campaign, $event)" /><span class="relative h-5 w-9 rounded-full bg-gray-300 transition peer-checked:bg-emerald-500 peer-disabled:opacity-50"><span class="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-4" /></span><UBadge :color="campaign.status === 'PUBLIC' ? 'success' : 'neutral'" variant="soft" size="xs">{{ campaign.status }}</UBadge></label></td>
-                  <td class="px-4 py-3"><div class="flex justify-end gap-1"><UButton :to="getArticleUrl(campaign)" target="_blank" icon="i-heroicons-arrow-top-right-on-square" color="neutral" variant="ghost" size="xs" title="Open public post" /><UButton :to="`/creator/campaigns/${campaign.id}/edit`" icon="i-heroicons-pencil-square" color="neutral" variant="ghost" size="xs" title="Edit campaign" /><UButton icon="i-heroicons-trash" color="error" variant="ghost" size="xs" :loading="deletingCampaignIds.has(campaign.id)" title="Delete campaign" @click="removeCampaign(user, campaign)" /></div></td>
+                  <td class="px-4 py-3"><CampaignStatusToggle :title="campaign.title" :status="campaign.status" :disabled="updatingStatusIds.has(campaign.id)" size="xs" @change="handleStatusToggle(campaign, $event)" /></td>
+                  <td class="px-4 py-3"><CampaignRowActions :article-url="getArticleUrl(campaign)" :edit-url="`/creator/campaigns/${campaign.id}/edit`" :deleting="deletingCampaignIds.has(campaign.id)" @delete="removeCampaign(user, campaign)" /></td>
                 </tr>
                 <tr v-if="!user.campaigns.length"><td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">No campaigns created by this user.</td></tr>
               </tbody>

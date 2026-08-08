@@ -36,9 +36,7 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
   loadData()
 })
 
-async function handleStatusToggle(campaign: CampaignData, event: Event) {
-  const checked = (event.target as HTMLInputElement).checked
-  const newStatus = checked ? 'PUBLIC' : 'DRAFT'
+async function handleStatusToggle(campaign: CampaignData, newStatus: 'DRAFT' | 'PUBLIC') {
   if (updatingStatusIds.value.has(campaign.id)) return
 
   updatingStatusIds.value = new Set(updatingStatusIds.value).add(campaign.id)
@@ -46,8 +44,6 @@ async function handleStatusToggle(campaign: CampaignData, event: Event) {
     await updateCampaignStatus(campaign.id, newStatus)
     campaign.status = newStatus
   } catch (err: any) {
-    // Keep the switch in sync with the server when the update fails.
-    ;(event.target as HTMLInputElement).checked = campaign.status === 'PUBLIC'
     alert(err.message || 'Failed to update status')
   } finally {
     const nextUpdatingIds = new Set(updatingStatusIds.value)
@@ -160,7 +156,7 @@ onMounted(() => {
     <!-- Campaigns List Table -->
     <div v-else
       class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
-      <div class="overflow-x-auto">
+      <div class="no-scrollbar overflow-x-auto">
         <table class="w-full text-left text-xs text-gray-600 dark:text-gray-300">
           <thead
             class="bg-gray-50 dark:bg-gray-950 text-gray-500 dark:text-gray-400 uppercase font-semibold border-b border-gray-200 dark:border-gray-800">
@@ -208,31 +204,7 @@ onMounted(() => {
                 {{ item.contentType || 'ARTICLE' }}
               </td>
 
-              <td class="py-3 px-4">
-                <div class="flex items-center gap-2">
-                  <label class="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      role="switch"
-                      class="peer sr-only"
-                      :checked="item.status === 'PUBLIC'"
-                      :disabled="updatingStatusIds.has(item.id)"
-                      :aria-label="`Make ${item.title} ${item.status === 'PUBLIC' ? 'draft' : 'public'}`"
-                      @change="handleStatusToggle(item, $event)"
-                    />
-                    <span
-                      class="h-5 w-9 rounded-full bg-gray-300 transition-colors peer-checked:bg-emerald-500 peer-checked:[&>span]:translate-x-4 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 dark:bg-gray-700"
-                    >
-                      <span
-                        class="block h-4 w-4 translate-x-0.5 translate-y-0.5 rounded-full bg-white shadow-sm transition-transform"
-                      />
-                    </span>
-                  </label>
-                  <UBadge :color="item.status === 'PUBLIC' ? 'success' : 'neutral'" variant="soft" size="sm">
-                    {{ item.status }}
-                  </UBadge>
-                </div>
-              </td>
+              <td class="py-3 px-4"><CampaignStatusToggle :title="item.title" :status="item.status" :disabled="updatingStatusIds.has(item.id)" @change="handleStatusToggle(item, $event)" /></td>
 
               <td class="py-3 px-4 font-mono font-medium">
                 {{ item.totalImpressions || 0 }}
@@ -242,24 +214,7 @@ onMounted(() => {
                 {{ new Date(item.createdAt).toLocaleDateString() }}
               </td>
 
-              <td class="py-3 px-4 text-right">
-                <div class="flex items-center justify-end gap-1">
-                  <UButton
-                    :to="getArticleUrl(item)"
-                    icon="i-heroicons-arrow-top-right-on-square"
-                    color="neutral"
-                    variant="ghost"
-                    size="xs"
-                    title="Open Campaign Details in New Tab"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  />
-                  <UButton :to="`/creator/campaigns/${item.id}/edit`" icon="i-heroicons-pencil-square" color="neutral"
-                    variant="ghost" size="xs" title="Edit Campaign" />
-                  <UButton icon="i-heroicons-trash" color="neutral" variant="ghost" size="xs"
-                    class="text-red-500 hover:text-red-600" title="Delete Campaign" @click="confirmDelete(item)" />
-                </div>
-              </td>
+              <td class="py-3 px-4 text-right"><CampaignRowActions :article-url="getArticleUrl(item)" :edit-url="`/creator/campaigns/${item.id}/edit`" @delete="confirmDelete(item)" /></td>
             </tr>
           </tbody>
         </table>
