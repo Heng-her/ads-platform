@@ -69,6 +69,14 @@ export const createCampaignTranslationSchema = z.object({
   sourceLocale: z.string().regex(/^[a-z]{2,3}(?:-[A-Z]{2})?$/).optional().default("en"),
 });
 
+export const updateCampaignTranslationSchema = z.object({
+  title: z.string().trim().min(1, "Translation title is required"),
+  description: z.string().nullable().optional(),
+  content: z.string().nullable().optional(),
+  imageTitle: z.string().nullable().optional(),
+  imageDescription: z.string().nullable().optional(),
+});
+
 const campaignFeedFiltersSchema = z.object({
   category: z.string().optional(),
   contentType: z.string().optional(),

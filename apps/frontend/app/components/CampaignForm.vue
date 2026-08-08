@@ -40,7 +40,10 @@ const imagePreviewUrl = ref('')
 const imagePreviewTitle = ref('Image preview')
 const translationLocale = ref('km')
 const isTranslating = ref(false)
+const isLoadingTranslation = ref(false)
+const isSavingTranslation = ref(false)
 const translationMessage = ref<string | null>(null)
+const translationForm = ref({ title: '', description: '', content: '', imageTitle: '', imageDescription: '' })
 let draftSaveTimer: ReturnType<typeof setTimeout> | undefined
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 
@@ -317,6 +320,7 @@ async function translateWithGoogle() {
     const json = await response.json()
     if (!response.ok || json.code !== 1) throw new Error(json.msg || 'Google Translate failed')
     translationMessage.value = `Google translation saved in ${translationLocale.value}.`
+    await loadTranslation()
   } catch (error: any) {
     translationMessage.value = error.message || 'Google Translate failed'
   } finally {
@@ -324,11 +328,78 @@ async function translateWithGoogle() {
   }
 }
 
+function resetTranslationForm() {
+  translationForm.value = { title: '', description: '', content: '', imageTitle: '', imageDescription: '' }
+}
+
+async function loadTranslation() {
+  if (!props.campaignId) return
+  isLoadingTranslation.value = true
+  translationMessage.value = null
+  try {
+    const response = await api.campaigns[':id'].translations[':locale'].$get({
+      param: { id: props.campaignId, locale: translationLocale.value },
+    })
+    const json = await response.json()
+    if (!response.ok || json.code !== 1) throw new Error(json.msg || 'Failed to load translation')
+    const translation = json.data
+    if (!translation) {
+      resetTranslationForm()
+      return
+    }
+    translationForm.value = {
+      title: translation.title || '',
+      description: translation.description || '',
+      content: translation.content || '',
+      imageTitle: translation.imageTitle || '',
+      imageDescription: translation.imageDescription || '',
+    }
+  } catch (error: any) {
+    resetTranslationForm()
+    translationMessage.value = error.message || 'Failed to load translation'
+  } finally {
+    isLoadingTranslation.value = false
+  }
+}
+
+async function saveTranslation() {
+  if (!props.campaignId || !translationForm.value.title.trim()) {
+    translationMessage.value = 'Translation title is required'
+    return
+  }
+  isSavingTranslation.value = true
+  translationMessage.value = null
+  try {
+    const response = await api.campaigns[':id'].translations[':locale'].$put({
+      param: { id: props.campaignId, locale: translationLocale.value },
+      json: {
+        title: translationForm.value.title.trim(),
+        description: translationForm.value.description || null,
+        content: translationForm.value.content || null,
+        imageTitle: translationForm.value.imageTitle || null,
+        imageDescription: translationForm.value.imageDescription || null,
+      },
+    })
+    const json = await response.json()
+    if (!response.ok || json.code !== 1) throw new Error(json.msg || 'Failed to save translation')
+    translationMessage.value = `${translationLocale.value} translation saved.`
+  } catch (error: any) {
+    translationMessage.value = error.message || 'Failed to save translation'
+  } finally {
+    isSavingTranslation.value = false
+  }
+}
+
+watch(translationLocale, () => {
+  if (props.isEdit && props.campaignId) void loadTranslation()
+})
+
 watch(form, scheduleDraftSave, { deep: true })
 
 onMounted(() => {
   fetchCategories()
   void initialiseForm()
+  if (props.isEdit && props.campaignId) void loadTranslation()
 })
 
 onBeforeUnmount(() => {
@@ -415,6 +486,23 @@ onBeforeUnmount(() => {
 
     <!-- Form Container -->
     <div v-if="!isFetching" class="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
+      <section v-if="isEdit" class="space-y-4 rounded-lg border border-primary/30 bg-primary-50/40 p-4 dark:bg-primary-950/20">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="font-semibold text-gray-900 dark:text-white">Translation: {{ translationLocale }}</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-300">This version is separate from the original campaign content.</p>
+          </div>
+          <UButton color="primary" size="sm" :loading="isSavingTranslation" @click="saveTranslation">Save Translation</UButton>
+        </div>
+        <div v-if="isLoadingTranslation" class="text-sm text-gray-500">Loading translation...</div>
+        <div v-else class="space-y-3">
+          <UInput v-model="translationForm.title" placeholder="Translated title" size="sm" />
+          <textarea v-model="translationForm.description" rows="2" placeholder="Translated summary" class="w-full rounded-md border border-gray-200 bg-white p-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
+          <CampaignRichTextEditor v-model="translationForm.content" placeholder="Translated campaign content..." />
+          <div class="grid gap-3 sm:grid-cols-2"><UInput v-model="translationForm.imageTitle" placeholder="Translated image title" size="sm" /><UInput v-model="translationForm.imageDescription" placeholder="Translated image description" size="sm" /></div>
+        </div>
+      </section>
+
       <!-- Title & Basic Metadata -->
       <div class="space-y-4">
         <div>

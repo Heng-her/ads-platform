@@ -25,7 +25,7 @@ const localeCookie = useCookie<string>('article-locale', { default: () => 'en' }
 const selectedLocale = ref('en')
 
 function normalizeLocale(value: unknown) {
-    return value === 'km' ? 'km' : 'en'
+    return ['km', 'th', 'vi'].includes(String(value)) ? String(value) : 'en'
 }
 
 selectedLocale.value = normalizeLocale(route.query.locale || localeCookie.value)

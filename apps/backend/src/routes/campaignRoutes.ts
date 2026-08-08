@@ -23,6 +23,7 @@ import {
   publicCampaignFeedQuerySchema,
   newCampaignCountQuerySchema,
   createCampaignTranslationSchema,
+  updateCampaignTranslationSchema,
 } from "../schemas/campaign";
 
 // Re-export schemas consumed by actionRoutes.ts
@@ -57,6 +58,39 @@ function canMutateCampaign(user: UserJwtPayload, campaignUserId: string): boolea
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
 export const campaignRoutes = new Hono<HonoEnv>()
+
+  .get("/:id/translations/:locale", authMiddleware(), async (c) => {
+    const id = extractId(c.req.param("id"));
+    const locale = c.req.param("locale");
+    const user = c.get("user")!;
+    const campaignService = new CampaignService(getDb(c.env.DB));
+    const campaign = await campaignService.getCampaignById(id, user.role === "ADMIN");
+    if (!campaign) return sendError(c, "Campaign not found", null, 404);
+    if (!canMutateCampaign(user, campaign.userId)) return sendError(c, "Forbidden", null, 403);
+    const translation = await campaignService.getTranslation(id, locale);
+    return sendSuccess(c, translation);
+  })
+
+  .put("/:id/translations/:locale", authMiddleware(), zValidator("json", updateCampaignTranslationSchema, (result, c) => {
+    if (!result.success) return zodErrorHandler(result, c);
+  }), async (c) => {
+    const id = extractId(c.req.param("id"));
+    const locale = c.req.param("locale");
+    const user = c.get("user")!;
+    const campaignService = new CampaignService(getDb(c.env.DB));
+    const campaign = await campaignService.getCampaignById(id, user.role === "ADMIN");
+    if (!campaign) return sendError(c, "Campaign not found", null, 404);
+    if (!canMutateCampaign(user, campaign.userId)) return sendError(c, "Forbidden", null, 403);
+    const body = c.req.valid("json");
+    const saved = await campaignService.saveTranslation(id, locale, {
+      title: body.title,
+      description: body.description ?? null,
+      content: body.content ?? null,
+      imageTitle: body.imageTitle ?? null,
+      imageDescription: body.imageDescription ?? null,
+    });
+    return sendSuccess(c, saved, "Translation saved");
+  })
 
   .post("/:id/translations/google", authMiddleware(), zValidator("json", createCampaignTranslationSchema, (result, c) => {
     if (!result.success) return zodErrorHandler(result, c);

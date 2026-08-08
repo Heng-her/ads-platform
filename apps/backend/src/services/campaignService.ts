@@ -179,9 +179,13 @@ export class CampaignService {
   }
 
   async saveGoogleTranslation(campaignId: string, locale: string, values: { title: string; description: string | null; content: string | null; imageTitle: string | null; imageDescription: string | null }) {
+    return this.saveTranslation(campaignId, locale, values, "google");
+  }
+
+  async saveTranslation(campaignId: string, locale: string, values: { title: string; description: string | null; content: string | null; imageTitle: string | null; imageDescription: string | null }, provider = "manual") {
     const now = new Date();
-    await this.db.insert(campaignTranslations).values({ id: crypto.randomUUID(), campaignId, locale, ...values, provider: "google", createdAt: now, updatedAt: now })
-      .onConflictDoUpdate({ target: [campaignTranslations.campaignId, campaignTranslations.locale], set: { ...values, provider: "google", updatedAt: now } });
+    await this.db.insert(campaignTranslations).values({ id: crypto.randomUUID(), campaignId, locale, ...values, provider, createdAt: now, updatedAt: now })
+      .onConflictDoUpdate({ target: [campaignTranslations.campaignId, campaignTranslations.locale], set: { ...values, provider, updatedAt: now } });
     return this.db.select().from(campaignTranslations).where(and(eq(campaignTranslations.campaignId, campaignId), eq(campaignTranslations.locale, locale))).get();
   }
 
