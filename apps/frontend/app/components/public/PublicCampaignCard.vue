@@ -65,7 +65,7 @@ function stripHtml(html: string | null | undefined) {
       <!-- Full-Width Media Image Banner Container -->
       <NuxtLink :to="getArticleUrl(campaign)" class="block w-full">
         <div
-          class="w-full h-36 sm:h-44 bg-gray-100 dark:bg-[#0d1c2d] rounded-xl overflow-hidden shrink-0 border border-gray-200 dark:border-[#273647] flex items-center justify-center shadow-inner relative group/img">
+          class="w-full h-56 sm:h-72 bg-gray-100 dark:bg-[#0d1c2d] rounded-xl overflow-hidden shrink-0 border border-gray-200 dark:border-[#273647] flex items-center justify-center shadow-inner relative group/img">
           <img v-if="galleryImages[0]" :src="galleryImages[0]" :alt="campaign.imageTitle || campaign.title"
             loading="lazy"
             class="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300" />
@@ -73,8 +73,13 @@ function stripHtml(html: string | null | undefined) {
             <UIcon name="i-heroicons-photo" class="w-10 h-10" />
             <span class="text-[11px] font-mono font-medium">Image Preview</span>
           </div>
-          <span v-if="galleryImages.length > 1" class="absolute bottom-2 left-2 rounded-md bg-black/70 px-2 py-1 text-[10px] font-semibold text-white">{{ galleryImages.length }} images</span>
-          <span v-if="campaign.videoUrls?.length" class="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-md bg-black/70 px-2 py-1 text-[10px] font-semibold text-white"><UIcon name="i-heroicons-play" class="h-3 w-3" />{{ campaign.videoUrls.length }}</span>
+          <span v-if="galleryImages.length > 1"
+            class="absolute bottom-2 left-2 rounded-md bg-black/70 px-2 py-1 text-[10px] font-semibold text-white">{{
+              galleryImages.length }} images</span>
+          <span v-if="campaign.videoUrls?.length"
+            class="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-md bg-black/70 px-2 py-1 text-[10px] font-semibold text-white">
+            <UIcon name="i-heroicons-play" class="h-3 w-3" />{{ campaign.videoUrls.length }}
+          </span>
         </div>
       </NuxtLink>
 
