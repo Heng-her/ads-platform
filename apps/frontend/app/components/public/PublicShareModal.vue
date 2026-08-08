@@ -74,12 +74,14 @@ async function triggerNativeShare() {
         <div class="relative p-5 sm:p-6">
           <div class="flex items-start justify-between gap-4">
             <div class="flex items-center gap-3">
-              <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-gray-950 shadow-lg shadow-primary/20">
+              <div
+                class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-gray-950 shadow-lg shadow-primary/20">
                 <UIcon name="i-heroicons-share" class="h-5 w-5" />
               </div>
               <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Send it onward</p>
-                <h3 id="share-modal-title" class="mt-0.5 text-lg font-extrabold text-gray-950 dark:text-white">Share this article</h3>
+                <h3 id="share-modal-title" class="mt-0.5 text-lg font-extrabold text-gray-950 dark:text-white">Share
+                  this article</h3>
               </div>
             </div>
             <button @click="closeModal" aria-label="Close share dialog"
@@ -95,7 +97,8 @@ async function triggerNativeShare() {
               </div>
               <div class="min-w-0">
                 <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">You’re sharing</p>
-                <p class="mt-1 line-clamp-2 text-sm font-bold leading-5 text-gray-800 dark:text-gray-100">{{ articleTitle }}</p>
+                <p class="mt-1 line-clamp-2 text-sm font-bold leading-5 text-gray-800 dark:text-gray-100">{{
+                  articleTitle }}</p>
               </div>
             </div>
           </div>
@@ -106,10 +109,13 @@ async function triggerNativeShare() {
               <a v-for="platform in sharePlatforms" :key="platform.name" :href="platform.shareUrl" target="_blank"
                 rel="noopener noreferrer" :title="`Share on ${platform.name}`"
                 class="group flex min-w-0 flex-col items-center gap-2 rounded-2xl px-1 py-2 text-center transition-all duration-200 hover:-translate-y-1 hover:bg-gray-50 dark:hover:bg-white/5">
-                <span class="flex h-12 w-12 items-center justify-center rounded-2xl border border-gray-200 bg-white p-2 shadow-sm transition-all group-hover:border-primary/40 group-hover:shadow-md dark:border-white/10 dark:bg-[#162a3d]">
+                <span
+                  class="flex h-12 w-12 items-center justify-center rounded-2xl border border-gray-200 bg-white p-2 shadow-sm transition-all group-hover:border-primary/40 group-hover:shadow-md dark:border-white/10 dark:bg-[#162a3d]">
                   <img :src="platform.iconImg" :alt="platform.name" class="h-full w-full object-contain" />
                 </span>
-                <span class="truncate text-[10px] font-bold text-gray-500 group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white">{{ platform.name }}</span>
+                <span
+                  class="truncate text-[10px] font-bold text-gray-500 group-hover:text-gray-950 dark:text-gray-400 dark:group-hover:text-white">{{
+                    platform.name }}</span>
               </a>
             </div>
           </div>
@@ -123,9 +129,11 @@ async function triggerNativeShare() {
           <div class="mt-5 border-t border-gray-100 pt-5 dark:border-white/10">
             <div class="mb-2 flex items-center justify-between">
               <label class="text-xs font-bold text-gray-700 dark:text-gray-200">Copy a link</label>
-              <span v-if="copied" class="text-xs font-bold text-emerald-600 dark:text-emerald-400">Copied to clipboard</span>
+              <span v-if="copied" class="text-xs font-bold text-emerald-600 dark:text-emerald-400">Copied to
+                clipboard</span>
             </div>
-            <div class="flex rounded-2xl border border-gray-200 bg-gray-50 p-1.5 focus-within:border-primary/50 dark:border-white/10 dark:bg-white/5">
+            <div
+              class="flex rounded-2xl border border-gray-200 bg-gray-50 p-1.5 focus-within:border-primary/50 dark:border-white/10 dark:bg-white/5">
               <input readonly :value="fullUrl" aria-label="Article link"
                 class="min-w-0 flex-1 bg-transparent px-2.5 text-xs font-medium text-gray-600 outline-none dark:text-gray-300" />
               <button @click="copyLink"
