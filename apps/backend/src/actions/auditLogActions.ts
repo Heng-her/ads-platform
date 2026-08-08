@@ -16,7 +16,7 @@ export async function handleAuditLogAction(
       if (currentUser.role !== "ADMIN")
         return sendError(c, "Forbidden", null, 403);
       const auditLogService = new AuditLogService(db);
-      const logs = await auditLogService.getAllLogs();
+      const logs = await auditLogService.getLogs();
       return sendSuccess(c, logs);
     }
 
@@ -25,9 +25,9 @@ export async function handleAuditLogAction(
       if (currentUser.role !== "ADMIN")
         return sendError(c, "Forbidden", null, 403);
       const auditLogService = new AuditLogService(db);
-      const success = await auditLogService.clearAllLogs();
-      if (success) {
-        return sendSuccess(c, null, "Audit logs cleared successfully");
+      const result = await auditLogService.clearLogs();
+      if (result) {
+        return sendSuccess(c, result, "Audit logs cleared successfully");
       }
       return sendError(c, "Failed to clear audit logs");
     }
