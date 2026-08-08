@@ -47,17 +47,19 @@ const { isMobileOpen } = useSidebar()
         </template>
 
         <template #right>
-          <LanguageSwitcher />
-          <UButton
-            to="/creator"
-            color="neutral"
-            variant="subtle"
-            size="xs"
-            class="hidden sm:inline-flex"
-          >
-            Switch to Creator
-          </UButton>
-          <UserMenu role="admin" />
+          <div class="flex items-center gap-1.5 sm:gap-3">
+            <LanguageSwitcher />
+            <UButton
+              to="/creator"
+              color="neutral"
+              variant="subtle"
+              size="xs"
+              class="hidden sm:inline-flex"
+            >
+              Switch to Creator
+            </UButton>
+            <UserMenu role="admin" />
+          </div>
         </template>
       </AppHeader>
 

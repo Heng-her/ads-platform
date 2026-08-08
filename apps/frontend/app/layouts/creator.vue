@@ -46,7 +46,7 @@ const { isMobileOpen } = useSidebar()
         </template>
 
         <template #right>
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5 sm:gap-3">
             <LanguageSwitcher />
             <UButton
               icon="i-heroicons-bell"

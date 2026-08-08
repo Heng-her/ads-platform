@@ -127,10 +127,20 @@ onUnmounted(() => {
     <!-- Header -->
     <AppHeader>
       <template #left>
-        <NuxtLink to="/" class="flex items-center gap-2 text-xl font-bold text-primary">
-          <UIcon name="i-heroicons-globe-alt" class="w-6 h-6" />
-          <span>NewPlatform</span>
-        </NuxtLink>
+        <div class="flex items-center gap-2">
+          <UButton
+            icon="i-heroicons-bars-3"
+            color="neutral"
+            variant="ghost"
+            class="md:hidden"
+            aria-label="Open mobile menu"
+            @click="mobileMenuOpen = true"
+          />
+          <NuxtLink to="/" class="flex items-center gap-2 text-xl font-bold text-primary">
+            <UIcon name="i-heroicons-globe-alt" class="w-6 h-6" />
+            <span>NewPlatform</span>
+          </NuxtLink>
+        </div>
       </template>
 
       <!-- Desktop Navigation (Center) -->
@@ -314,5 +324,16 @@ onUnmounted(() => {
         <span class="text-[10px] tracking-wide">{{ item.label }}</span>
       </NuxtLink>
     </nav>
+
+    <!-- Mobile Drawer -->
+    <MobileDrawer
+      v-model:open="mobileMenuOpen"
+      side="left"
+      title="NewPlatform"
+      icon="i-heroicons-globe-alt"
+      icon-class="text-primary"
+      :links="publicNavLinks"
+      role="public"
+    />
   </div>
 </template>

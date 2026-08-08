@@ -21,6 +21,21 @@ const router = useRouter()
 const api = useApi()
 const { categories } = useCategories()
 
+// Mobile drawer & search overlay state
+const isMobileOpen = ref(false)
+const showMobileSearch = ref(false)
+
+const publicNavLinks = [
+    { label: 'Articles & Feed', icon: 'i-heroicons-newspaper', to: '/article' },
+    { label: 'Explore Campaigns', icon: 'i-heroicons-sparkles', to: '/explore' },
+    { label: 'Trending Ads', icon: 'i-heroicons-fire', to: '/trending' },
+    { label: 'Monetization', icon: 'i-heroicons-banknotes', to: '/pricing' },
+    { label: 'News & Updates', icon: 'i-heroicons-rss', to: '/news' },
+    { label: 'AI Insights', icon: 'i-heroicons-cpu-chip', to: '/ai' },
+    { label: 'Web3 Finance', icon: 'i-heroicons-wallet', to: '/finance' },
+    { label: 'Advertisers', icon: 'i-heroicons-user-group', to: '/advertisers' }
+]
+
 // ---- Search & Filter state ----
 const searchQuery = ref((route.query.search as string) || '')
 const isSearchFocused = ref(false)
@@ -121,11 +136,13 @@ function onSearchInput() {
 function handleSearchSubmit() {
     const query = searchQuery.value.trim()
     isSearchFocused.value = false
+    showMobileSearch.value = false
     pushQuery({ search: query || undefined })
 }
 
 function selectSuggestion(item: SuggestionItem) {
     isSearchFocused.value = false
+    showMobileSearch.value = false
     searchQuery.value = item.type === 'title' ? item.label : searchQuery.value
 
     const [key, val] = item.filter.split('=')
@@ -189,54 +206,77 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="min-h-screen w-full flex flex-col bg-background text-foreground">
+    <div class="min-h-screen w-full flex flex-col bg-background text-foreground pb-16 md:pb-0">
         <!-- ================= TOP HEADER / NAVIGATION ================= -->
         <AppHeader :class="[
             'will-change-transform transition-transform duration-300 ease-out',
             isHeaderHidden ? '-translate-y-full' : 'translate-y-0'
         ]">
             <template #left>
-                <NuxtLink to="/article" class="flex items-center gap-2 text-xl font-bold text-primary group">
-                    <div
-                        class="h-9 w-9 rounded-xl flex items-center justify-center bg-primary-500/10 text-primary border border-primary/20 transition-transform group-hover:scale-105">
-                        <img src="/article.webp" alt="Article" class="h-full w-full rounded-xl object-cover" />
-                    </div>
-                    <div class="hidden sm:flex flex-col">
-                        <span
-                            class="font-display font-bold text-base tracking-tight text-gray-900 dark:text-white group-hover:text-primary transition-colors">
-                            SIGNAL
-                        </span>
-                        <span
-                            class="text-[10px] font-mono tracking-wider text-gray-500 dark:text-gray-400 uppercase -mt-1">
-                            Ads Platform
-                        </span>
-                    </div>
-                </NuxtLink>
+                <div class="flex items-center gap-2">
+                    <!-- Mobile Hamburger Drawer Toggle Button -->
+                    <UButton
+                        icon="i-heroicons-bars-3"
+                        color="neutral"
+                        variant="ghost"
+                        class="md:hidden"
+                        aria-label="Open mobile menu"
+                        @click="isMobileOpen = true"
+                    />
+
+                    <!-- Brand Logo -->
+                    <NuxtLink to="/article" class="flex items-center gap-2 text-xl font-bold text-primary group">
+                        <div
+                            class="h-9 w-9 rounded-xl flex items-center justify-center bg-primary-500/10 text-primary border border-primary/20 transition-transform group-hover:scale-105 shrink-0">
+                            <img src="/article.webp" alt="Article" class="h-full w-full rounded-xl object-cover" />
+                        </div>
+                        <div class="flex flex-col">
+                            <span
+                                class="font-display font-bold text-base tracking-tight text-gray-900 dark:text-white group-hover:text-primary transition-colors">
+                                SIGNAL
+                            </span>
+                            <span
+                                class="text-[9px] sm:text-[10px] font-mono tracking-wider text-gray-500 dark:text-gray-400 uppercase -mt-1">
+                                Ads Platform
+                            </span>
+                        </div>
+                    </NuxtLink>
+                </div>
             </template>
 
             <!-- Right: Search Box, Color Mode Toggle & Actions -->
             <template #right>
-                <div class="flex items-center gap-2 md:gap-3">
-                    <!-- Search Input Wrapper -->
-                    <div class="relative w-52 sm:w-72 lg:w-[22rem]">
+                <div class="flex items-center gap-1.5 sm:gap-2 md:gap-3">
+                    <!-- Mobile Search Toggle Button -->
+                    <UButton
+                        icon="i-heroicons-magnifying-glass"
+                        color="neutral"
+                        variant="ghost"
+                        class="md:hidden"
+                        aria-label="Search"
+                        @click="showMobileSearch = !showMobileSearch"
+                    />
+
+                    <!-- Desktop Search Input Wrapper -->
+                    <div class="relative hidden md:block w-52 sm:w-64 lg:w-80">
                         <div
-                            class="relative flex h-11 items-center rounded-2xl border border-gray-200 bg-gray-50 shadow-sm transition-all duration-200 focus-within:border-primary/50 focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/10 dark:border-gray-800 dark:bg-gray-900 dark:focus-within:bg-gray-950">
+                            class="relative flex h-10 lg:h-11 items-center rounded-2xl border border-gray-200 bg-gray-50 shadow-sm transition-all duration-200 focus-within:border-primary/50 focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/10 dark:border-gray-800 dark:bg-gray-900 dark:focus-within:bg-gray-950">
                             <!-- Search Icon -->
-                            <span class="flex shrink-0 items-center pl-4 pr-2.5 text-gray-400">
-                                <UIcon name="i-heroicons-magnifying-glass" class="h-4.5 w-4.5 text-primary" />
+                            <span class="flex shrink-0 items-center pl-3.5 pr-2 text-gray-400">
+                                <UIcon name="i-heroicons-magnifying-glass" class="h-4 w-4 text-primary" />
                             </span>
 
                             <!-- Input -->
                             <input ref="searchInputRef" v-model="searchQuery" type="text"
                                 placeholder="Search campaigns... (/)"
-                                class="w-full bg-transparent py-2 pr-7 text-sm font-medium text-gray-900 outline-none placeholder:text-gray-400 dark:text-white font-body"
+                                class="w-full bg-transparent py-2 pr-7 text-xs sm:text-sm font-medium text-gray-900 outline-none placeholder:text-gray-400 dark:text-white font-body"
                                 @input="onSearchInput" @focus="isSearchFocused = true" @blur="onSearchBlur"
                                 @keydown.enter="handleSearchSubmit" />
 
                             <!-- Clear button or shortcut -->
                             <div class="flex shrink-0 items-center pr-3">
                                 <button v-if="searchQuery" type="button" @click="clearSearch"
-                                    class="flex h-6 w-6 items-center justify-center rounded-lg text-gray-400 transition-all hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white"
+                                    class="flex h-5 w-5 items-center justify-center rounded-lg text-gray-400 transition-all hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white"
                                     title="Clear search">
                                     <UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
                                 </button>
@@ -326,16 +366,36 @@ onUnmounted(() => {
                     <LanguageSwitcher />
                     <UColorModeButton />
 
-                    <!-- Action Buttons -->
+                    <!-- Action Buttons (Desktop) -->
                     <UButton to="/login" color="neutral" variant="ghost" class="hidden sm:inline-flex text-xs">
                         Sign In
                     </UButton>
-                    <UButton to="/creator" color="primary" size="xs" class="sm:inline-flex font-semibold text-xs">
+                    <UButton to="/creator" color="primary" size="xs" class="hidden sm:inline-flex font-semibold text-xs">
                         Creator Studio
                     </UButton>
                 </div>
             </template>
         </AppHeader>
+
+        <!-- Expandable Mobile Search Bar Overlay -->
+        <transition name="fade-slide">
+            <div v-if="showMobileSearch" class="md:hidden sticky top-16 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 p-3 shadow-md">
+                <div class="relative flex items-center">
+                    <UIcon name="i-heroicons-magnifying-glass" class="absolute left-3.5 h-4 w-4 text-primary" />
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Search campaigns..."
+                        class="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 py-2 pl-9 pr-9 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20"
+                        @input="onSearchInput"
+                        @keydown.enter="handleSearchSubmit"
+                    />
+                    <button v-if="searchQuery" @click="clearSearch" class="absolute right-3 text-gray-400">
+                        <UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
+                    </button>
+                </div>
+            </div>
+        </transition>
 
         <!-- Main Body Container -->
         <main :class="[
@@ -345,7 +405,42 @@ onUnmounted(() => {
             <slot />
         </main>
 
-        <!-- Footer -->
+        <!-- Glassmorphic Sticky Mobile Bottom Navigation Bar -->
+        <div class="md:hidden fixed bottom-3 left-3 right-3 z-40 rounded-2xl bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border border-gray-200/80 dark:border-gray-800/80 shadow-lg px-2 py-1.5 flex items-center justify-around">
+            <NuxtLink to="/article" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" active-class="text-primary font-bold">
+                <UIcon name="i-heroicons-newspaper" class="w-5 h-5" />
+                <span>Articles</span>
+            </NuxtLink>
+            <NuxtLink to="/explore" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" active-class="text-primary font-bold">
+                <UIcon name="i-heroicons-sparkles" class="w-5 h-5" />
+                <span>Explore</span>
+            </NuxtLink>
+            <NuxtLink to="/trending" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" active-class="text-primary font-bold">
+                <UIcon name="i-heroicons-fire" class="w-5 h-5" />
+                <span>Trending</span>
+            </NuxtLink>
+            <NuxtLink to="/pricing" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" active-class="text-primary font-bold">
+                <UIcon name="i-heroicons-banknotes" class="w-5 h-5" />
+                <span>Pricing</span>
+            </NuxtLink>
+            <button @click="isMobileOpen = true" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
+                <UIcon name="i-heroicons-bars-3" class="w-5 h-5" />
+                <span>Menu</span>
+            </button>
+        </div>
+
+        <!-- Mobile Side Navigation Drawer -->
+        <MobileDrawer
+            v-model:open="isMobileOpen"
+            side="left"
+            title="Signal Ads"
+            icon="i-heroicons-globe-alt"
+            icon-class="text-primary"
+            :links="publicNavLinks"
+            role="public"
+        />
+
+        <!-- Desktop Footer -->
         <footer
             class="border-t border-gray-200 dark:border-gray-800 py-6 bg-gray-50/50 dark:bg-gray-900/50 hidden md:block">
             <div class="max-w-[1400px] mx-auto px-4 text-center text-xs text-gray-500">
