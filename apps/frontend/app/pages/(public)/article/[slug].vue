@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, watchEffect } from 'vue'
+import { ref, computed, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import sanitizeHtml from 'sanitize-html'
 import { useApi } from '~/composables/useApi'
+import { useCategories } from '~/composables/useCategories'
 import { useCustomSeoMeta, useArticleSeo } from '~/lib/seo/metadata'
 import { extractIdFromSlug, getArticleUrl } from '~/lib/utils'
+import type { CampaignItem } from '~/types/campaign'
 
 definePageMeta({
     layout: 'public'
@@ -13,6 +15,7 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
+const { categories, fetchCategories } = useCategories()
 
 const slug = computed(() => (route.params.slug as string) || '')
 
@@ -72,6 +75,10 @@ const errorMessage = computed(() => {
 const copied = ref(false)
 const feedbackGiven = ref<boolean | null>(null)
 const isShareModalOpen = ref(false)
+const relatedCampaigns = ref<CampaignItem[]>([])
+const relatedPage = ref(1)
+const relatedHasMore = ref(false)
+const isLoadingRelated = ref(false)
 
 // SEO Metadata and Structured Data (JSON-LD) for Search Engines & Social Cards
 watchEffect(() => {
@@ -129,6 +136,39 @@ function copyLink() {
 function giveFeedback(val: boolean) {
     feedbackGiven.value = val
 }
+
+const galleryImages = computed(() => {
+    if (!campaign.value) return []
+    const images = [campaign.value.imageUrl, ...(campaign.value.images || []).map((image: any) => image.url)]
+    return [...new Set(images.filter(Boolean))] as string[]
+})
+
+async function loadRelatedCampaigns(targetPage = 1, append = false) {
+    if (!campaign.value?.category) return
+    isLoadingRelated.value = true
+    try {
+        const response = await api.action.$post({
+            json: { action: 'campaigns/list', data: { category: campaign.value.category, page: targetPage, limit: 3 } }
+        })
+        const json = await response.json()
+        if (json.code !== 1) throw new Error(json.msg || 'Failed to load related campaigns')
+        const items = (json.data?.items || []).filter((item: CampaignItem) => item.id !== campaign.value?.id)
+        relatedCampaigns.value = append ? [...relatedCampaigns.value, ...items] : items
+        relatedPage.value = targetPage
+        relatedHasMore.value = Boolean(json.data?.pagination?.hasNextPage)
+    } finally {
+        isLoadingRelated.value = false
+    }
+}
+
+watch(campaign, (currentCampaign) => {
+    relatedCampaigns.value = []
+    relatedPage.value = 1
+    relatedHasMore.value = false
+    if (currentCampaign) loadRelatedCampaigns()
+}, { immediate: true })
+
+fetchCategories()
 </script>
 
 <template>
@@ -178,7 +218,11 @@ function giveFeedback(val: boolean) {
         </div>
 
         <!-- Main Content Grid -->
-        <div v-else class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div v-else class="flex gap-6 items-start">
+            <PublicFilterSidebar :categories="categories" :selected-category="campaign.category || ''" :active-filter-count="campaign.category ? 1 : 0"
+                @select-category="(category) => router.push({ path: '/article', query: category ? { category } : {} })"
+                @reset-filters="router.push('/article')" />
+            <div class="min-w-0 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
             <!-- Left Main Column (Details & Article Content) -->
             <article class="lg:col-span-8 space-y-6">
@@ -232,18 +276,20 @@ function giveFeedback(val: boolean) {
                     </div>
                 </header>
 
-                <!-- Cover Image Banner -->
-                <div v-if="campaign.imageUrl"
-                    class="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-xl bg-gray-100 dark:bg-gray-950">
-                    <img :src="campaign.imageUrl" :alt="campaign.imageTitle || campaign.title"
-                        class="w-full max-h-[480px] object-cover" />
-                    <div v-if="campaign.imageTitle || campaign.imageDescription"
-                        class="p-3 bg-gray-50 dark:bg-gray-900/90 text-xs font-mono font-medium text-gray-600 dark:text-gray-300 border-t border-gray-200 dark:border-gray-800">
-                        <span class="font-bold text-gray-900 dark:text-white" v-if="campaign.imageTitle">{{
-                            campaign.imageTitle }}: </span>
-                        <span>{{ campaign.imageDescription }}</span>
+                <!-- Full media gallery -->
+                <section v-if="galleryImages.length || campaign.videoUrls?.length" class="space-y-3">
+                    <div v-if="galleryImages.length" class="grid gap-3" :class="galleryImages.length > 1 ? 'sm:grid-cols-2' : ''">
+                        <figure v-for="(image, index) in galleryImages" :key="image" class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+                            <img :src="image" :alt="index === 0 ? (campaign.imageTitle || campaign.title) : `${campaign.title} image ${index + 1}`" class="h-full max-h-[480px] w-full object-cover" />
+                            <figcaption v-if="index === 0 && (campaign.imageTitle || campaign.imageDescription)" class="border-t border-gray-200 bg-gray-50 p-3 text-xs font-medium text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+                                <strong v-if="campaign.imageTitle" class="text-gray-900 dark:text-white">{{ campaign.imageTitle }}: </strong>{{ campaign.imageDescription }}
+                            </figcaption>
+                        </figure>
                     </div>
-                </div>
+                    <div v-if="campaign.videoUrls?.length" class="grid gap-3 sm:grid-cols-2">
+                        <video v-for="videoUrl in campaign.videoUrls" :key="videoUrl" :src="videoUrl" controls preload="metadata" class="w-full rounded-2xl border border-gray-200 bg-black shadow-sm dark:border-gray-800" />
+                    </div>
+                </section>
 
                 <!-- Main Content Body -->
                 <div
@@ -264,6 +310,21 @@ function giveFeedback(val: boolean) {
 
                 <!-- Interactive Feedback Widget -->
                 <PublicFeedbackWidget :feedback-given="feedbackGiven" @give-feedback="giveFeedback" />
+
+                <section v-if="campaign.category" class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+                    <div class="mb-4 flex items-center justify-between gap-3">
+                        <div><p class="text-xs font-semibold uppercase tracking-wider text-primary">More to explore</p><h2 class="mt-1 font-display text-lg font-bold text-gray-900 dark:text-white">More {{ campaign.category }} campaigns</h2></div>
+                        <NuxtLink :to="`/article?category=${encodeURIComponent(campaign.category)}`" class="text-xs font-semibold text-primary hover:underline">View category</NuxtLink>
+                    </div>
+                    <div v-if="relatedCampaigns.length" class="grid gap-3 sm:grid-cols-3">
+                        <NuxtLink v-for="item in relatedCampaigns" :key="item.id" :to="getArticleUrl(item)" class="group overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+                            <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.title" class="h-24 w-full object-cover" /><div v-else class="flex h-24 items-center justify-center bg-gray-100 text-gray-400 dark:bg-gray-800"><UIcon name="i-heroicons-photo" class="h-5 w-5" /></div>
+                            <p class="line-clamp-2 p-3 text-sm font-semibold text-gray-900 group-hover:text-primary dark:text-white">{{ item.title }}</p>
+                        </NuxtLink>
+                    </div>
+                    <p v-else-if="!isLoadingRelated" class="text-sm text-gray-500">No other campaigns in this category yet.</p>
+                    <div v-if="relatedHasMore" class="mt-4 text-center"><UButton color="neutral" variant="outline" size="sm" :loading="isLoadingRelated" @click="loadRelatedCampaigns(relatedPage + 1, true)">Load more {{ campaign.category }} campaigns</UButton></div>
+                </section>
             </article>
 
             <!-- Right Sidebar Column (Metrics & Ad Info) -->
@@ -280,6 +341,7 @@ function giveFeedback(val: boolean) {
                     <UIcon name="i-heroicons-arrow-right" class="w-4 h-4" />
                 </NuxtLink>
             </aside>
+            </div>
         </div>
 
         <!-- Social Share Modal -->
