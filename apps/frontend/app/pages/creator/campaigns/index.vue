@@ -39,7 +39,7 @@ function openImagePreview(item: CampaignData) {
 async function loadData() {
   await fetchMyCampaigns({
     page: currentPage.value,
-    limit: 3,
+    limit: 5,
     search: searchQuery.value || undefined,
     category: selectedCategory.value || undefined,
     status: selectedStatus.value === 'ALL' ? undefined : selectedStatus.value,
