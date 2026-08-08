@@ -10,6 +10,9 @@
   "vars": {
     // "ENVIRONMENT": "development",
     "ENVIRONMENT": "development",
+    "UPLOAD_API_BASE_URL": "https://api-upload-image-8ym9.onrender.com",
+    "UPLOAD_API_KEY": "crypten-api-key",
+    "UPLOAD_API_BYPASS_SECRET": "crypten-bypass-secret",
   },
   "d1_databases": [
     {
