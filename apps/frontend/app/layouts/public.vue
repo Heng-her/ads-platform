@@ -177,7 +177,7 @@ onUnmounted(() => {
                 <NuxtLink to="/article" class="flex items-center gap-2 text-xl font-bold text-primary group">
                     <div
                         class="h-9 w-9 rounded-xl flex items-center justify-center bg-primary-500/10 text-primary border border-primary/20 transition-transform group-hover:scale-105">
-                        <UIcon name="i-heroicons-globe-alt" class="w-6 h-6 text-primary" />
+                        <img src="/article.webp" alt="Article" class="h-full w-full rounded-xl object-cover" />
                     </div>
                     <div class="hidden sm:flex flex-col">
                         <span
