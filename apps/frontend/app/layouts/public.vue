@@ -329,7 +329,7 @@ onUnmounted(() => {
                     <UButton to="/login" color="neutral" variant="ghost" class="hidden sm:inline-flex text-xs">
                         Sign In
                     </UButton>
-                    <UButton to="/creator" color="primary" size="xs" class="hidden sm:inline-flex font-semibold text-xs">
+                    <UButton to="/creator" color="primary" size="xs" class="sm:inline-flex font-semibold text-xs">
                         Creator Studio
                     </UButton>
                 </div>
