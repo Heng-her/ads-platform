@@ -1,5 +1,4 @@
 import { computed, ref } from "vue";
-import { useApi } from "~/composables/useApi";
 import { useAuthStore } from "~/stores/auth";
 
 export interface CloudinaryUploadResponse {
@@ -86,9 +85,10 @@ export function useCloudinaryUpload() {
   const baseUrl =
     (config.public as any)?.cloudinaryBaseUrl ||
     "https://api-upload-image-8ym9.onrender.com";
+  const backendApiBase =
+    (config.public as any)?.apiBase || "http://localhost:8787/api";
   const apiKey = (config.public as any)?.cloudinaryApiKey || "crypten-api-key";
   const isAdmin = computed(() => authStore.user?.role === "admin");
-  const api = useApi();
 
   /**
    * Upload image or video to Cloudinary API
@@ -135,10 +135,16 @@ export function useCloudinaryUpload() {
 
     try {
       const response = isAdmin.value
-        ? await api.media.upload.$post({
-            query: { folder },
-            body: formData,
-          })
+        ? await fetch(
+            `${backendApiBase}/media/upload?${new URLSearchParams({ folder })}`,
+            {
+              method: "POST",
+              headers: authStore.token
+                ? { Authorization: `Bearer ${authStore.token}` }
+                : undefined,
+              body: formData,
+            },
+          )
         : await fetch(`${baseUrl}/api/${folder}`, {
             method: "POST",
             headers,
