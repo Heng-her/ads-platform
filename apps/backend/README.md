@@ -14,9 +14,9 @@ Base URL: `http://localhost:8787`
 
 ### Admin Upload Proxy
 
-`POST /api/media/upload?folder=campaigns` and
-`POST /api/media/upload?folder=campaigns/videos` are available only to
-authenticated `ADMIN` users. The proxy forwards the file to the upload service
+`POST /api/media/upload` is available only to authenticated `ADMIN` users for
+the `campaigns`, `campaigns/covers`, `campaigns/gallery`, and
+`campaigns/videos` folders. The proxy forwards the file to the upload service
 with its bypass header held only in Worker secrets; browsers never receive it.
 
 Configure these Worker secrets before deploying:

@@ -3,7 +3,12 @@ import { authMiddleware, requireRole } from "../middlewares/auth";
 import type { HonoEnv } from "../types/env";
 import { sendError } from "../utils/response";
 
-const allowedFolders = new Set(["campaigns", "campaigns/videos"]);
+const allowedFolders = new Set([
+  "campaigns",
+  "campaigns/covers",
+  "campaigns/gallery",
+  "campaigns/videos",
+]);
 
 export const mediaRoutes = new Hono<HonoEnv>().post(
   "/upload",
