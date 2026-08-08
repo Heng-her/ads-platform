@@ -80,6 +80,8 @@ export const meCampaignsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(10),
   status: z.enum(["DRAFT", "PUBLIC"]).optional(),
+  category: z.string().optional(),
+  search: z.string().optional(),
 });
 
 export type CreateCampaignInput = z.infer<typeof createCampaignSchema>;

@@ -293,6 +293,8 @@ export class CampaignService {
       status?: "DRAFT" | "PUBLIC";
       page?: number;
       limit?: number;
+      category?: string;
+      search?: string;
     } = {},
   ) {
     const { page, limit, offset } = parsePagination(
@@ -307,6 +309,12 @@ export class CampaignService {
 
     if (options.status) {
       conditions.push(eq(campaigns.status, options.status));
+    }
+    if (options.category) {
+      conditions.push(eq(campaigns.category, options.category));
+    }
+    if (options.search) {
+      conditions.push(like(campaigns.title, `%${options.search}%`));
     }
 
     const whereClause = and(...conditions);

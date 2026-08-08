@@ -112,6 +112,33 @@ export function useCampaigns() {
     }
   }
 
+  /** Fetches only campaigns owned by the authenticated creator. */
+  async function fetchMyCampaigns(options: Pick<ListCampaignsOptions, 'page' | 'limit' | 'category' | 'search' | 'status'> = {}) {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const query = Object.fromEntries(
+        Object.entries(options)
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key, String(value)]),
+      );
+      const response = await api.campaigns.me.$get({ query });
+      const body = await response.json();
+      if (response.ok && body.code === 1 && body.data) {
+        campaignsList.value = body.data.items || [];
+        totalItems.value = body.data.pagination?.total || 0;
+        totalPages.value = body.data.pagination?.totalPages || 1;
+        return body.data;
+      }
+      throw new Error(body.msg || 'Failed to load your campaigns');
+    } catch (err: any) {
+      error.value = err.message || 'An error occurred';
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   async function fetchAdminCampaignUsers(options: { page?: number; limit?: number; search?: string } = {}) {
     isLoading.value = true;
     error.value = null;
@@ -287,6 +314,7 @@ export function useCampaigns() {
     isLoading,
     error,
     fetchCampaigns,
+    fetchMyCampaigns,
     fetchAdminCampaignUsers,
     getCampaign,
     createCampaign,

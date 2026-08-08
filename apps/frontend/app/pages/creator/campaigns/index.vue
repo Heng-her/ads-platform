@@ -8,7 +8,7 @@ definePageMeta({
   layout: 'creator'
 })
 
-const { campaignsList, isLoading, fetchCampaigns, updateCampaignStatus, deleteCampaign } = useCampaigns()
+const { campaignsList, isLoading, fetchMyCampaigns, updateCampaignStatus, deleteCampaign } = useCampaigns()
 const { categories } = useCategories()
 
 const searchQuery = ref('')
@@ -22,7 +22,7 @@ const isDeleting = ref(false)
 const updatingStatusIds = ref<Set<string>>(new Set())
 
 async function loadData() {
-  await fetchCampaigns({
+  await fetchMyCampaigns({
     page: currentPage.value,
     limit: 10,
     search: searchQuery.value || undefined,

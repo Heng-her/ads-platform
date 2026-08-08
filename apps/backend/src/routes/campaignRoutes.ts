@@ -119,9 +119,9 @@ export const campaignRoutes = new Hono<HonoEnv>()
       const db = getDb(c.env.DB);
       const campaignService = new CampaignService(db);
       const impressionService = new ImpressionService(db, c.env.CACHE_KV);
-      const { page, limit, status } = c.req.valid("query");
+      const { page, limit, status, category, search } = c.req.valid("query");
 
-      const result = await campaignService.getUserCampaigns(userPayload.id, { page, limit, status });
+      const result = await campaignService.getUserCampaigns(userPayload.id, { page, limit, status, category, search });
 
       const campaignIds = result.items.map((item) => item.id);
 
