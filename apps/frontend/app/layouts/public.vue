@@ -19,7 +19,7 @@ useHead({
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
-const { categories, fetchCategories } = useCategories()
+const { categories } = useCategories()
 
 // ---- Search & Filter state ----
 const searchQuery = ref((route.query.search as string) || '')
@@ -158,9 +158,6 @@ function onKeyDown(e: KeyboardEvent) {
         isSearchFocused.value = false
     }
 }
-
-// Fetch categories immediately when layout initializes
-fetchCategories()
 
 onMounted(() => {
     window.addEventListener('keydown', onKeyDown)

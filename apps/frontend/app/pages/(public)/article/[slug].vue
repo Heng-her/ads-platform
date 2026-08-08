@@ -17,7 +17,7 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
-const { categories, fetchCategories } = useCategories()
+const { categories } = useCategories()
 
 const slug = computed(() => (route.params.slug as string) || '')
 
@@ -170,7 +170,6 @@ watch(campaign, (currentCampaign) => {
     if (currentCampaign) loadRelatedCampaigns()
 }, { immediate: true })
 
-fetchCategories()
 </script>
 
 <template>

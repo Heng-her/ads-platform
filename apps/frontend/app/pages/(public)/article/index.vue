@@ -27,7 +27,7 @@ useCustomSeoMeta({
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
-const { categories, fetchCategories } = useCategories()
+const { categories } = useCategories()
 
 const feedLimit = 3
 const feedStoragePrefix = 'signal:article-feed:v1'
@@ -296,8 +296,6 @@ function handleWindowScroll() {
     userScrolledSinceLastPage.value = true
     if (sentinelIsVisible.value) loadNextPage()
 }
-
-fetchCategories()
 
 onMounted(() => {
     if (!restoreFeed()) startNewFeed()
