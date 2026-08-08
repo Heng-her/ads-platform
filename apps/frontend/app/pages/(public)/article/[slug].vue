@@ -9,7 +9,8 @@ import { extractIdFromSlug, getArticleUrl } from '~/lib/utils'
 import type { CampaignItem } from '~/types/campaign'
 
 definePageMeta({
-    layout: 'public'
+    layout: 'public',
+    fullWidth: true
 })
 
 const route = useRoute()
@@ -172,7 +173,7 @@ fetchCategories()
 </script>
 
 <template>
-    <div class="py-6 max-w-[1100px] mx-auto font-body text-foreground">
+    <div class="py-6 w-full font-body text-foreground">
 
         <!-- Breadcrumb & Back Button -->
         <div class="flex items-center justify-between mb-6">

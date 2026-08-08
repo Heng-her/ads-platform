@@ -318,7 +318,10 @@ onUnmounted(() => {
         </AppHeader>
 
         <!-- Main Body Container -->
-        <main class="max-w-[1400px] mx-auto px-4 sm:px-6 flex-1 w-full py-6">
+        <main :class="[
+            'mx-auto px-4 sm:px-6 flex-1 w-full py-6',
+            route.meta.fullWidth ? 'max-w-none' : 'max-w-[1400px]'
+        ]">
             <slot />
         </main>
 
