@@ -153,7 +153,7 @@ watch(() => route.fullPath, () => {
               <div class="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 text-[11px]">
                 <UIcon name="i-heroicons-banknotes" class="w-3.5 h-3.5" />
                 <span>${{ authStore.user.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'
-                  }}</span>
+                }}</span>
               </div>
             </div>
           </div>
@@ -233,7 +233,10 @@ watch(() => route.fullPath, () => {
             <span>Home</span>
           </NuxtLink>
 
-          <UColorModeButton />
+          <div class="flex items-center gap-2">
+            <LanguageSwitcher />
+            <UColorModeButton />
+          </div>
         </div>
       </div>
     </template>

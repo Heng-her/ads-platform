@@ -1,5 +1,3 @@
-import https from "node:https";
-
 const GOOGLE_TRANSLATE_ENDPOINT = "https://translate.googleapis.com/translate_a/single";
 
 type GoogleTranslateSentence = [string?, string?, ...unknown[]];
@@ -10,72 +8,57 @@ function normalizeTargetLanguage(target: string) {
   return target;
 }
 
-function parseGoogleTranslateResponse(data: GoogleTranslateResponse) {
-  return (data[0] || []).map((sentence) => sentence[0] || "").join("");
-}
+export async function translateManyWithGoogleTranslate(texts: string[], target: string): Promise<string[]> {
+  if (texts.length === 0) return [];
 
-function requestGoogleTranslate(url: URL) {
-  return new Promise<GoogleTranslateResponse>((resolve, reject) => {
-    const request = https.request(
-      url,
-      {
-        method: "GET",
-        family: 4,
+  const BATCH_SIZE = 40;
+  const results: string[] = new Array(texts.length);
+
+  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+    const batch = texts.slice(i, i + BATCH_SIZE);
+
+    try {
+      const body = new URLSearchParams();
+      body.append("client", "gtx");
+      body.append("sl", "auto");
+      body.append("tl", normalizeTargetLanguage(target));
+      body.append("dt", "t");
+      body.append("q", batch.join("\n"));
+
+      const response = await fetch(GOOGLE_TRANSLATE_ENDPOINT, {
+        method: "POST",
         headers: {
-          "User-Agent": "Mozilla/5.0",
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         },
-        timeout: 15000,
-      },
-      (response) => {
-        const chunks: Buffer[] = [];
+        body: body.toString(),
+      });
 
-        response.on("data", (chunk) => {
-          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      if (!response.ok) {
+        console.error(`Google Translate HTTP ${response.status} for batch at ${i}`);
+        batch.forEach((text, index) => {
+          results[i + index] = text;
         });
-
-        response.on("end", () => {
-          const rawBody = Buffer.concat(chunks).toString("utf8");
-
-          if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
-            reject(new Error(`Google Translate request failed with status ${response.statusCode || 500}.`));
-            return;
-          }
-
-          try {
-            resolve(JSON.parse(rawBody) as GoogleTranslateResponse);
-          } catch {
-            reject(new Error("Google Translate returned an invalid response."));
-          }
-        });
+        continue;
       }
-    );
 
-    request.on("timeout", () => {
-      request.destroy(new Error("Google Translate request timed out."));
-    });
-    request.on("error", reject);
-    request.end();
-  });
+      const data = (await response.json()) as GoogleTranslateResponse;
+      const sentences = data[0] || [];
+
+      batch.forEach((text, index) => {
+        const sentence = sentences[index];
+        const translated = sentence && sentence[0] ? sentence[0].replace(/\n$/, "").trim() : text;
+        results[i + index] = translated || text;
+      });
+    } catch (err) {
+      console.error("Translation batch error:", err);
+      batch.forEach((text, index) => {
+        results[i + index] = text;
+      });
+    }
+  }
+
+  return results;
 }
 
-export async function translateWithGoogleTranslate(text: string, target: string) {
-  const trimmedText = text.trim();
 
-  if (!trimmedText) return text;
-
-  const url = new URL(GOOGLE_TRANSLATE_ENDPOINT);
-  url.searchParams.set("client", "gtx");
-  url.searchParams.set("sl", "auto");
-  url.searchParams.set("tl", normalizeTargetLanguage(target));
-  url.searchParams.set("dt", "t");
-  url.searchParams.set("q", trimmedText);
-
-  const data = await requestGoogleTranslate(url);
-  const translatedText = parseGoogleTranslateResponse(data);
-
-  return translatedText || text;
-}
-
-export async function translateManyWithGoogleTranslate(texts: string[], target: string) {
-  return Promise.all(texts.map((text) => translateWithGoogleTranslate(text, target)));
-}

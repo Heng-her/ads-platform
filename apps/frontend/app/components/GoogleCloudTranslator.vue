@@ -180,6 +180,60 @@ function collectAttributeElements(root: ParentNode) {
   return elements.filter((element) => !shouldSkipElement(element))
 }
 
+async function fetchClientTranslate(texts: string[], target: string): Promise<string[]> {
+  if (texts.length === 0) return []
+
+  const normTarget = target === "zh" ? "zh-CN" : target
+
+  // Attempt 1: Direct browser Google Translate batch request
+  try {
+    const url = new URL("https://translate.googleapis.com/translate_a/single")
+    url.searchParams.set("client", "gtx")
+    url.searchParams.set("sl", "auto")
+    url.searchParams.set("tl", normTarget)
+    url.searchParams.set("dt", "t")
+    url.searchParams.set("q", texts.join("\n"))
+
+    const res = await fetch(url.toString())
+    if (res.ok) {
+      const data = await res.json()
+      const sentences = data[0] || []
+      const results = texts.map((text, index) => {
+        const sentence = sentences[index]
+        const translated = sentence && sentence[0] ? sentence[0].replace(/\n$/, "").trim() : text
+        return translated || text
+      })
+      if (results.length === texts.length) {
+        return results
+      }
+    }
+  } catch {
+    // Fall through to MyMemory backup
+  }
+
+  // Attempt 2: MyMemory API fallback
+  try {
+    const results = await Promise.all(
+      texts.map(async (text) => {
+        try {
+          const res = await fetch(
+            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=auto|${normTarget}`
+          )
+          if (!res.ok) return text
+          const data = await res.json()
+          const translated = data?.responseData?.translatedText
+          return translated && typeof translated === "string" ? translated : text
+        } catch {
+          return text
+        }
+      })
+    )
+    return results
+  } catch {
+    return texts
+  }
+}
+
 async function translateTexts(texts: string[], target: string) {
   const translations = new Map<string, string>()
   const keysNeeded = Array.from(new Set(texts.map((t) => `${target}:${t}`)))
@@ -203,6 +257,8 @@ async function translateTexts(texts: string[], target: string) {
     const newDbEntries = new Map<string, string>()
     for (let index = 0; index < missingTexts.length; index += BATCH_SIZE) {
       const batch = missingTexts.slice(index, index + BATCH_SIZE)
+      let translatedBatch: string[] = []
+
       try {
         const data = await $fetch<{ translations?: string[]; error?: string }>("/api/translate", {
           method: "POST",
@@ -212,19 +268,24 @@ async function translateTexts(texts: string[], target: string) {
           },
         })
 
-        if (data.error) {
-          throw new Error(data.error)
+        if (Array.isArray(data?.translations) && data.translations.length === batch.length) {
+          translatedBatch = data.translations
         }
-
-        batch.forEach((text, batchIndex) => {
-          const translated = decodeHtmlEntities(data.translations?.[batchIndex] || text)
-          const cacheKey = `${target}:${text}`
-          TEXT_CACHE.set(cacheKey, translated)
-          newDbEntries.set(cacheKey, translated)
-        })
       } catch (error) {
-        console.error("Translation batch failed:", error)
+        console.warn("Server translation endpoint unavailable, using client-side fallback:", error)
       }
+
+      // If server API failed or returned untranslated results, use browser direct fallback
+      if (translatedBatch.length === 0 || (target !== "en" && translatedBatch.every((t, i) => t === batch[i]))) {
+        translatedBatch = await fetchClientTranslate(batch, target)
+      }
+
+      batch.forEach((text, batchIndex) => {
+        const translated = decodeHtmlEntities(translatedBatch[batchIndex] || text)
+        const cacheKey = `${target}:${text}`
+        TEXT_CACHE.set(cacheKey, translated)
+        newDbEntries.set(cacheKey, translated)
+      })
     }
 
     if (newDbEntries.size > 0) {

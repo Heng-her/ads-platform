@@ -48,6 +48,8 @@ export default defineEventHandler(async (event) => {
     const message = error instanceof Error ? error.message : "Unknown Google Translate error.";
     console.error(`Google Translate request failed: ${name}: ${message}`);
 
-    throw createError({ statusCode: 502, statusMessage: "Unable to reach Google Translate." });
+    // Return original texts as fallback so the page UI remains functional
+    return { translations: texts };
   }
 });
+
