@@ -5,7 +5,6 @@ import { useApi } from '~/composables/useApi'
 import { useCategories } from '~/composables/useCategories'
 import { useCustomSeoMeta } from '~/lib/seo/metadata'
 import {
-    buildCampaignListQuery,
     countActiveFilters,
     getArticleUrl,
     getRelatedTopics,
@@ -30,11 +29,8 @@ const router = useRouter()
 const api = useApi()
 const { categories, fetchCategories } = useCategories()
 
-// ---- Query state, driven entirely by the URL ----
-const page = ref(1)
-// Public article feed loads three campaigns at a time. The next page is only
-// requested after the user scrolls to the end of the current response.
-const limit = ref(3)
+const feedLimit = 3
+const feedStoragePrefix = 'signal:article-feed:v1'
 
 const searchQuery = computed(() => (route.query.search as string) || '')
 const selectedCategory = computed(() => (route.query.category as string) || '')
@@ -53,8 +49,27 @@ const isLoadingMore = ref(false)
 const hasMore = ref(true)
 const totalCount = ref(0)
 const errorMessage = ref('')
+const nextCursor = ref<string | null>(null)
+const snapshotAt = ref<string | null>(null)
+const newCampaignCount = ref(0)
 
 let sentinelObserver: IntersectionObserver | null = null
+let newCampaignPollTimer: ReturnType<typeof setInterval> | null = null
+
+type FeedFilters = {
+    category: string
+    contentType: string
+    customCategoryId: string
+    search: string
+}
+
+type StoredFeed = {
+    filters: FeedFilters
+    items: CampaignItem[]
+    nextCursor: string | null
+    snapshotAt: string
+    hasMore: boolean
+}
 
 
 function copyCampaignLink(campaign: CampaignItem) {
@@ -96,6 +111,15 @@ const activeFilterCount = computed(() => countActiveFilters([
     selectedCustomCategoryId.value,
 ]))
 
+const feedFilters = computed<FeedFilters>(() => ({
+    category: selectedCategory.value,
+    contentType: selectedContentType.value,
+    customCategoryId: selectedCustomCategoryId.value,
+    search: searchQuery.value,
+}))
+
+const feedStorageKey = computed(() => `${feedStoragePrefix}:${encodeURIComponent(JSON.stringify(feedFilters.value))}`)
+
 function setQuery(patch: Record<string, string | undefined>) {
     router.push({ path: route.path, query: { ...route.query, ...patch } })
 }
@@ -108,27 +132,98 @@ function giveFeedback(value: boolean) {
     feedbackGiven.value = value
 }
 
+function buildFeedQuery(cursor?: string, stableSnapshotAt?: string) {
+    const query: Record<string, string> = {
+        limit: feedLimit.toString(),
+    }
+
+    if (selectedCategory.value) query.category = selectedCategory.value
+    if (selectedContentType.value) query.contentType = selectedContentType.value
+    if (selectedCustomCategoryId.value) query.customCategoryId = selectedCustomCategoryId.value
+    if (searchQuery.value) query.search = searchQuery.value
+    if (cursor) query.cursor = cursor
+    if (stableSnapshotAt) query.snapshotAt = stableSnapshotAt
+
+    return query
+}
+
+function deduplicateCampaigns(items: CampaignItem[]) {
+    const campaignIds = new Set<string>()
+    return items.filter((campaign) => {
+        if (campaignIds.has(campaign.id)) return false
+        campaignIds.add(campaign.id)
+        return true
+    })
+}
+
+function persistFeed() {
+    if (typeof window === 'undefined' || !snapshotAt.value) return
+
+    const state: StoredFeed = {
+        filters: feedFilters.value,
+        items: campaigns.value,
+        nextCursor: nextCursor.value,
+        snapshotAt: snapshotAt.value,
+        hasMore: hasMore.value,
+    }
+    window.sessionStorage.setItem(feedStorageKey.value, JSON.stringify(state))
+}
+
+function restoreFeed() {
+    if (typeof window === 'undefined') return false
+
+    const rawState = window.sessionStorage.getItem(feedStorageKey.value)
+    if (!rawState) return false
+
+    try {
+        const state = JSON.parse(rawState) as StoredFeed
+        if (
+            !state.snapshotAt ||
+            JSON.stringify(state.filters) !== JSON.stringify(feedFilters.value) ||
+            !Array.isArray(state.items)
+        ) {
+            return false
+        }
+
+        campaigns.value = deduplicateCampaigns(state.items)
+        nextCursor.value = state.nextCursor || null
+        snapshotAt.value = state.snapshotAt
+        hasMore.value = Boolean(state.hasMore)
+        totalCount.value = campaigns.value.length
+        return true
+    } catch {
+        window.sessionStorage.removeItem(feedStorageKey.value)
+        return false
+    }
+}
+
+function clearFeedState() {
+    if (typeof window !== 'undefined') window.sessionStorage.removeItem(feedStorageKey.value)
+    campaigns.value = []
+    nextCursor.value = null
+    snapshotAt.value = null
+    hasMore.value = true
+    totalCount.value = 0
+    newCampaignCount.value = 0
+}
+
 let fetchGeneration = 0
 
-async function fetchCampaigns(targetPage: number, isAppend = false) {
+async function fetchCampaigns(isAppend = false) {
+    if (isAppend && (!nextCursor.value || !snapshotAt.value)) return
+
     const myGeneration = ++fetchGeneration
 
     isLoading.value = true
     if (isAppend) isLoadingMore.value = true
     errorMessage.value = ''
 
-    const queryObj = buildCampaignListQuery({
-        page: targetPage,
-        limit: limit.value,
-        category: selectedCategory.value,
-        contentType: selectedContentType.value,
-        customCategoryId: selectedCustomCategoryId.value,
-        search: searchQuery.value,
-    })
-
     try {
         const res = await api.campaigns.$get({
-            query: queryObj
+            query: buildFeedQuery(
+                isAppend ? nextCursor.value || undefined : undefined,
+                isAppend ? snapshotAt.value || undefined : undefined,
+            )
         })
         const json = await res.json()
 
@@ -137,18 +232,13 @@ async function fetchCampaigns(targetPage: number, isAppend = false) {
         if (json.code !== 1) throw new Error(json.msg || 'Failed to load campaigns')
 
         const newItems = json.data?.items || []
-        const pagination = json.data?.pagination
-
-        campaigns.value = isAppend ? [...campaigns.value, ...newItems] : newItems
-        page.value = targetPage
-
-        if (pagination) {
-            totalCount.value = pagination.total ?? campaigns.value.length
-            hasMore.value = Boolean(pagination.hasNextPage)
-        } else {
-            totalCount.value = campaigns.value.length
-            hasMore.value = newItems.length === limit.value
-        }
+        campaigns.value = deduplicateCampaigns(isAppend ? [...campaigns.value, ...newItems] : newItems)
+        nextCursor.value = json.data?.nextCursor || null
+        snapshotAt.value = json.data?.snapshotAt || snapshotAt.value
+        hasMore.value = Boolean(json.data?.hasMore)
+        totalCount.value = campaigns.value.length
+        persistFeed()
+        checkNewCampaigns()
     } catch (error: unknown) {
         if (myGeneration !== fetchGeneration) return
         const err = error as Error
@@ -167,7 +257,29 @@ async function fetchCampaigns(targetPage: number, isAppend = false) {
 }
 
 function retry() {
-    fetchCampaigns(1, false)
+    fetchCampaigns(false)
+}
+
+function startNewFeed() {
+    fetchGeneration += 1
+    clearFeedState()
+    fetchCampaigns(false)
+}
+
+async function checkNewCampaigns() {
+    if (!snapshotAt.value) return
+
+    try {
+        const activeSnapshotAt = snapshotAt.value
+        const query = { ...buildFeedQuery(), snapshotAt: activeSnapshotAt }
+        const response = await api.campaigns['new-count'].$get({ query })
+        const json = await response.json()
+        if (response.ok && json.code === 1) {
+            newCampaignCount.value = json.data?.count || 0
+        }
+    } catch {
+        // New campaign polling should never interrupt the active feed.
+    }
 }
 
 const sentinel = ref<HTMLElement | null>(null)
@@ -177,7 +289,7 @@ const userScrolledSinceLastPage = ref(false)
 function loadNextPage() {
     if (!userScrolledSinceLastPage.value || isLoading.value || !hasMore.value) return
     userScrolledSinceLastPage.value = false
-    fetchCampaigns(page.value + 1, true)
+    fetchCampaigns(true)
 }
 
 function handleWindowScroll() {
@@ -185,11 +297,12 @@ function handleWindowScroll() {
     if (sentinelIsVisible.value) loadNextPage()
 }
 
-// Fetch initial campaigns and categories immediately when page setup runs
-fetchCampaigns(1, false)
 fetchCategories()
 
 onMounted(() => {
+    if (!restoreFeed()) startNewFeed()
+    checkNewCampaigns()
+    newCampaignPollTimer = setInterval(checkNewCampaigns, 30000)
     window.addEventListener('scroll', handleWindowScroll, { passive: true })
 
     if (typeof IntersectionObserver !== 'undefined' && sentinel.value) {
@@ -204,13 +317,13 @@ onMounted(() => {
 onUnmounted(() => {
     window.removeEventListener('scroll', handleWindowScroll)
     sentinelObserver?.disconnect()
+    if (newCampaignPollTimer) clearInterval(newCampaignPollTimer)
 })
 
 // React to changes in route parameters
 watch([searchQuery, selectedCategory, selectedContentType, selectedCustomCategoryId], () => {
-    hasMore.value = true
     userScrolledSinceLastPage.value = false
-    fetchCampaigns(1, false)
+    startNewFeed()
 })
 
 // If the user reaches the end while a request is finishing, complete the
@@ -250,6 +363,11 @@ watch([isLoading, sentinelIsVisible, hasMore], ([loading, isVisible, more]) => {
 
             <!-- ================= CENTER SECTION: SPOTLIGHT + RESULTS ================= -->
             <section class="flex-1 min-w-0 flex flex-col gap-6">
+
+                <button v-if="newCampaignCount > 0" type="button" @click="startNewFeed"
+                    class="w-full rounded-xl border border-primary/30 bg-primary-50 px-4 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary-100 dark:bg-primary-950/30 dark:hover:bg-primary-950/50">
+                    {{ newCampaignCount }} new campaign{{ newCampaignCount === 1 ? '' : 's' }} available. Refresh feed
+                </button>
 
                 <!-- Active Filter Tags Bar -->
                 <div v-if="activeFilterCount > 0"
@@ -352,7 +470,7 @@ watch([isLoading, sentinelIsVisible, hasMore], ([loading, isVisible, more]) => {
                             CAMPAIGN SEARCH RESULTS
                         </h4>
                         <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ totalCount }}
-                            total results</span>
+                            loaded</span>
                     </div>
 
                     <!-- RESULT ROWS -->

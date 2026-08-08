@@ -3,6 +3,9 @@ import {
   desc,
   and,
   count,
+  gt,
+  lt,
+  lte,
   or,
   like,
   notInArray,
@@ -16,6 +19,27 @@ import {
   type NewCampaign,
 } from "../db/schema/index";
 import { parsePagination, buildPaginationMeta } from "../utils/pagination";
+
+type CampaignCursor = {
+  createdAt: string;
+  id: string;
+};
+
+function encodeCampaignCursor(cursor: CampaignCursor): string {
+  return btoa(JSON.stringify(cursor));
+}
+
+function decodeCampaignCursor(cursor: string): CampaignCursor {
+  try {
+    const parsed = JSON.parse(atob(cursor)) as CampaignCursor;
+    if (!parsed?.id || !parsed?.createdAt || Number.isNaN(new Date(parsed.createdAt).getTime())) {
+      throw new Error("Invalid cursor");
+    }
+    return parsed;
+  } catch {
+    throw new Error("Invalid campaign feed cursor");
+  }
+}
 
 // Shared select shape for campaign queries — single source of truth
 const campaignSelectShape = {
@@ -147,6 +171,130 @@ export class CampaignService {
       .get();
 
     return result || null;
+  }
+
+  private async buildPublicFeedConditions(options: {
+    user?: { id: string; role: "ADMIN" | "CREATOR" } | null;
+    category?: string;
+    contentType?: string;
+    search?: string;
+    customCategoryId?: number;
+  }) {
+    const conditions = [
+      eq(campaigns.status, "PUBLIC"),
+      eq(campaigns.isDeleted, false),
+    ];
+
+    if (options.category) {
+      if (options.category === "OTHER") {
+        const systemCats = await this.db
+          .select({ name: systemCategories.name })
+          .from(systemCategories)
+          .all();
+        const systemNames = systemCats.map((category) => category.name);
+
+        if (systemNames.length > 0) {
+          const otherCategoryCondition = or(
+            isNull(campaigns.category),
+            notInArray(campaigns.category, systemNames),
+          );
+          if (otherCategoryCondition) conditions.push(otherCategoryCondition);
+        }
+      } else {
+        conditions.push(eq(campaigns.category, options.category));
+      }
+    }
+
+    if (options.contentType) {
+      conditions.push(eq(campaigns.contentType, options.contentType));
+    }
+    if (options.search) {
+      conditions.push(like(campaigns.title, `%${options.search}%`));
+    }
+    if (options.customCategoryId !== undefined) {
+      if (!options.user) return null;
+      conditions.push(eq(campaigns.customCategoryId, options.customCategoryId));
+      conditions.push(eq(campaigns.userId, options.user.id));
+    }
+
+    return conditions;
+  }
+
+  async getPublicCampaignFeed(options: {
+    user?: { id: string; role: "ADMIN" | "CREATOR" } | null;
+    category?: string;
+    contentType?: string;
+    search?: string;
+    customCategoryId?: number;
+    limit: number;
+    cursor?: string;
+    snapshotAt?: string;
+  }) {
+    const snapshotDate = options.snapshotAt ? new Date(options.snapshotAt) : new Date();
+    if (Number.isNaN(snapshotDate.getTime())) throw new Error("Invalid campaign feed snapshot");
+
+    const conditions = await this.buildPublicFeedConditions(options);
+    if (!conditions) {
+      return { items: [], nextCursor: null, hasMore: false, snapshotAt: snapshotDate.toISOString() };
+    }
+
+    conditions.push(lte(campaigns.createdAt, snapshotDate));
+
+    if (options.cursor) {
+      const cursor = decodeCampaignCursor(options.cursor);
+      const cursorDate = new Date(cursor.createdAt);
+      const cursorCondition = or(
+        lt(campaigns.createdAt, cursorDate),
+        and(eq(campaigns.createdAt, cursorDate), lt(campaigns.id, cursor.id)),
+      );
+      if (cursorCondition) conditions.push(cursorCondition);
+    }
+
+    const rows = await this.db
+      .select(campaignSelectShape)
+      .from(campaigns)
+      .leftJoin(users, eq(campaigns.userId, users.id))
+      .where(and(...conditions))
+      .orderBy(desc(campaigns.createdAt), desc(campaigns.id))
+      .limit(options.limit + 1)
+      .all();
+
+    const hasMore = rows.length > options.limit;
+    const items = hasMore ? rows.slice(0, options.limit) : rows;
+    const lastItem = items.at(-1);
+
+    return {
+      items,
+      nextCursor: hasMore && lastItem
+        ? encodeCampaignCursor({ createdAt: lastItem.createdAt.toISOString(), id: lastItem.id })
+        : null,
+      hasMore,
+      snapshotAt: snapshotDate.toISOString(),
+    };
+  }
+
+  async getPublicCampaignNewCount(options: {
+    user?: { id: string; role: "ADMIN" | "CREATOR" } | null;
+    category?: string;
+    contentType?: string;
+    search?: string;
+    customCategoryId?: number;
+    snapshotAt: string;
+  }) {
+    const snapshotDate = new Date(options.snapshotAt);
+    if (Number.isNaN(snapshotDate.getTime())) throw new Error("Invalid campaign feed snapshot");
+
+    const conditions = await this.buildPublicFeedConditions(options);
+    if (!conditions) return 0;
+
+    conditions.push(gt(campaigns.createdAt, snapshotDate));
+    const result = await this.db
+      .select({ total: count() })
+      .from(campaigns)
+      .where(and(...conditions))
+      .get();
+
+    return result?.total ?? 0;
   }
 
   async getCampaignsList(options: {

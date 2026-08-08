@@ -66,14 +66,43 @@ export const updateCampaignStatusSchema = z.object({
   status: z.enum(["DRAFT", "PUBLIC"]),
 });
 
-export const listCampaignsQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(10),
+const campaignFeedFiltersSchema = z.object({
   category: z.string().optional(),
   contentType: z.string().optional(),
   search: z.string().optional(),
-  status: z.enum(["DRAFT", "PUBLIC"]).optional(),
   customCategoryId: z.coerce.number().int().positive().optional(),
+});
+
+export const publicCampaignFeedQuerySchema = campaignFeedFiltersSchema.extend({
+  limit: z.coerce.number().int().min(1).max(100).optional().default(10),
+  cursor: z.string().optional(),
+  snapshotAt: z.string().datetime().optional(),
+}).superRefine(({ cursor, snapshotAt }, context) => {
+  if (cursor && !snapshotAt) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["snapshotAt"],
+      message: "snapshotAt is required when cursor is provided",
+    });
+  }
+
+  if (snapshotAt && !cursor) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["cursor"],
+      message: "cursor is required when snapshotAt is provided",
+    });
+  }
+});
+
+export const newCampaignCountQuerySchema = campaignFeedFiltersSchema.extend({
+  snapshotAt: z.string().datetime(),
+});
+
+export const listCampaignsQuerySchema = campaignFeedFiltersSchema.extend({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(10),
+  status: z.enum(["DRAFT", "PUBLIC"]).optional(),
 });
 
 export const meCampaignsQuerySchema = z.object({

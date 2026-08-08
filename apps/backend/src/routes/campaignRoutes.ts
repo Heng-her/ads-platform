@@ -19,6 +19,8 @@ import {
   updateCampaignStatusSchema,
   listCampaignsQuerySchema,
   meCampaignsQuerySchema,
+  publicCampaignFeedQuerySchema,
+  newCampaignCountQuerySchema,
 } from "../schemas/campaign";
 
 // Re-export schemas consumed by actionRoutes.ts
@@ -54,10 +56,10 @@ function canMutateCampaign(user: UserJwtPayload, campaignUserId: string): boolea
 
 export const campaignRoutes = new Hono<HonoEnv>()
 
-  // ── GET /api/campaigns — Public list with filters & pagination ──────────────
+  // ── GET /api/campaigns — Stable public cursor feed ─────────────────────────
   .get(
     "/",
-    zValidator("query", listCampaignsQuerySchema, (result, c) => {
+    zValidator("query", publicCampaignFeedQuerySchema, (result, c) => {
       if (!result.success) return zodErrorHandler(result, c);
     }),
     async (c) => {
@@ -65,17 +67,17 @@ export const campaignRoutes = new Hono<HonoEnv>()
       const campaignService = new CampaignService(db);
       const impressionService = new ImpressionService(db, c.env.CACHE_KV);
       const user = await getOptionalUser(c);
-      const { page, limit, category, contentType, search, status, customCategoryId } = c.req.valid("query");
+      const { limit, cursor, snapshotAt, category, contentType, search, customCategoryId } = c.req.valid("query");
 
-      const result = await campaignService.getCampaignsList({
+      const result = await campaignService.getPublicCampaignFeed({
         user,
         category,
         contentType,
         search,
-        status,
         customCategoryId,
-        page,
         limit,
+        cursor,
+        snapshotAt,
       });
 
       const campaignIds = result.items.map((item) => item.id);
@@ -104,6 +106,29 @@ export const campaignRoutes = new Hono<HonoEnv>()
       }
 
       return sendSuccess(c, { ...result, items: itemsWithStats });
+    },
+  )
+
+  .get(
+    "/new-count",
+    zValidator("query", newCampaignCountQuerySchema, (result, c) => {
+      if (!result.success) return zodErrorHandler(result, c);
+    }),
+    async (c) => {
+      const db = getDb(c.env.DB);
+      const campaignService = new CampaignService(db);
+      const user = await getOptionalUser(c);
+      const { snapshotAt, category, contentType, search, customCategoryId } = c.req.valid("query");
+      const count = await campaignService.getPublicCampaignNewCount({
+        user,
+        snapshotAt,
+        category,
+        contentType,
+        search,
+        customCategoryId,
+      });
+
+      return sendSuccess(c, { count });
     },
   )
 

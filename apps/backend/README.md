@@ -120,9 +120,30 @@ All endpoints return JSON in the following format:
 
 #### List Campaigns
 
-- **Endpoint:** `GET /api/campaigns`
-- **Headers:** `Authorization: Bearer <token>`
-- _Note: ADMIN gets all campaigns; non-ADMIN gets their own campaigns._
+- **Endpoint:** `GET /api/campaigns?limit=3`
+- **Next page:** `GET /api/campaigns?limit=3&cursor=<cursor>&snapshotAt=<timestamp>`
+- Returns public, non-deleted campaigns ordered by `createdAt DESC, id DESC`.
+  The first request creates `snapshotAt`; every subsequent request supplies that
+  same value with the cursor so campaigns created later do not move into the
+  active feed.
+
+```json
+{
+  "code": 1,
+  "data": {
+    "items": [],
+    "nextCursor": "eyJjcmVhdGVkQXQiOiIuLi4iLCJpZCI6Ii4uLiJ9",
+    "hasMore": true,
+    "snapshotAt": "2026-08-08T10:00:00.000Z"
+  }
+}
+```
+
+#### Count New Campaigns
+
+- **Endpoint:** `GET /api/campaigns/new-count?snapshotAt=<timestamp>`
+- Applies the same optional feed filters and returns `{ "count": 3 }` for
+  public campaigns created after the active feed snapshot.
 
 #### Create Campaign
 

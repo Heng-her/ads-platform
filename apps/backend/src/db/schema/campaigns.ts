@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 import { users } from "./users";
 import { customCategories } from "./categories";
 
@@ -55,7 +55,14 @@ export const campaigns = sqliteTable("campaigns", {
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("campaigns_public_feed_idx").on(
+    table.status,
+    table.isDeleted,
+    table.createdAt,
+    table.id,
+  ),
+]);
 
 export type Campaign = typeof campaigns.$inferSelect;
 export type NewCampaign = typeof campaigns.$inferInsert;
