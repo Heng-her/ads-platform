@@ -32,5 +32,6 @@ useSeoMeta({
       <NuxtPage />
     </NuxtLayout>
     <GoogleCloudTranslator />
+    <AppToast />
   </UApp>
 </template>

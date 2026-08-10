@@ -25,6 +25,35 @@ export async function handleUserAction(
       return sendSuccess(c, user);
     }
 
+    case "users/update-profile": {
+      const currentUser = await authenticate(c);
+      const userService = new UserService(db);
+      const existingUser = await userService.getUserById(currentUser.id);
+      if (!existingUser) return sendError(c, "User not found", null, 404);
+
+      // Strip role and status to prevent privilege escalation
+      const { role: _role, status: _status, email: _email, ...allowedData } = payloadData || {};
+      const parseResult = updateUserSchema.safeParse(allowedData);
+      if (!parseResult.success) {
+        return sendError(
+          c,
+          parseResult.error.errors[0]?.message || "Validation error",
+          parseResult.error.format(),
+        );
+      }
+
+      const updated = await userService.updateUser(currentUser.id, parseResult.data);
+      await auditLogService.createLog(
+        "USER_UPDATE_PROFILE",
+        currentUser.id,
+        getClientIp(c),
+        JSON.stringify({
+          updatedFields: Object.keys(parseResult.data),
+        }),
+      );
+      return sendSuccess(c, updated, "Profile updated successfully");
+    }
+
     case "users/get": {
       const userId = payloadData?.id;
       if (!userId) return sendError(c, "User ID is required");
