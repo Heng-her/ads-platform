@@ -37,10 +37,23 @@ export default defineNuxtConfig({
     host: "0.0.0.0",
     port: 3000,
   },
+  linkChecker: {
+    enabled: false,
+  },
   vite: {
     server: {
       allowedHosts: true,
     },
+    optimizeDeps: {
+      include: [
+        "@tiptap/vue-3",
+        "@tiptap/starter-kit",
+        "crypto-js",
+        "sanitize-html",
+        "ethers",
+        "hono"
+      ]
+    }
   },
   nitro: {
     preset:

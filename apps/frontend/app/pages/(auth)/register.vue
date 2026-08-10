@@ -385,17 +385,14 @@ const handleSubmit = async () => {
     <!-- Floating Success Toast -->
     <Transition name="fade">
       <div v-if="showToast"
-        class="fixed top-10 right-10 p-6 bg-white dark:bg-slate-800 border-l-4 border-blue-600 rounded-xl shadow-2xl z-50 transition-all duration-500">
-        <div class="flex gap-4 items-start">
-          <UIcon name="i-lucide-check-circle" class="text-blue-600 h-6 w-6 shrink-0 mt-0.5" />
-          <div>
-            <p class="font-semibold text-slate-900 dark:text-white">
-              Application Received
-            </p>
-            <p class="text-sm text-slate-600 dark:text-slate-300">
-              Check your email for the next steps.
-            </p>
-          </div>
+        class="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-2.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-full shadow-lg shadow-slate-900/5 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10">
+        <div class="flex items-center justify-center h-6 w-6 rounded-full bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 shrink-0">
+          <UIcon name="i-lucide-check" class="h-3.5 w-3.5 stroke-[2.5]" />
+        </div>
+        <div class="flex items-center gap-2 text-sm pr-1">
+          <span class="font-semibold text-slate-900 dark:text-white">Application Received</span>
+          <span class="text-slate-300 dark:text-slate-600">•</span>
+          <span class="text-xs text-slate-500 dark:text-slate-400">Check your email for next steps.</span>
         </div>
       </div>
     </Transition>
@@ -405,12 +402,12 @@ const handleSubmit = async () => {
 <style scoped>
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-12px) scale(0.95);
 }
 </style>

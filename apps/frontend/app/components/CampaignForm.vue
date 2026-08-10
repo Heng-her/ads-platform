@@ -69,6 +69,64 @@ const draftKey = computed(() => {
   return `creator:${ownerId}:${target}`
 })
 
+interface AdNetworkOption {
+  value: string
+  label: string
+  subtitle: string
+  icon: string
+  badge?: string
+  placeholder: string
+  labelTitle: string
+  hint: string
+}
+
+const adNetworkOptions: AdNetworkOption[] = [
+  {
+    value: '',
+    label: 'None / Custom',
+    subtitle: 'Direct placement without 3rd-party ad tags',
+    icon: 'i-heroicons-no-symbol',
+    badge: 'Default',
+    placeholder: 'e.g. ca-pub-123456789 or zone-987',
+    labelTitle: 'Ad Unit Code Snippet / Zone ID',
+    hint: 'Leave empty or enter a custom reference code for direct ad management.'
+  },
+  {
+    value: 'GOOGLE_ADSENSE',
+    label: 'Google AdSense',
+    subtitle: 'Auto-insert responsive display units',
+    icon: 'i-heroicons-globe-alt',
+    badge: 'Popular',
+    placeholder: 'e.g. ca-pub-1234567890123456 / slot-987654',
+    labelTitle: 'Publisher ID / Ad Unit Slot ID',
+    hint: 'Enter your AdSense Publisher ID (ca-pub-...) or specific Data Ad Slot ID.'
+  },
+  {
+    value: 'ADSTERRA',
+    label: 'Adsterra Network',
+    subtitle: 'High CPM native banners & direct link monetization',
+    icon: 'i-heroicons-bolt',
+    badge: 'High CPM',
+    placeholder: 'e.g. zone-987654 or key-abc123',
+    labelTitle: 'Adsterra Placement Zone ID',
+    hint: 'Copy your Placement Zone ID or direct key from Adsterra Publisher Panel.'
+  },
+  {
+    value: 'CUSTOM',
+    label: 'Custom Ad Slot',
+    subtitle: 'Raw HTML snippet, JS tag, or custom ad server',
+    icon: 'i-heroicons-code-bracket',
+    badge: 'Advanced',
+    placeholder: 'e.g. <script src="..."> or zone-custom-01',
+    labelTitle: 'Custom Ad Snippet / Script Code',
+    hint: 'Supports custom script tags, iframe embeds, or private ad server zone keys.'
+  }
+]
+
+const currentAdNetworkInfo = computed<AdNetworkOption>(() => {
+  return adNetworkOptions.find(opt => opt.value === form.value.adNetwork) ?? adNetworkOptions[0]!
+})
+
 function getDraftForm() {
   return JSON.parse(JSON.stringify(form.value)) as CampaignDraftForm
 }
@@ -414,13 +472,7 @@ onBeforeUnmount(() => {
     <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-4">
       <div>
         <div class="flex items-center gap-2">
-          <UButton
-            to="/creator/campaigns"
-            icon="i-heroicons-arrow-left"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-          />
+          <UButton to="/creator/campaigns" icon="i-heroicons-arrow-left" color="neutral" variant="ghost" size="xs" />
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {{ isEdit ? 'Edit Campaign' : 'Create Campaign' }}
           </h1>
@@ -441,7 +493,8 @@ onBeforeUnmount(() => {
 
       <div class="flex items-center gap-2">
         <template v-if="isEdit">
-          <select v-model="translationLocale" class="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900">
+          <select v-model="translationLocale"
+            class="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900">
             <option value="km">ខ្មែរ</option>
             <option value="th">ไทย</option>
             <option value="vi">Tiếng Việt</option>
@@ -450,27 +503,18 @@ onBeforeUnmount(() => {
             Translate with Google
           </UButton>
         </template>
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          :loading="isLoading"
-          @click="handleSubmit('DRAFT')"
-        >
+        <UButton color="neutral" variant="outline" size="sm" :loading="isLoading" @click="handleSubmit('DRAFT')">
           Save Draft
         </UButton>
-        <UButton
-          color="primary"
-          size="sm"
-          :loading="isLoading"
-          @click="handleSubmit('PUBLIC')"
-        >
+        <UButton color="primary" size="sm" :loading="isLoading" @click="handleSubmit('PUBLIC')">
           {{ isEdit ? 'Save & Update' : 'Publish Campaign' }}
         </UButton>
       </div>
     </div>
 
-    <p v-if="translationMessage" class="text-sm" :class="translationMessage.startsWith('Google translation') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ translationMessage }}</p>
+    <p v-if="translationMessage" class="text-sm"
+      :class="translationMessage.startsWith('Google translation') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+      {{ translationMessage }}</p>
 
     <!-- Loading State -->
     <div v-if="isFetching" class="py-12 text-center text-gray-500 text-base">
@@ -479,27 +523,37 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Error Alert -->
-    <div v-else-if="submitError" class="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+    <div v-else-if="submitError"
+      class="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
       <UIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4 shrink-0" />
       <span>{{ submitError }}</span>
     </div>
 
     <!-- Form Container -->
-    <div v-if="!isFetching" class="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
-      <section v-if="isEdit" class="space-y-4 rounded-lg border border-primary/30 bg-primary-50/40 p-4 dark:bg-primary-950/20">
+    <div v-if="!isFetching"
+      class="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
+      <section v-if="isEdit"
+        class="space-y-4 rounded-lg border border-primary/30 bg-primary-50/40 p-4 dark:bg-primary-950/20">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="font-semibold text-gray-900 dark:text-white">Translation: {{ translationLocale }}</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-300">This version is separate from the original campaign content.</p>
+            <p class="text-sm text-gray-600 dark:text-gray-300">This version is separate from the original campaign
+              content.
+            </p>
           </div>
-          <UButton color="primary" size="sm" :loading="isSavingTranslation" @click="saveTranslation">Save Translation</UButton>
+          <UButton color="primary" size="sm" :loading="isSavingTranslation" @click="saveTranslation">Save Translation
+          </UButton>
         </div>
         <div v-if="isLoadingTranslation" class="text-sm text-gray-500">Loading translation...</div>
         <div v-else class="space-y-3">
           <UInput v-model="translationForm.title" placeholder="Translated title" size="sm" />
-          <textarea v-model="translationForm.description" rows="2" placeholder="Translated summary" class="w-full rounded-md border border-gray-200 bg-white p-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
+          <textarea v-model="translationForm.description" rows="2" placeholder="Translated summary"
+            class="w-full rounded-md border border-gray-200 bg-white p-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
           <CampaignRichTextEditor v-model="translationForm.content" placeholder="Translated campaign content..." />
-          <div class="grid gap-3 sm:grid-cols-2"><UInput v-model="translationForm.imageTitle" placeholder="Translated image title" size="sm" /><UInput v-model="translationForm.imageDescription" placeholder="Translated image description" size="sm" /></div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <UInput v-model="translationForm.imageTitle" placeholder="Translated image title" size="sm" />
+            <UInput v-model="translationForm.imageDescription" placeholder="Translated image description" size="sm" />
+          </div>
         </div>
       </section>
 
@@ -509,12 +563,7 @@ onBeforeUnmount(() => {
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
             Campaign Title <span class="text-red-500">*</span>
           </label>
-          <UInput
-            v-model="form.title"
-            placeholder="e.g. New Summer Promotion Campaign"
-            size="lg"
-            class="w-full"
-          />
+          <UInput v-model="form.title" placeholder="e.g. New Summer Promotion Campaign" size="lg" class="w-full" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -522,10 +571,8 @@ onBeforeUnmount(() => {
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
               Category
             </label>
-            <select
-              v-model="form.category"
-              class="w-full text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-2 text-gray-900 dark:text-gray-100 focus:outline-none"
-            >
+            <select v-model="form.category"
+              class="w-full text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-2 text-gray-900 dark:text-gray-100 focus:outline-none">
               <option value="GENERAL">General</option>
               <option v-for="cat in categories" :key="cat.id" :value="cat.name">
                 {{ cat.name }}
@@ -537,10 +584,8 @@ onBeforeUnmount(() => {
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
               Content Type
             </label>
-            <select
-              v-model="form.contentType"
-              class="w-full text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-2 text-gray-900 dark:text-gray-100 focus:outline-none"
-            >
+            <select v-model="form.contentType"
+              class="w-full text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-2 text-gray-900 dark:text-gray-100 focus:outline-none">
               <option value="ARTICLE">Article</option>
               <option value="NEWS">News</option>
               <option value="BANNER">Banner Promotion</option>
@@ -552,12 +597,8 @@ onBeforeUnmount(() => {
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
             Short Description / Summary
           </label>
-          <textarea
-            v-model="form.description"
-            rows="2"
-            placeholder="Brief overview of the campaign..."
-            class="w-full text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-2 text-gray-900 dark:text-gray-100 focus:outline-none"
-          ></textarea>
+          <textarea v-model="form.description" rows="2" placeholder="Brief overview of the campaign..."
+            class="w-full text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-2 text-gray-900 dark:text-gray-100 focus:outline-none"></textarea>
         </div>
       </div>
 
@@ -567,12 +608,11 @@ onBeforeUnmount(() => {
           Campaign Body Content (Rich Text / HTML / Tailwind)
         </label>
         <p class="text-sm text-gray-400">
-          Use the visual editor toolbar for formatting (H1, H2, Bold, Lists, Media) or toggle "HTML / Tailwind Source" to write raw HTML markup and custom Tailwind CSS classes.
+          Use the visual editor toolbar for formatting (H1, H2, Bold, Lists, Media) or toggle "HTML / Tailwind Source"
+          to
+          write raw HTML markup and custom Tailwind CSS classes.
         </p>
-        <CampaignRichTextEditor
-          v-model="form.content"
-          placeholder="Start writing campaign body content..."
-        />
+        <CampaignRichTextEditor v-model="form.content" placeholder="Start writing campaign body content..." />
       </div>
 
       <!-- Media Assets & Cloudinary Upload -->
@@ -583,39 +623,29 @@ onBeforeUnmount(() => {
 
         <!-- Main Cover Image -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <AppMediaUploader
-            label="Main Cover Image"
-            accept="image"
-            folder="campaigns/covers"
-            @uploaded="handleCoverUploaded"
-          />
+          <AppMediaUploader label="Main Cover Image" accept="image" folder="campaigns/covers"
+            @uploaded="handleCoverUploaded" />
 
           <div v-if="form.imageUrl" class="space-y-2">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Cover Preview &amp; Metadata</p>
             <div
               class="relative group border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden h-28 bg-gray-50 dark:bg-gray-950 flex items-center justify-center cursor-zoom-in"
-              role="button"
-              tabindex="0"
-              :aria-label="`Open ${form.imageTitle || 'cover image'} preview`"
+              role="button" tabindex="0" :aria-label="`Open ${form.imageTitle || 'cover image'} preview`"
               @click="openImagePreview(form.imageUrl, form.imageTitle || 'Cover image')"
               @keydown.enter.prevent="openImagePreview(form.imageUrl, form.imageTitle || 'Cover image')"
-              @keydown.space.prevent="openImagePreview(form.imageUrl, form.imageTitle || 'Cover image')"
-            >
+              @keydown.space.prevent="openImagePreview(form.imageUrl, form.imageTitle || 'Cover image')">
               <img :src="form.imageUrl" :alt="form.imageTitle || 'Cover image'" class="h-full w-full object-cover" />
-              <span class="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+              <span
+                class="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
                 Click to preview
               </span>
-              <button
-                type="button"
+              <button type="button"
                 class="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-80 hover:opacity-100"
                 :disabled="deletingMediaUrl === form.imageUrl"
                 :title="deletingMediaUrl === form.imageUrl ? 'Deleting media...' : 'Delete cover image'"
-                @click.stop="removeCoverImage"
-              >
-                <UIcon
-                  :name="deletingMediaUrl === form.imageUrl ? 'i-heroicons-arrow-path' : 'i-heroicons-x-mark'"
-                  :class="['w-4 h-4', deletingMediaUrl === form.imageUrl ? 'animate-spin' : '']"
-                />
+                @click.stop="removeCoverImage">
+                <UIcon :name="deletingMediaUrl === form.imageUrl ? 'i-heroicons-arrow-path' : 'i-heroicons-x-mark'"
+                  :class="['w-4 h-4', deletingMediaUrl === form.imageUrl ? 'animate-spin' : '']" />
               </button>
             </div>
             <UInput v-model="form.imageTitle" placeholder="Image Title / Alt text" size="sm" />
@@ -625,42 +655,28 @@ onBeforeUnmount(() => {
 
         <!-- Gallery Images -->
         <div class="space-y-2 pt-2">
-          <AppMediaUploader
-            label="Multi-Image Gallery"
-            accept="image"
-            folder="campaigns/gallery"
-            :multiple="true"
-            @multiUploaded="handleGalleryUploaded"
-            @uploaded="handleSingleGalleryUploaded"
-          />
+          <AppMediaUploader label="Multi-Image Gallery" accept="image" folder="campaigns/gallery" :multiple="true"
+            @multiUploaded="handleGalleryUploaded" @uploaded="handleSingleGalleryUploaded" />
 
           <div v-if="form.images.length > 0" class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-            <div
-              v-for="(img, idx) in form.images"
-              :key="idx"
+            <div v-for="(img, idx) in form.images" :key="idx"
               class="relative group border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden p-1 bg-gray-50 dark:bg-gray-950 cursor-zoom-in"
-              role="button"
-              tabindex="0"
-              :aria-label="`Open ${img.title || 'gallery image'} preview`"
+              role="button" tabindex="0" :aria-label="`Open ${img.title || 'gallery image'} preview`"
               @click="openImagePreview(img.url, img.title || 'Gallery image')"
               @keydown.enter.prevent="openImagePreview(img.url, img.title || 'Gallery image')"
-              @keydown.space.prevent="openImagePreview(img.url, img.title || 'Gallery image')"
-            >
+              @keydown.space.prevent="openImagePreview(img.url, img.title || 'Gallery image')">
               <img :src="img.url" :alt="img.title || 'Gallery image'" class="w-full h-20 object-cover rounded" />
-              <span class="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+              <span
+                class="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
                 Preview
               </span>
-              <button
-                type="button"
+              <button type="button"
                 class="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-80 hover:opacity-100"
                 :disabled="deletingMediaUrl === img.url"
                 :title="deletingMediaUrl === img.url ? 'Deleting media...' : 'Delete gallery image'"
-                @click.stop="removeGalleryImage(idx)"
-              >
-                <UIcon
-                  :name="deletingMediaUrl === img.url ? 'i-heroicons-arrow-path' : 'i-heroicons-x-mark'"
-                  :class="['w-3 h-3', deletingMediaUrl === img.url ? 'animate-spin' : '']"
-                />
+                @click.stop="removeGalleryImage(idx)">
+                <UIcon :name="deletingMediaUrl === img.url ? 'i-heroicons-arrow-path' : 'i-heroicons-x-mark'"
+                  :class="['w-3 h-3', deletingMediaUrl === img.url ? 'animate-spin' : '']" />
               </button>
             </div>
           </div>
@@ -673,69 +689,40 @@ onBeforeUnmount(() => {
           </label>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <AppMediaUploader
-              label="Upload Video"
-              accept="video"
-              folder="campaigns/videos"
+            <AppMediaUploader label="Upload Video" accept="video" folder="campaigns/videos"
               :hint="isAdmin ? 'Admin uploads are securely proxied with no campaign video-count limit.' : 'Allowed: MP4, MOV, WEBM. (Max 50MB for creators)'"
-              @uploaded="handleVideoUploaded"
-            />
+              @uploaded="handleVideoUploaded" />
 
             <div class="space-y-2">
-              <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Or Add YouTube, TikTok, or Direct Video URL</p>
+              <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Or Add YouTube, TikTok, or Direct Video
+                URL
+              </p>
               <div class="flex gap-2">
-                <UInput
-                  v-model="videoInputTemp"
-                  placeholder="https://youtube.com/watch?v=..."
-                  size="sm"
-                  class="flex-1"
-                />
-                <UButton
-                  color="neutral"
-                  variant="subtle"
-                  size="sm"
-                  @click="addVideoUrlDirect"
-                >
+                <UInput v-model="videoInputTemp" placeholder="https://youtube.com/watch?v=..." size="sm"
+                  class="flex-1" />
+                <UButton color="neutral" variant="subtle" size="sm" @click="addVideoUrlDirect">
                   Add Video
                 </UButton>
               </div>
 
               <!-- Attached video previews -->
               <div v-if="form.videoUrls.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div
-                  v-for="(vUrl, idx) in form.videoUrls"
-                  :key="vUrl"
-                  class="relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-                >
-                  <iframe
-                    v-if="getEmbedUrl(vUrl)"
-                    :src="getEmbedUrl(vUrl)"
-                    :title="`Video preview ${idx + 1}`"
+                <div v-for="(vUrl, idx) in form.videoUrls" :key="vUrl"
+                  class="relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                  <iframe v-if="getEmbedUrl(vUrl)" :src="getEmbedUrl(vUrl)" :title="`Video preview ${idx + 1}`"
                     class="h-32 w-full bg-black"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowfullscreen
-                  />
-                  <video
-                    v-else
-                    :src="vUrl"
-                    controls
-                    muted
-                    preload="metadata"
-                    class="w-full h-32 object-cover bg-black"
-                  >
+                    allowfullscreen />
+                  <video v-else :src="vUrl" controls muted preload="metadata" class="w-full h-32 object-cover bg-black">
                     Your browser does not support video previews.
                   </video>
-                  <button
-                    type="button"
+                  <button type="button"
                     class="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-80 hover:opacity-100"
                     :disabled="deletingMediaUrl === vUrl"
                     :title="deletingMediaUrl === vUrl ? 'Deleting media...' : 'Delete video'"
-                    @click.stop="removeVideoUrl(idx)"
-                  >
-                    <UIcon
-                      :name="deletingMediaUrl === vUrl ? 'i-heroicons-arrow-path' : 'i-heroicons-x-mark'"
-                      :class="['w-4 h-4', deletingMediaUrl === vUrl ? 'animate-spin' : '']"
-                    />
+                    @click.stop="removeVideoUrl(idx)">
+                    <UIcon :name="deletingMediaUrl === vUrl ? 'i-heroicons-arrow-path' : 'i-heroicons-x-mark'"
+                      :class="['w-4 h-4', deletingMediaUrl === vUrl ? 'animate-spin' : '']" />
                   </button>
                   <p class="truncate px-2 py-1 text-xs text-gray-500 dark:text-gray-400" :title="vUrl">
                     {{ vUrl }}
@@ -748,54 +735,155 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Monetization Integration -->
-      <div class="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-        <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">
-          Monetization &amp; Ad Placement (Optional)
-        </h3>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-              Ad Network Integration
-            </label>
-            <select
-              v-model="form.adNetwork"
-              class="w-full text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-2 text-gray-900 dark:text-gray-100 focus:outline-none"
-            >
-              <option value="">None / Custom</option>
-              <option value="GOOGLE_ADSENSE">Google AdSense</option>
-              <option value="ADSTERRA">Adsterra</option>
-              <option value="CUSTOM">Custom Ad Slot</option>
-            </select>
+      <div class="space-y-6 pt-6 border-t border-gray-100 dark:border-gray-800">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-2.5">
+            <div
+              class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <UIcon name="i-heroicons-banknotes" class="w-5 h-5" />
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">
+                  Monetization &amp; Ad Placement
+                </h3>
+                <span
+                  class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  Optional
+                </span>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Connect external ad networks or custom zone slots to earn revenue from campaign views.
+              </p>
+            </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-              Ad Unit Code Snippet / Zone ID
-            </label>
-            <UInput
-              v-model="form.adUnitCode"
-              placeholder="e.g. ca-pub-123456789 or zone-987"
-              size="sm"
-            />
+          <!-- Status Indicator Badge -->
+          <div class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full border transition-all"
+            :class="form.adNetwork ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300' : 'bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'">
+            <span class="relative flex h-2 w-2">
+              <span v-if="form.adNetwork"
+                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2"
+                :class="form.adNetwork ? 'bg-emerald-500' : 'bg-gray-400'"></span>
+            </span>
+            <span class="font-medium">
+              {{ form.adNetwork ? `Active: ${currentAdNetworkInfo?.label}` : 'No Ad Tag Attached' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Visual Select Grid for Ad Networks -->
+        <div class="space-y-2">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            Ad Network Integration
+          </label>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <button v-for="net in adNetworkOptions" :key="net.value" type="button"
+              class="relative flex flex-col justify-between p-3.5 rounded-xl border text-left transition-all duration-200 group focus:outline-none"
+              :class="form.adNetwork === net.value
+                ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-500 dark:border-blue-500 ring-2 ring-blue-500/20 shadow-sm'
+                : 'bg-white dark:bg-gray-800/60 border-gray-200 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50/50 dark:hover:bg-gray-800'"
+              @click="form.adNetwork = net.value">
+              <div class="flex items-start justify-between gap-2 mb-3">
+                <div class="flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
+                  :class="form.adNetwork === net.value
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 group-hover:bg-gray-200 dark:group-hover:bg-gray-600'">
+                  <UIcon :name="net.icon" class="w-4 h-4" />
+                </div>
+                <span v-if="net.badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full" :class="form.adNetwork === net.value
+                  ? 'bg-blue-600/15 text-blue-700 dark:text-blue-300'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'">
+                  {{ net.badge }}
+                </span>
+              </div>
+
+              <div>
+                <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center justify-between">
+                  {{ net.label }}
+                  <UIcon v-if="form.adNetwork === net.value" name="i-heroicons-check-circle"
+                    class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                </h4>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                  {{ net.subtitle }}
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Contextual Input & Live Preview Section -->
+        <div
+          class="p-4 rounded-xl bg-gray-50/80 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-700/80 space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+            <div class="md:col-span-2 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                  {{ currentAdNetworkInfo?.labelTitle }}
+                </label>
+                <span v-if="form.adNetwork" class="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                  {{ currentAdNetworkInfo?.label }} Mode
+                </span>
+              </div>
+
+              <div class="relative">
+                <UInput v-model="form.adUnitCode" :placeholder="currentAdNetworkInfo?.placeholder" size="md"
+                  class="w-full font-mono text-xs" />
+              </div>
+
+              <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                <UIcon name="i-heroicons-information-circle" class="w-4 h-4 text-gray-400 shrink-0" />
+                <span>{{ currentAdNetworkInfo?.hint }}</span>
+              </p>
+            </div>
+
+            <!-- Ad Unit Live Preview Box -->
+            <div class="p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 space-y-2">
+              <div class="flex items-center justify-between text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                <span class="flex items-center gap-1">
+                  <UIcon name="i-heroicons-eye" class="w-3.5 h-3.5 text-blue-500" />
+                  Live Preview
+                </span>
+                <span
+                  class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                  Ad Slot
+                </span>
+              </div>
+
+              <div
+                class="h-16 rounded border-2 border-dashed flex flex-col items-center justify-center p-2 text-center transition-all"
+                :class="form.adNetwork
+                  ? 'border-blue-300 dark:border-blue-700/60 bg-blue-50/40 dark:bg-blue-950/30'
+                  : 'border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950/40'">
+                <template v-if="form.adNetwork">
+                  <div class="flex items-center gap-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300">
+                    <UIcon :name="currentAdNetworkInfo?.icon" class="w-3.5 h-3.5" />
+                    <span>{{ currentAdNetworkInfo?.label }}</span>
+                  </div>
+                  <p class="text-[10px] font-mono text-gray-500 dark:text-gray-400 truncate max-w-full px-2 mt-0.5">
+                    {{ form.adUnitCode || 'e.g. ca-pub-123456789 or zone-987' }}
+                  </p>
+                </template>
+                <template v-else>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">None / Custom</p>
+                  <p class="text-[10px] text-gray-400 dark:text-gray-500">No external ad network tag attached</p>
+                </template>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Full-size image preview -->
-    <UModal
-      v-model:open="imagePreviewOpen"
-      :title="imagePreviewTitle"
-      :ui="{ content: 'w-[calc(100vw-2rem)] max-w-[90vw] sm:max-w-[86vw] lg:max-w-[84vw]' }"
-    >
+    <UModal v-model:open="imagePreviewOpen" :title="imagePreviewTitle"
+      :ui="{ content: 'w-[calc(100vw-2rem)] max-w-[90vw] sm:max-w-[86vw] lg:max-w-[84vw]' }">
       <template #body>
-        <div class="flex h-[68vh] max-h-[68vh] min-h-[16rem] items-center justify-center overflow-auto bg-gray-950 p-2 sm:h-[72vh] sm:max-h-[72vh] sm:p-4">
-          <img
-            :src="imagePreviewUrl"
-            :alt="imagePreviewTitle"
-            class="max-h-full max-w-full object-contain"
-          />
+        <div
+          class="flex h-[68vh] max-h-[68vh] min-h-[16rem] items-center justify-center overflow-auto bg-gray-950 p-2 sm:h-[72vh] sm:max-h-[72vh] sm:p-4">
+          <img :src="imagePreviewUrl" :alt="imagePreviewTitle" class="max-h-full max-w-full object-contain" />
         </div>
       </template>
     </UModal>

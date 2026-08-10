@@ -128,17 +128,11 @@ onUnmounted(() => {
     <AppHeader>
       <template #left>
         <div class="flex items-center gap-2">
-          <UButton
-            icon="i-heroicons-bars-3"
-            color="neutral"
-            variant="ghost"
-            class="md:hidden"
-            aria-label="Open mobile menu"
-            @click="mobileMenuOpen = true"
-          />
-          <NuxtLink to="/" class="flex items-center gap-2 text-xl font-bold text-primary">
-            <UIcon name="i-heroicons-globe-alt" class="w-6 h-6" />
-            <span>NewPlatform</span>
+
+          <NuxtLink to="/" class="flex items-center gap-2 text-xl font-bold text-primary group">
+            <NuxtImg src="/ads-platform.png" alt="Ads Platform" width="32" height="32"
+              class="h-8 w-8 object-contain shrink-0 transition-transform group-hover:scale-105" />
+            <!-- <span>NewPlatform</span> -->
           </NuxtLink>
         </div>
       </template>
@@ -194,7 +188,7 @@ onUnmounted(() => {
                     <div class="flex-1 min-w-0">
                       <div class="text-gray-900 dark:text-gray-100 text-xs font-semibold truncate">{{ res.label }}</div>
                       <div class="text-[10px] text-gray-400 dark:text-gray-500 font-normal truncate mt-0.5">{{ res.desc
-                        }}</div>
+                      }}</div>
                     </div>
                   </div>
                 </div>
@@ -216,7 +210,7 @@ onUnmounted(() => {
               class="hidden md:flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-semibold">
               <UIcon name="i-heroicons-banknotes" class="w-4 h-4" />
               <span>${{ authStore.user.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'
-                }}</span>
+              }}</span>
             </div>
 
             <!-- Role Badge (Desktop) -->
@@ -326,14 +320,7 @@ onUnmounted(() => {
     </nav>
 
     <!-- Mobile Drawer -->
-    <MobileDrawer
-      v-model:open="mobileMenuOpen"
-      side="left"
-      title="NewPlatform"
-      icon="i-heroicons-globe-alt"
-      icon-class="text-primary"
-      :links="publicNavLinks"
-      role="public"
-    />
+    <MobileDrawer v-model:open="mobileMenuOpen" side="left" title="NewPlatform" icon="i-heroicons-globe-alt"
+      icon-class="text-primary" :links="publicNavLinks" role="public" />
   </div>
 </template>

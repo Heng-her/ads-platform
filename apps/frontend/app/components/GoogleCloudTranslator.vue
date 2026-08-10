@@ -330,7 +330,6 @@ async function translatePage() {
   const root = document.body
 
   if (targetLang === "en") {
-    restoreOriginalText(root)
     isTranslating.value = false
     return
   }
@@ -431,6 +430,8 @@ async function translatePage() {
 }
 
 function scheduleTranslation() {
+  if (targetLanguage.value === 'en') return
+
   if (timeoutId) {
     clearTimeout(timeoutId)
   }
@@ -441,9 +442,13 @@ function scheduleTranslation() {
 }
 
 onMounted(() => {
-  scheduleTranslation()
+  if (targetLanguage.value !== 'en') {
+    scheduleTranslation()
+  }
 
   observer = new MutationObserver((mutations) => {
+    if (targetLanguage.value === 'en') return
+
     const hasNewNodes = mutations.some((mutation) =>
       Array.from(mutation.addedNodes).some((node) => {
         if (node.nodeType === Node.TEXT_NODE) {
@@ -469,8 +474,13 @@ onMounted(() => {
   })
 })
 
-watch(targetLanguage, () => {
-  scheduleTranslation()
+watch(targetLanguage, (newLang, oldLang) => {
+  if (newLang === 'en') {
+    restoreOriginalText(document.body)
+    isTranslating.value = false
+  } else {
+    scheduleTranslation()
+  }
 })
 
 onUnmounted(() => {

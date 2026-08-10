@@ -14,7 +14,8 @@ import HomeCta from '~/components/home/HomeCta.vue'
 useCustomSeoMeta({
   title: 'Decentralized Web3 Advertising Platform',
   description: 'Transparent, escrow-backed advertising infrastructure powered by smart contracts. Programmatic payouts, 0.5% protocol fees, zero middleman markups.',
-  path: '/'
+  path: '/',
+  image: '/images/home.png',
 })
 </script>
 
