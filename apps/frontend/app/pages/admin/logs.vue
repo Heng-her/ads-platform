@@ -131,14 +131,10 @@ onMounted(() => loadLogs())
           @keyup.enter="applyFilters" />
         <UInput v-model="device" label="Device or browser" placeholder="e.g. iPhone, Chrome"
           icon="i-heroicons-device-phone-mobile" @keyup.enter="applyFilters" />
-        <label class="space-y-1 text-xs font-semibold text-gray-600 dark:text-gray-300">From date
-          <input v-model="fromDate" type="date"
-            class="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
-        </label>
-        <label class="space-y-1 text-xs font-semibold text-gray-600 dark:text-gray-300">To date
-          <input v-model="toDate" type="date"
-            class="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
-        </label>
+        <UInput v-model="fromDate" type="date" label="From date" icon="i-heroicons-calendar"
+          @keyup.enter="applyFilters" />
+        <UInput v-model="toDate" type="date" label="To date" icon="i-heroicons-calendar"
+          @keyup.enter="applyFilters" />
       </div>
       <div
         class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4 dark:border-gray-800">
@@ -147,10 +143,7 @@ onMounted(() => loadLogs())
           <UButton color="neutral" variant="ghost" size="sm" @click="resetFilters">Reset</UButton>
         </div>
         <div class="flex flex-wrap items-end gap-2">
-          <label class="space-y-1 text-xs font-semibold text-gray-500 dark:text-gray-400">Clear before date (optional)
-            <input v-model="clearBeforeDate" type="date"
-              class="block h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
-          </label>
+          <UInput v-model="clearBeforeDate" type="date" label="Clear before date (optional)" icon="i-heroicons-calendar" size="sm" />
           <UButton color="error" variant="soft" size="sm" icon="i-heroicons-trash" :loading="isClearing"
             @click="clearLogs">{{ clearButtonLabel }}</UButton>
         </div>

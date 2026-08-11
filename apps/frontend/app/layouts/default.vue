@@ -53,8 +53,8 @@ const handleOutsideClick = (event: MouseEvent) => {
 
 const userDropdownItems = computed(() => {
   const role = authStore.user?.role
-  const dashboardPath = role === 'admin' ? '/admin' : (role === 'advertiser' ? '/advertiser' : '/creator')
-  const isActualAdmin = role === 'admin'
+  const dashboardPath = (role as string) === 'admin' ? '/admin' : ((role as string) === 'advertiser' ? '/advertiser' : '/creator')
+  const isActualAdmin = (role as string) === 'admin'
 
   const items: any[][] = [
     [

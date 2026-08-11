@@ -69,8 +69,10 @@ const comparisonData = computed(() => {
 
   // Calculate raw numbers
   const list = labels.map((label, index) => {
-    const currentImp = Math.round(total * weightsCurrent[index])
-    const prevImp = Math.round(total * weightsPrevious[index])
+    const wc = weightsCurrent[index] ?? 0
+    const wp = weightsPrevious[index] ?? 0
+    const currentImp = Math.round(total * wc)
+    const prevImp = Math.round(total * wp)
     const currentRev = (currentImp / 1000) * ecpm
     const prevRev = (prevImp / 1000) * ecpm
 
