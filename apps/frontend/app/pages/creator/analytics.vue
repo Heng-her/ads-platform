@@ -47,20 +47,6 @@ const stats = ref<{
 } | null>(null)
 
 // Fallback demographics breakdown if stats loading
-const audienceData = ref({
-  countries: [
-    { code: 'KH', name: 'Cambodia', flag: '🇰🇭', percentage: 58, impressions: 72210 },
-    { code: 'US', name: 'United States', flag: '🇺🇸', percentage: 24, impressions: 29880 },
-    { code: 'SG', name: 'Singapore', flag: '🇸🇬', percentage: 12, impressions: 14940 },
-    { code: 'OTHER', name: 'Others', flag: '🌐', percentage: 6, impressions: 7470 }
-  ],
-  devices: [
-    { name: 'Mobile Devices', icon: 'i-heroicons-device-phone-mobile', percentage: 68, count: 84660 },
-    { name: 'Desktop Computers', icon: 'i-heroicons-computer-desktop', percentage: 26, count: 32370 },
-    { name: 'Tablets & Other', icon: 'i-heroicons-device-tablet', percentage: 6, count: 7470 }
-  ]
-})
-
 // Dynamic Period Comparison Visualizer Data
 const comparisonData = computed(() => {
   if (stats.value?.periodComparison) {
@@ -70,11 +56,11 @@ const comparisonData = computed(() => {
     return {
       items: pc.items.map(item => ({
         ...item,
-        currentHeightPct: Math.max(22, Math.round((item.currentImp / maxVal) * 100)),
-        prevHeightPct: Math.max(18, Math.round((item.prevImp / maxVal) * 100)),
-        isPeak: pc.peakItem ? item.label === pc.peakItem.label : false
+        currentHeightPct: item.currentImp > 0 ? Math.max(22, Math.round((item.currentImp / maxVal) * 100)) : 4,
+        prevHeightPct: item.prevImp > 0 ? Math.max(18, Math.round((item.prevImp / maxVal) * 100)) : 4,
+        isPeak: pc.peakItem && pc.peakItem.currentImp > 0 ? item.label === pc.peakItem.label : false
       })),
-      peakItem: pc.peakItem,
+      peakItem: (pc.peakItem && pc.peakItem.currentImp > 0) ? pc.peakItem : null,
       totalCurrentImp: pc.totalCurrentImp,
       totalPrevImp: pc.totalPrevImp,
       totalCurrentRev: pc.totalCurrentRev,
@@ -82,40 +68,13 @@ const comparisonData = computed(() => {
     }
   }
 
-  // Baseline fallback
-  const total = stats.value?.impressions.total || 124500
-  const ecpm = stats.value?.monetization?.ecpmRate || 2.50
-
-  let labels: string[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-  let weightsCurrent: number[] = [0.11, 0.14, 0.16, 0.20, 0.26, 0.18, 0.12]
-  let weightsPrevious: number[] = [0.09, 0.11, 0.13, 0.15, 0.20, 0.14, 0.10]
-
-  const list = labels.map((label, index) => {
-    const wc = weightsCurrent[index] ?? 0
-    const wp = weightsPrevious[index] ?? 0
-    const currentImp = Math.round(total * wc)
-    const prevImp = Math.round(total * wp)
-    const currentRev = (currentImp / 1000) * ecpm
-    const prevRev = (prevImp / 1000) * ecpm
-    const diffPct = prevImp > 0 ? Math.round(((currentImp - prevImp) / prevImp) * 100) : 0
-    return { label, currentImp, prevImp, currentRev, prevRev, diffPct }
-  })
-
-  const maxVal = Math.max(...list.map(i => Math.max(i.currentImp, i.prevImp)), 1)
-  const peakVal = Math.max(...list.map(i => i.currentImp))
-
   return {
-    items: list.map(item => ({
-      ...item,
-      currentHeightPct: Math.max(22, Math.round((item.currentImp / maxVal) * 100)),
-      prevHeightPct: Math.max(18, Math.round((item.prevImp / maxVal) * 100)),
-      isPeak: item.currentImp === peakVal
-    })),
-    peakItem: list.find(item => item.currentImp === peakVal),
-    totalCurrentImp: list.reduce((acc, i) => acc + i.currentImp, 0),
-    totalPrevImp: list.reduce((acc, i) => acc + i.prevImp, 0),
-    totalCurrentRev: list.reduce((acc, i) => acc + i.currentRev, 0),
-    growthPct: 18
+    items: [],
+    peakItem: null,
+    totalCurrentImp: 0,
+    totalPrevImp: 0,
+    totalCurrentRev: 0,
+    growthPct: 0
   }
 })
 
@@ -549,9 +508,11 @@ const filteredCampaigns = computed(() => {
             Top Audience Locations
           </h2>
 
-          <div class="space-y-3">
-            <div v-for="country in (stats?.audienceLocations || audienceData.countries)" :key="country.code"
-              class="space-y-1.5">
+          <div v-if="!stats?.audienceLocations || stats.audienceLocations.length === 0" class="py-6 text-center text-xs text-gray-500">
+            No audience location data recorded yet.
+          </div>
+          <div v-else class="space-y-3">
+            <div v-for="country in stats.audienceLocations" :key="country.code" class="space-y-1.5">
               <div class="flex items-center justify-between text-xs">
                 <span class="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
                   <span>{{ country.flag }}</span>
@@ -575,8 +536,11 @@ const filteredCampaigns = computed(() => {
             Device Distribution
           </h2>
 
-          <div class="space-y-4">
-            <div v-for="device in (stats?.deviceDistribution || audienceData.devices)" :key="device.name"
+          <div v-if="!stats?.deviceDistribution || stats.deviceDistribution.length === 0" class="py-6 text-center text-xs text-gray-500">
+            No device distribution data recorded yet.
+          </div>
+          <div v-else class="space-y-4">
+            <div v-for="device in stats.deviceDistribution" :key="device.name"
               class="flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500">
@@ -584,8 +548,7 @@ const filteredCampaigns = computed(() => {
                 </div>
                 <div>
                   <p class="text-xs font-semibold text-gray-900 dark:text-white">{{ device.name }}</p>
-                  <p class="text-[10px] text-gray-400">{{ typeof device.count === 'number' ? formatNumber(device.count)
-                    : device.count }} views</p>
+                  <p class="text-[10px] text-gray-400">{{ formatNumber(device.count) }} views</p>
                 </div>
               </div>
               <span class="text-xs font-bold text-purple-600 dark:text-purple-400">{{ device.percentage }}%</span>

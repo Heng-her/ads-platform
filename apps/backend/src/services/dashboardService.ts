@@ -49,7 +49,7 @@ export interface DeviceDistributionItem {
 }
 
 export interface CreatorStats {
-  period: '7d' | '30d' | '90d' | 'all';
+  period: "7d" | "30d" | "90d" | "all";
   campaigns: {
     total: number;
     public: number;
@@ -130,16 +130,21 @@ export class DashboardService {
   /**
    * Stats for a single creator's own campaigns + impressions with period filtering.
    */
-  async getCreatorStats(userId: string, periodParam: string = "7d"): Promise<CreatorStats> {
+  async getCreatorStats(
+    userId: string,
+    periodParam: string = "7d",
+  ): Promise<CreatorStats> {
     const validPeriods = ["7d", "30d", "90d", "all"] as const;
-    const period = (validPeriods.includes(periodParam as any) ? periodParam : "7d") as '7d' | '30d' | '90d' | 'all';
+    const period = (
+      validPeriods.includes(periodParam as any) ? periodParam : "7d"
+    ) as "7d" | "30d" | "90d" | "all";
 
     // ── 0. Get Creator profile for eCPM rate ────────────────────────────────
     const [userRow] = await this.db
       .select({ ecpmRate: users.ecpmRate })
       .from(users)
       .where(eq(users.id, userId));
-    const ecpmRate = Number(userRow?.ecpmRate ?? 2.50);
+    const ecpmRate = Number(userRow?.ecpmRate ?? 2.5);
 
     // ── 1. Calculate Date Ranges ───────────────────────────────────────────
     const now = new Date();
@@ -160,21 +165,24 @@ export class DashboardService {
     // ── 2. Campaign counts ──────────────────────────────────────────────────
     const [campaignCounts] = await this.db
       .select({
-        total:  count(),
+        total: count(),
         public: sql<number>`sum(case when ${campaigns.status} = 'PUBLIC' and ${campaigns.isDeleted} = 0 then 1 else 0 end)`,
-        draft:  sql<number>`sum(case when ${campaigns.status} = 'DRAFT'  and ${campaigns.isDeleted} = 0 then 1 else 0 end)`,
+        draft: sql<number>`sum(case when ${campaigns.status} = 'DRAFT'  and ${campaigns.isDeleted} = 0 then 1 else 0 end)`,
       })
       .from(campaigns)
       .where(and(eq(campaigns.userId, userId), eq(campaigns.isDeleted, false)));
 
     // ── 3. Current Period Impression totals ────────────────────────────────
     const currentImpWhere = currentStart
-      ? and(eq(campaigns.userId, userId), gte(impressions.createdAt, currentStart))
+      ? and(
+          eq(campaigns.userId, userId),
+          gte(impressions.createdAt, currentStart),
+        )
       : eq(campaigns.userId, userId);
 
     const [currentImpTotals] = await this.db
       .select({
-        total:         count(),
+        total: count(),
         uniqueViewers: countDistinct(impressions.viewerHash),
       })
       .from(impressions)
@@ -191,7 +199,7 @@ export class DashboardService {
       const prevImpWhere = and(
         eq(campaigns.userId, userId),
         gte(impressions.createdAt, previousStart),
-        lt(impressions.createdAt, currentStart)
+        lt(impressions.createdAt, currentStart),
       );
 
       const [prevImpTotals] = await this.db
@@ -203,23 +211,29 @@ export class DashboardService {
       previousTotal = Number(prevImpTotals?.total ?? 0);
     }
 
-    const periodGrowthPct = previousTotal > 0
-      ? Math.round(((totalImpressions - previousTotal) / previousTotal) * 100)
-      : (totalImpressions > 0 ? 100 : 0);
+    const periodGrowthPct =
+      previousTotal > 0
+        ? Math.round(((totalImpressions - previousTotal) / previousTotal) * 100)
+        : totalImpressions > 0
+          ? 100
+          : 0;
 
     // ── 5. Top campaign by impression count in period ─────────────────────
     const topCampaignRows = await this.db
       .select({
-        id:               campaigns.id,
-        title:            campaigns.title,
+        id: campaigns.id,
+        title: campaigns.title,
         totalImpressions: count(impressions.id),
-        uniqueViewers:    countDistinct(impressions.viewerHash),
+        uniqueViewers: countDistinct(impressions.viewerHash),
       })
       .from(campaigns)
-      .leftJoin(impressions, and(
-        eq(impressions.campaignId, campaigns.id),
-        currentStart ? gte(impressions.createdAt, currentStart) : sql`1=1`
-      ))
+      .leftJoin(
+        impressions,
+        and(
+          eq(impressions.campaignId, campaigns.id),
+          currentStart ? gte(impressions.createdAt, currentStart) : sql`1=1`,
+        ),
+      )
       .where(and(eq(campaigns.userId, userId), eq(campaigns.isDeleted, false)))
       .groupBy(campaigns.id, campaigns.title)
       .orderBy(sql`count(${impressions.id}) desc`)
@@ -228,36 +242,49 @@ export class DashboardService {
     // ── 6. Campaign Performance Breakdown (All creator's campaigns) ─────────
     const campaignBreakdownRows = await this.db
       .select({
-        id:        campaigns.id,
-        title:     campaigns.title,
-        status:    campaigns.status,
+        id: campaigns.id,
+        title: campaigns.title,
+        status: campaigns.status,
         createdAt: campaigns.createdAt,
         impressions: count(impressions.id),
       })
       .from(campaigns)
-      .leftJoin(impressions, and(
-        eq(impressions.campaignId, campaigns.id),
-        currentStart ? gte(impressions.createdAt, currentStart) : sql`1=1`
-      ))
+      .leftJoin(
+        impressions,
+        and(
+          eq(impressions.campaignId, campaigns.id),
+          currentStart ? gte(impressions.createdAt, currentStart) : sql`1=1`,
+        ),
+      )
       .where(and(eq(campaigns.userId, userId), eq(campaigns.isDeleted, false)))
-      .groupBy(campaigns.id, campaigns.title, campaigns.status, campaigns.createdAt)
+      .groupBy(
+        campaigns.id,
+        campaigns.title,
+        campaigns.status,
+        campaigns.createdAt,
+      )
       .orderBy(sql`count(${impressions.id}) desc`);
 
-    const sumBreakdownImp = campaignBreakdownRows.reduce((acc, c) => acc + Number(c.impressions), 0);
-    const campaignBreakdown: CampaignBreakdownItem[] = campaignBreakdownRows.map((c) => {
-      const imp = Number(c.impressions);
-      const rev = (imp / 1000) * ecpmRate;
-      const pct = sumBreakdownImp > 0 ? Math.round((imp / sumBreakdownImp) * 100) : 0;
-      return {
-        id: c.id,
-        title: c.title,
-        status: c.status,
-        createdAt: c.createdAt,
-        impressions: imp,
-        estimatedRevenue: rev,
-        contributionPct: pct,
-      };
-    });
+    const sumBreakdownImp = campaignBreakdownRows.reduce(
+      (acc, c) => acc + Number(c.impressions),
+      0,
+    );
+    const campaignBreakdown: CampaignBreakdownItem[] =
+      campaignBreakdownRows.map((c) => {
+        const imp = Number(c.impressions);
+        const rev = (imp / 1000) * ecpmRate;
+        const pct =
+          sumBreakdownImp > 0 ? Math.round((imp / sumBreakdownImp) * 100) : 0;
+        return {
+          id: c.id,
+          title: c.title,
+          status: c.status,
+          createdAt: c.createdAt,
+          impressions: imp,
+          estimatedRevenue: rev,
+          contributionPct: pct,
+        };
+      });
 
     const recentCampaigns = campaignBreakdownRows.slice(0, 5).map((c) => ({
       id: c.id,
@@ -273,24 +300,24 @@ export class DashboardService {
 
     if (period === "7d") {
       labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-      weightsCurrent = [0.11, 0.14, 0.16, 0.20, 0.26, 0.18, 0.12];
-      weightsPrevious = [0.09, 0.11, 0.13, 0.15, 0.20, 0.14, 0.10];
+      weightsCurrent = [0.11, 0.14, 0.16, 0.2, 0.26, 0.18, 0.12];
+      weightsPrevious = [0.09, 0.11, 0.13, 0.15, 0.2, 0.14, 0.1];
     } else if (period === "30d") {
       labels = ["Week 1", "Week 2", "Week 3", "Week 4"];
       weightsCurrent = [0.22, 0.28, 0.35, 0.25];
-      weightsPrevious = [0.18, 0.22, 0.29, 0.20];
+      weightsPrevious = [0.18, 0.22, 0.29, 0.2];
     } else if (period === "90d") {
       labels = ["Month 1", "Month 2", "Month 3"];
       weightsCurrent = [0.28, 0.36, 0.44];
-      weightsPrevious = [0.22, 0.30, 0.35];
+      weightsPrevious = [0.22, 0.3, 0.35];
     } else {
       labels = ["Q1", "Q2", "Q3", "Q4"];
       weightsCurrent = [0.18, 0.27, 0.38, 0.32];
-      weightsPrevious = [0.14, 0.20, 0.28, 0.24];
+      weightsPrevious = [0.14, 0.2, 0.28, 0.24];
     }
 
-    const baselineCurrent = totalImpressions > 0 ? totalImpressions : 124500;
-    const baselinePrev = previousTotal > 0 ? previousTotal : Math.round(baselineCurrent * 0.82);
+    const baselineCurrent = totalImpressions;
+    const baselinePrev = previousTotal;
 
     const items: ComparisonItem[] = labels.map((label, idx) => {
       const wc = weightsCurrent[idx] ?? 0.2;
@@ -302,7 +329,12 @@ export class DashboardService {
       const currentRev = (currentImp / 1000) * ecpmRate;
       const prevRev = (prevImp / 1000) * ecpmRate;
 
-      const diffPct = prevImp > 0 ? Math.round(((currentImp - prevImp) / prevImp) * 100) : 0;
+      const diffPct =
+        prevImp > 0
+          ? Math.round(((currentImp - prevImp) / prevImp) * 100)
+          : currentImp > 0
+            ? 100
+            : 0;
 
       return {
         label,
@@ -314,13 +346,21 @@ export class DashboardService {
       };
     });
 
-    const maxCurrentImp = Math.max(...items.map((i) => i.currentImp), 1);
-    const peakItem = items.find((i) => i.currentImp === maxCurrentImp) || null;
+    const maxCurrentImp = Math.max(...items.map((i) => i.currentImp), 0);
+    const peakItem =
+      maxCurrentImp > 0
+        ? items.find((i) => i.currentImp === maxCurrentImp) || null
+        : null;
     const totalCurrentImp = items.reduce((acc, i) => acc + i.currentImp, 0);
     const totalPrevImp = items.reduce((acc, i) => acc + i.prevImp, 0);
     const totalCurrentRev = (totalCurrentImp / 1000) * ecpmRate;
     const totalPrevRev = (totalPrevImp / 1000) * ecpmRate;
-    const growthPct = totalPrevImp > 0 ? Math.round(((totalCurrentImp - totalPrevImp) / totalPrevImp) * 100) : 0;
+    const growthPct =
+      totalPrevImp > 0
+        ? Math.round(((totalCurrentImp - totalPrevImp) / totalPrevImp) * 100)
+        : totalCurrentImp > 0
+          ? 100
+          : 0;
 
     const periodComparison: PeriodComparison = {
       items,
@@ -333,29 +373,73 @@ export class DashboardService {
     };
 
     // ── 8. Audience Locations & Devices ────────────────────────────────────
-    const locationBaseline = totalImpressions > 0 ? totalImpressions : 124500;
-    const audienceLocations: CountryDemographic[] = [
-      { code: "KH", name: "Cambodia", flag: "🇰🇭", percentage: 58, impressions: Math.round(locationBaseline * 0.58) },
-      { code: "US", name: "United States", flag: "🇺🇸", percentage: 24, impressions: Math.round(locationBaseline * 0.24) },
-      { code: "SG", name: "Singapore", flag: "🇸🇬", percentage: 12, impressions: Math.round(locationBaseline * 0.12) },
-      { code: "OTHER", name: "Others", flag: "🌐", percentage: 6, impressions: Math.round(locationBaseline * 0.06) },
-    ];
+    const audienceLocations: CountryDemographic[] =
+      totalImpressions > 0
+        ? [
+            {
+              code: "KH",
+              name: "Cambodia",
+              flag: "🇰🇭",
+              percentage: 58,
+              impressions: Math.round(totalImpressions * 0.58),
+            },
+            {
+              code: "US",
+              name: "United States",
+              flag: "🇺🇸",
+              percentage: 24,
+              impressions: Math.round(totalImpressions * 0.24),
+            },
+            {
+              code: "SG",
+              name: "Singapore",
+              flag: "🇸🇬",
+              percentage: 12,
+              impressions: Math.round(totalImpressions * 0.12),
+            },
+            {
+              code: "OTHER",
+              name: "Others",
+              flag: "🌐",
+              percentage: 6,
+              impressions: Math.round(totalImpressions * 0.06),
+            },
+          ]
+        : [];
 
-    const deviceDistribution: DeviceDistributionItem[] = [
-      { name: "Mobile Devices", icon: "i-heroicons-device-phone-mobile", percentage: 68, count: Math.round(locationBaseline * 0.68) },
-      { name: "Desktop Computers", icon: "i-heroicons-computer-desktop", percentage: 26, count: Math.round(locationBaseline * 0.26) },
-      { name: "Tablets & Other", icon: "i-heroicons-device-tablet", percentage: 6, count: Math.round(locationBaseline * 0.06) },
-    ];
+    const deviceDistribution: DeviceDistributionItem[] =
+      totalImpressions > 0
+        ? [
+            {
+              name: "Mobile Devices",
+              icon: "i-heroicons-device-phone-mobile",
+              percentage: 68,
+              count: Math.round(totalImpressions * 0.68),
+            },
+            {
+              name: "Desktop Computers",
+              icon: "i-heroicons-computer-desktop",
+              percentage: 26,
+              count: Math.round(totalImpressions * 0.26),
+            },
+            {
+              name: "Tablets & Other",
+              icon: "i-heroicons-device-tablet",
+              percentage: 6,
+              count: Math.round(totalImpressions * 0.06),
+            },
+          ]
+        : [];
 
     return {
       period,
       campaigns: {
-        total:  Number(campaignCounts?.total  ?? 0),
+        total: Number(campaignCounts?.total ?? 0),
         public: Number(campaignCounts?.public ?? 0),
-        draft:  Number(campaignCounts?.draft  ?? 0),
+        draft: Number(campaignCounts?.draft ?? 0),
       },
       impressions: {
-        total:         totalImpressions,
+        total: totalImpressions,
         uniqueViewers: uniqueViewers,
         previousTotal,
         periodGrowthPct,
@@ -366,10 +450,10 @@ export class DashboardService {
       },
       topCampaign: topCampaignRows[0]
         ? {
-            id:               topCampaignRows[0].id,
-            title:            topCampaignRows[0].title,
+            id: topCampaignRows[0].id,
+            title: topCampaignRows[0].title,
             totalImpressions: Number(topCampaignRows[0].totalImpressions),
-            uniqueViewers:    Number(topCampaignRows[0].uniqueViewers),
+            uniqueViewers: Number(topCampaignRows[0].uniqueViewers),
           }
         : null,
       recentCampaigns,
@@ -380,32 +464,31 @@ export class DashboardService {
     };
   }
 
-
   /**
    * Platform-wide stats for admins.
    */
   async getAdminStats(): Promise<AdminStats> {
-    const todayStart   = this._startOfToday();
+    const todayStart = this._startOfToday();
     const sevenDaysAgo = this._daysAgo(7);
 
     // ── 1. User counts ───────────────────────────────────────────────────────
     const [userCounts] = await this.db
       .select({
-        total:     count(),
-        active:    sql<number>`sum(case when ${users.status} = 'ACTIVE'    then 1 else 0 end)`,
+        total: count(),
+        active: sql<number>`sum(case when ${users.status} = 'ACTIVE'    then 1 else 0 end)`,
         suspended: sql<number>`sum(case when ${users.status} = 'SUSPENDED' then 1 else 0 end)`,
-        pending:   sql<number>`sum(case when ${users.status} = 'PENDING'   then 1 else 0 end)`,
-        newToday:  sql<number>`sum(case when ${users.createdAt} >= ${todayStart * 1000} then 1 else 0 end)`,
+        pending: sql<number>`sum(case when ${users.status} = 'PENDING'   then 1 else 0 end)`,
+        newToday: sql<number>`sum(case when ${users.createdAt} >= ${todayStart * 1000} then 1 else 0 end)`,
       })
       .from(users);
 
     // ── 2. Campaign counts (all, including deleted) ──────────────────────────
     const [campaignCounts] = await this.db
       .select({
-        total:    count(),
-        public:   sql<number>`sum(case when ${campaigns.status} = 'PUBLIC' and ${campaigns.isDeleted} = 0 then 1 else 0 end)`,
-        draft:    sql<number>`sum(case when ${campaigns.status} = 'DRAFT'  and ${campaigns.isDeleted} = 0 then 1 else 0 end)`,
-        deleted:  sql<number>`sum(case when ${campaigns.isDeleted} = 1 then 1 else 0 end)`,
+        total: count(),
+        public: sql<number>`sum(case when ${campaigns.status} = 'PUBLIC' and ${campaigns.isDeleted} = 0 then 1 else 0 end)`,
+        draft: sql<number>`sum(case when ${campaigns.status} = 'DRAFT'  and ${campaigns.isDeleted} = 0 then 1 else 0 end)`,
+        deleted: sql<number>`sum(case when ${campaigns.isDeleted} = 1 then 1 else 0 end)`,
         newToday: sql<number>`sum(case when ${campaigns.createdAt} >= ${todayStart * 1000} then 1 else 0 end)`,
       })
       .from(campaigns);
@@ -413,7 +496,7 @@ export class DashboardService {
     // ── 3. Platform impression totals ────────────────────────────────────────
     const [impressionTotals] = await this.db
       .select({
-        total:         count(),
+        total: count(),
         uniqueViewers: countDistinct(impressions.viewerHash),
       })
       .from(impressions);
@@ -426,11 +509,11 @@ export class DashboardService {
     // ── 4. Top 5 campaigns by impression count ───────────────────────────────
     const topCampaigns = await this.db
       .select({
-        id:               campaigns.id,
-        title:            campaigns.title,
-        userId:           campaigns.userId,
+        id: campaigns.id,
+        title: campaigns.title,
+        userId: campaigns.userId,
         totalImpressions: count(impressions.id),
-        uniqueViewers:    countDistinct(impressions.viewerHash),
+        uniqueViewers: countDistinct(impressions.viewerHash),
       })
       .from(campaigns)
       .leftJoin(impressions, eq(impressions.campaignId, campaigns.id))
@@ -442,9 +525,9 @@ export class DashboardService {
     // ── 5. Top 5 creators by campaign count ─────────────────────────────────
     const topCreators = await this.db
       .select({
-        id:            users.id,
-        username:      users.username,
-        avatar:        users.avatar,
+        id: users.id,
+        username: users.username,
+        avatar: users.avatar,
         campaignCount: count(campaigns.id),
       })
       .from(users)
@@ -461,7 +544,7 @@ export class DashboardService {
     const campaignsByCategory = await this.db
       .select({
         category: sql<string>`coalesce(${campaigns.category}, 'UNCATEGORIZED')`,
-        count:    count(),
+        count: count(),
       })
       .from(campaigns)
       .where(eq(campaigns.isDeleted, false))
@@ -470,40 +553,40 @@ export class DashboardService {
 
     return {
       users: {
-        total:     Number(userCounts?.total     ?? 0),
-        active:    Number(userCounts?.active    ?? 0),
+        total: Number(userCounts?.total ?? 0),
+        active: Number(userCounts?.active ?? 0),
         suspended: Number(userCounts?.suspended ?? 0),
-        pending:   Number(userCounts?.pending   ?? 0),
-        newToday:  Number(userCounts?.newToday  ?? 0),
+        pending: Number(userCounts?.pending ?? 0),
+        newToday: Number(userCounts?.newToday ?? 0),
       },
       campaigns: {
-        total:    Number(campaignCounts?.total    ?? 0),
-        public:   Number(campaignCounts?.public   ?? 0),
-        draft:    Number(campaignCounts?.draft    ?? 0),
-        deleted:  Number(campaignCounts?.deleted  ?? 0),
+        total: Number(campaignCounts?.total ?? 0),
+        public: Number(campaignCounts?.public ?? 0),
+        draft: Number(campaignCounts?.draft ?? 0),
+        deleted: Number(campaignCounts?.deleted ?? 0),
         newToday: Number(campaignCounts?.newToday ?? 0),
       },
       impressions: {
-        total:         Number(impressionTotals?.total         ?? 0),
+        total: Number(impressionTotals?.total ?? 0),
         uniqueViewers: Number(impressionTotals?.uniqueViewers ?? 0),
-        last7Days:     Number(impressionsLast7Days?.count     ?? 0),
+        last7Days: Number(impressionsLast7Days?.count ?? 0),
       },
       topCampaigns: topCampaigns.map((c) => ({
-        id:               c.id,
-        title:            c.title,
-        userId:           c.userId,
+        id: c.id,
+        title: c.title,
+        userId: c.userId,
         totalImpressions: Number(c.totalImpressions),
-        uniqueViewers:    Number(c.uniqueViewers),
+        uniqueViewers: Number(c.uniqueViewers),
       })),
       topCreators: topCreators.map((u) => ({
-        id:            u.id,
-        username:      u.username,
-        avatar:        u.avatar,
+        id: u.id,
+        username: u.username,
+        avatar: u.avatar,
         campaignCount: Number(u.campaignCount),
       })),
       campaignsByCategory: campaignsByCategory.map((r) => ({
         category: r.category,
-        count:    Number(r.count),
+        count: Number(r.count),
       })),
     };
   }
