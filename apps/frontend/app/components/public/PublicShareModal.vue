@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useClipboard } from '~/composables/useClipboard'
 import { getArticleUrl, getSocialShareLinks } from '~/lib/utils'
 import type { CampaignItem } from '~/types/campaign'
 
@@ -13,7 +14,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
 }>()
 
-const copied = ref(false)
+const { isCopied: copied, copy } = useClipboard()
 
 const articleTitle = computed(() => props.article?.title || props.title || 'Share Article')
 
@@ -35,12 +36,7 @@ function closeModal() {
 
 function copyLink() {
   if (!fullUrl.value) return
-  navigator.clipboard.writeText(fullUrl.value).then(() => {
-    copied.value = true
-    setTimeout(() => {
-      copied.value = false
-    }, 2000)
-  })
+  copy(fullUrl.value)
 }
 
 async function triggerNativeShare() {

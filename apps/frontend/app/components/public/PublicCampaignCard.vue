@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { getArticleUrl } from '~/lib/utils'
+import { getArticleUrl, stripHtml } from '~/lib/utils'
 import type { CampaignItem } from '~/types/campaign'
 
 const props = defineProps<{
@@ -13,17 +13,12 @@ const galleryImages = computed(() => [...new Set([
   ...(props.campaign.images || []).map((image: any) => image.url)
 ].filter(Boolean))] as string[])
 
-function stripHtml(html: string | null | undefined) {
-  if (!html) return ''
-  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-}
 </script>
 
 <template>
   <div class="block">
     <article
       class="bg-white dark:bg-[#122131] rounded-2xl p-4 sm:p-5 border border-gray-200 dark:border-[#273647] hover:border-primary/50 transition-all duration-200 shadow-sm hover:shadow-md group flex flex-col gap-3">
-
       <!-- Top Content & Details Section -->
       <div class="flex flex-col gap-2.5">
         <NuxtLink :to="getArticleUrl(campaign)">
@@ -66,7 +61,7 @@ function stripHtml(html: string | null | undefined) {
       <NuxtLink :to="getArticleUrl(campaign)" class="block w-full">
         <div
           class="w-full h-56 sm:h-72 bg-gray-100 dark:bg-[#0d1c2d] rounded-xl overflow-hidden shrink-0 border border-gray-200 dark:border-[#273647] flex items-center justify-center shadow-inner relative group/img">
-          <img v-if="galleryImages[0]" :src="galleryImages[0]" :alt="campaign.imageTitle || campaign.title"
+          <NuxtImg v-if="galleryImages[0]" :src="galleryImages[0]" :alt="campaign.imageTitle || campaign.title"
             loading="lazy"
             class="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300" />
           <div v-else class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-600">

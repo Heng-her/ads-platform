@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import sanitizeHtml from 'sanitize-html'
 import { useApi } from '~/composables/useApi'
 import { useCategories } from '~/composables/useCategories'
 import { useCustomSeoMeta, useArticleSeo } from '~/lib/seo/metadata'
 import { getVideoEmbedUrl } from '~/lib/videoEmbed'
-import { extractIdFromSlug, getArticleUrl } from '~/lib/utils'
+import { useClipboard } from '~/composables/useClipboard'
+import { extractIdFromSlug, getArticleUrl, timeAgo, formatDate, initials } from '~/lib/utils'
 import type { CampaignItem } from '~/types/campaign'
 
 definePageMeta({
@@ -19,36 +19,12 @@ const router = useRouter()
 const api = useApi()
 const runtimeConfig = useRuntimeConfig()
 const { categories } = useCategories()
+const { isCopied: copied, copy } = useClipboard()
 
 const slug = computed(() => (route.params.slug as string) || '')
 
 const renderedContent = computed(() => {
-    const content = campaign.value?.content || campaign.value?.description || ''
-    if (!content) return ''
-
-    return sanitizeHtml(content, {
-        allowedTags: [
-            'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'mark',
-            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-            'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
-            'a', 'img', 'div', 'span', 'video'
-        ],
-        allowedAttributes: {
-            a: ['href', 'target', 'rel', 'class'],
-            img: ['src', 'alt', 'title', 'width', 'height', 'class'],
-            video: ['src', 'controls', 'class'],
-            '*': ['class', 'style']
-        },
-        allowedSchemes: ['http', 'https', 'mailto'],
-        allowedStyles: {
-            '*': {
-                color: [/^#[0-9a-f]{3,8}$/i, /^rgba?\([\d\s,.%]+\)$/i],
-                'background-color': [/^#[0-9a-f]{3,8}$/i, /^rgba?\([\d\s,.%]+\)$/i],
-                'font-size': [/^\d+(?:\.\d+)?(?:px|rem|em|%)$/i],
-                'text-align': [/^(?:left|center|right|justify)$/i]
-            }
-        }
-    })
+    return campaign.value?.content || campaign.value?.description || ''
 })
 
 const { data: campaign, pending: isLoading, error: asyncError } = await useAsyncData(
@@ -73,7 +49,6 @@ const errorMessage = computed(() => {
     return ''
 })
 
-const copied = ref(false)
 const feedbackGiven = ref<boolean | null>(null)
 const isShareModalOpen = ref(false)
 const relatedCampaigns = ref<CampaignItem[]>([])
@@ -94,44 +69,10 @@ watchEffect(() => {
     }
 })
 
-function timeAgo(iso: string) {
-    if (!iso) return 'recently'
-    const diffMs = Date.now() - new Date(iso).getTime()
-    const mins = Math.floor(diffMs / 60000)
-    if (mins < 1) return 'just now'
-    if (mins < 60) return `${mins}m ago`
-    const hours = Math.floor(mins / 60)
-    if (hours < 24) return `${hours}h ago`
-    const days = Math.floor(hours / 24)
-    if (days < 30) return `${days}d ago`
-    const months = Math.floor(days / 30)
-    if (months < 12) return `${months}mo ago`
-    return `${Math.floor(months / 12)}y ago`
-}
-
-function formatDate(iso: string) {
-    if (!iso) return ''
-    return new Date(iso).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    })
-}
-
-function initials(name: string) {
-    if (!name) return '?'
-    return name.trim().slice(0, 2).toUpperCase()
-}
-
 function copyLink() {
-    if (!campaign.value) return
+    if (!campaign.value || typeof window === 'undefined') return
     const fullUrl = `${window.location.origin}${getArticleUrl(campaign.value)}`
-    navigator.clipboard.writeText(fullUrl).then(() => {
-        copied.value = true
-        setTimeout(() => {
-            copied.value = false
-        }, 2000)
-    })
+    copy(fullUrl)
 }
 
 function giveFeedback(val: boolean) {
@@ -251,8 +192,8 @@ watch(campaign, (currentCampaign) => {
                         <div
                             class="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                             <div class="flex items-center gap-3">
-                                <img v-if="campaign.creator?.avatar" :src="campaign.creator.avatar"
-                                    :alt="campaign.creator?.username"
+                                <NuxtImg v-if="campaign.creator?.avatar" :src="campaign.creator.avatar"
+                                    :alt="campaign.creator?.username || 'Creator avatar'" loading="lazy"
                                     class="h-8 w-8 rounded-full object-cover ring-2 ring-primary/40" />
                                 <span v-else
                                     class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold bg-primary-100 dark:bg-primary-950/60 text-primary ring-2 ring-primary/30">
@@ -274,11 +215,10 @@ watch(campaign, (currentCampaign) => {
 
                             <!-- Action Controls -->
                             <div class="flex items-center gap-2">
-                                <button @click="isShareModalOpen = true"
-                                    class="px-3.5 py-1.5 rounded-xl bg-[#1c2b3c] hover:bg-gray-700 text-white text-xs font-mono font-bold transition-all flex items-center gap-1.5 shadow-sm border border-gray-700/60">
-                                    <UIcon name="i-heroicons-share" class="w-4 h-4 text-primary shrink-0" />
-                                    <span>Share / Copy Link</span>
-                                </button>
+                                <UButton @click="isShareModalOpen = true" color="neutral" variant="outline" size="sm"
+                                    icon="i-heroicons-share" class="font-mono font-bold cursor-pointer">
+                                    Share / Copy Link
+                                </UButton>
                             </div>
                         </div>
                     </header>
@@ -289,9 +229,9 @@ watch(campaign, (currentCampaign) => {
                             :class="galleryImages.length > 1 ? 'sm:grid-cols-2' : ''">
                             <figure v-for="(image, index) in galleryImages" :key="image"
                                 class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 shadow-sm dark:border-gray-800 dark:bg-gray-950">
-                                <img :src="image"
+                                <NuxtImg :src="image"
                                     :alt="index === 0 ? (campaign.imageTitle || campaign.title) : `${campaign.title} image ${index + 1}`"
-                                    class="h-full max-h-[480px] w-full object-cover" />
+                                    loading="lazy" class="h-full max-h-[480px] w-full object-cover" />
                                 <figcaption v-if="index === 0 && (campaign.imageTitle || campaign.imageDescription)"
                                     class="border-t border-gray-200 bg-gray-50 p-3 text-xs font-medium text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
                                     <strong v-if="campaign.imageTitle" class="text-gray-900 dark:text-white">{{
@@ -348,7 +288,7 @@ watch(campaign, (currentCampaign) => {
                         <div v-if="relatedCampaigns.length" class="grid gap-3 sm:grid-cols-3">
                             <NuxtLink v-for="item in relatedCampaigns" :key="item.id" :to="getArticleUrl(item)"
                                 class="group overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
-                                <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.title"
+                                <NuxtImg v-if="item.imageUrl" :src="item.imageUrl" :alt="item.title" loading="lazy"
                                     class="h-24 w-full object-cover" />
                                 <div v-else
                                     class="flex h-24 items-center justify-center bg-gray-100 text-gray-400 dark:bg-gray-800">
@@ -373,15 +313,6 @@ watch(campaign, (currentCampaign) => {
                 <!-- Right Sidebar Column (Ads & Category Link) -->
                 <aside class="lg:col-span-4 space-y-6 sticky top-20">
                     <AdBanner slot-type="sidebar" />
-
-                    <PublicAdIntegrationCard :ad-network="campaign.adNetwork" :ad-unit-code="campaign.adUnitCode" />
-
-                    <!-- Explore Category Button -->
-                    <NuxtLink :to="`/article?category=${encodeURIComponent(campaign.category || '')}`"
-                        class="w-full text-center flex items-center justify-center gap-1.5 text-xs font-mono font-bold py-3 rounded-xl transition-all text-white bg-primary hover:bg-primary-600 shadow-md">
-                        <span>Explore {{ campaign.category || 'General' }} Campaigns</span>
-                        <UIcon name="i-heroicons-arrow-right" class="w-4 h-4" />
-                    </NuxtLink>
                 </aside>
             </div>
         </div>
