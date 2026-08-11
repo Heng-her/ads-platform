@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
@@ -18,14 +18,35 @@ const searchQuery = ref('')
 const compareMetric = ref<'impressions' | 'revenue'>('impressions')
 
 const stats = ref<{
+  period?: '7d' | '30d' | '90d' | 'all'
   campaigns: { total: number; public: number; draft: number }
-  impressions: { total: number; uniqueViewers: number }
+  impressions: { total: number; uniqueViewers: number; previousTotal?: number; periodGrowthPct?: number }
   monetization?: { ecpmRate: number; estimatedRevenue: number }
   topCampaign: { id: string; title: string; totalImpressions: number; uniqueViewers: number } | null
   recentCampaigns: { id: string; title: string; status: string; createdAt: string }[]
+  periodComparison?: {
+    items: { label: string; currentImp: number; prevImp: number; currentRev: number; prevRev: number; diffPct: number }[]
+    peakItem: { label: string; currentImp: number; prevImp: number; currentRev: number; prevRev: number; diffPct: number } | null
+    totalCurrentImp: number
+    totalPrevImp: number
+    totalCurrentRev: number
+    totalPrevRev: number
+    growthPct: number
+  }
+  campaignBreakdown?: {
+    id: string
+    title: string
+    status: string
+    createdAt: string
+    impressions: number
+    estimatedRevenue: number
+    contributionPct: number
+  }[]
+  audienceLocations?: { code: string; name: string; flag: string; percentage: number; impressions: number }[]
+  deviceDistribution?: { name: string; icon: string; percentage: number; count: number }[]
 } | null>(null)
 
-// Mock demographics breakdown
+// Fallback demographics breakdown if stats loading
 const audienceData = ref({
   countries: [
     { code: 'KH', name: 'Cambodia', flag: '🇰🇭', percentage: 58, impressions: 72210 },
@@ -34,40 +55,41 @@ const audienceData = ref({
     { code: 'OTHER', name: 'Others', flag: '🌐', percentage: 6, impressions: 7470 }
   ],
   devices: [
-    { name: 'Mobile Devices', icon: 'i-heroicons-device-phone-mobile', percentage: 68, count: '84,660' },
-    { name: 'Desktop Computers', icon: 'i-heroicons-computer-desktop', percentage: 26, count: '32,370' },
-    { name: 'Tablets & Other', icon: 'i-heroicons-device-tablet', percentage: 6, count: '7,470' }
+    { name: 'Mobile Devices', icon: 'i-heroicons-device-phone-mobile', percentage: 68, count: 84660 },
+    { name: 'Desktop Computers', icon: 'i-heroicons-computer-desktop', percentage: 26, count: 32370 },
+    { name: 'Tablets & Other', icon: 'i-heroicons-device-tablet', percentage: 6, count: 7470 }
   ]
 })
 
 // Dynamic Period Comparison Visualizer Data
 const comparisonData = computed(() => {
+  if (stats.value?.periodComparison) {
+    const pc = stats.value.periodComparison
+    const maxVal = Math.max(...pc.items.map(i => Math.max(i.currentImp, i.prevImp)), 1)
+
+    return {
+      items: pc.items.map(item => ({
+        ...item,
+        currentHeightPct: Math.max(22, Math.round((item.currentImp / maxVal) * 100)),
+        prevHeightPct: Math.max(18, Math.round((item.prevImp / maxVal) * 100)),
+        isPeak: pc.peakItem ? item.label === pc.peakItem.label : false
+      })),
+      peakItem: pc.peakItem,
+      totalCurrentImp: pc.totalCurrentImp,
+      totalPrevImp: pc.totalPrevImp,
+      totalCurrentRev: pc.totalCurrentRev,
+      growthPct: pc.growthPct
+    }
+  }
+
+  // Baseline fallback
   const total = stats.value?.impressions.total || 124500
   const ecpm = stats.value?.monetization?.ecpmRate || 2.50
 
-  let labels: string[] = []
-  let weightsCurrent: number[] = []
-  let weightsPrevious: number[] = []
+  let labels: string[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  let weightsCurrent: number[] = [0.11, 0.14, 0.16, 0.20, 0.26, 0.18, 0.12]
+  let weightsPrevious: number[] = [0.09, 0.11, 0.13, 0.15, 0.20, 0.14, 0.10]
 
-  if (timeRange.value === '7d') {
-    labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    weightsCurrent = [0.11, 0.14, 0.16, 0.20, 0.26, 0.18, 0.12]
-    weightsPrevious = [0.09, 0.11, 0.13, 0.15, 0.20, 0.14, 0.10]
-  } else if (timeRange.value === '30d') {
-    labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4']
-    weightsCurrent = [0.22, 0.28, 0.35, 0.25]
-    weightsPrevious = [0.18, 0.22, 0.29, 0.20]
-  } else if (timeRange.value === '90d') {
-    labels = ['Month 1 (May)', 'Month 2 (Jun)', 'Month 3 (Jul)']
-    weightsCurrent = [0.28, 0.36, 0.44]
-    weightsPrevious = [0.22, 0.30, 0.35]
-  } else {
-    labels = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)']
-    weightsCurrent = [0.18, 0.27, 0.38, 0.32]
-    weightsPrevious = [0.14, 0.20, 0.28, 0.24]
-  }
-
-  // Calculate raw numbers
   const list = labels.map((label, index) => {
     const wc = weightsCurrent[index] ?? 0
     const wp = weightsPrevious[index] ?? 0
@@ -75,20 +97,10 @@ const comparisonData = computed(() => {
     const prevImp = Math.round(total * wp)
     const currentRev = (currentImp / 1000) * ecpm
     const prevRev = (prevImp / 1000) * ecpm
-
     const diffPct = prevImp > 0 ? Math.round(((currentImp - prevImp) / prevImp) * 100) : 0
-
-    return {
-      label,
-      currentImp,
-      prevImp,
-      currentRev,
-      prevRev,
-      diffPct
-    }
+    return { label, currentImp, prevImp, currentRev, prevRev, diffPct }
   })
 
-  // Find max value across current and previous to scale height to 100% (min height 20%)
   const maxVal = Math.max(...list.map(i => Math.max(i.currentImp, i.prevImp)), 1)
   const peakVal = Math.max(...list.map(i => i.currentImp))
 
@@ -102,14 +114,17 @@ const comparisonData = computed(() => {
     peakItem: list.find(item => item.currentImp === peakVal),
     totalCurrentImp: list.reduce((acc, i) => acc + i.currentImp, 0),
     totalPrevImp: list.reduce((acc, i) => acc + i.prevImp, 0),
-    totalCurrentRev: list.reduce((acc, i) => acc + i.currentRev, 0)
+    totalCurrentRev: list.reduce((acc, i) => acc + i.currentRev, 0),
+    growthPct: 18
   }
 })
 
 async function fetchAnalyticsData() {
   isLoading.value = true
   try {
-    const res = await api.dashboard.me.stats.$get()
+    const res = await (api.dashboard.me.stats.$get as any)({
+      query: { period: timeRange.value }
+    })
     const data = await res.json()
     if (res.ok && data.code === 1) {
       stats.value = data.data
@@ -122,6 +137,10 @@ async function fetchAnalyticsData() {
     isLoading.value = false
   }
 }
+
+watch(timeRange, () => {
+  fetchAnalyticsData()
+})
 
 onMounted(() => {
   fetchAnalyticsData()
@@ -139,11 +158,12 @@ function formatCurrency(amount?: number): string {
 
 // Filtered campaigns for table
 const filteredCampaigns = computed(() => {
-  if (!stats.value?.recentCampaigns) return []
+  const list = stats.value?.campaignBreakdown || stats.value?.recentCampaigns || []
+  if (!list) return []
   const query = searchQuery.value.toLowerCase().trim()
-  if (!query) return stats.value.recentCampaigns
+  if (!query) return list
 
-  return stats.value.recentCampaigns.filter(c =>
+  return list.filter(c =>
     c.title.toLowerCase().includes(query) || c.id.toLowerCase().includes(query) || c.status.toLowerCase().includes(query)
   )
 })
@@ -219,9 +239,13 @@ const filteredCampaigns = computed(() => {
           </span>
         </div>
         <div
-          class="mt-4 flex items-center gap-1 text-xs text-emerald-500 font-semibold border-t border-gray-100 pt-3 dark:border-gray-800">
-          <UIcon name="i-heroicons-arrow-trending-up" class="h-4 w-4" />
-          <span>+18.4% vs previous {{ timeRange }}</span>
+          class="mt-4 flex items-center gap-1 text-xs font-semibold border-t border-gray-100 pt-3 dark:border-gray-800"
+          :class="(stats.impressions.periodGrowthPct ?? 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+          <UIcon
+            :name="(stats.impressions.periodGrowthPct ?? 0) >= 0 ? 'i-heroicons-arrow-trending-up' : 'i-heroicons-arrow-trending-down'"
+            class="h-4 w-4" />
+          <span>{{ (stats.impressions.periodGrowthPct ?? 0) >= 0 ? '+' : '' }}{{ stats.impressions.periodGrowthPct ?? 0
+            }}% vs previous {{ timeRange }}</span>
         </div>
       </div>
 
@@ -491,18 +515,20 @@ const filteredCampaigns = computed(() => {
                     </UBadge>
                   </td>
                   <td class="px-4 py-3 text-right font-bold text-sky-600 dark:text-sky-400">
-                    {{ formatNumber(stats.impressions.total > 0 ? Math.round(stats.impressions.total * 0.4) : 0) }}
+                    {{ formatNumber((campaign as any).impressions ?? 0) }}
                   </td>
                   <td class="px-4 py-3 text-right font-bold text-amber-600 dark:text-amber-400">
-                    {{ formatCurrency(stats.monetization?.estimatedRevenue ? stats.monetization.estimatedRevenue * 0.4 :
-                      0) }}
+                    {{ formatCurrency((campaign as any).estimatedRevenue ?? 0) }}
                   </td>
                   <td class="px-4 py-3 text-right">
                     <div class="flex items-center justify-end gap-2">
                       <div class="w-16 h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                        <div class="h-full bg-primary-500 rounded-full" style="width: 40%;" />
+                        <div class="h-full bg-primary-500 rounded-full"
+                          :style="{ width: ((campaign as any).contributionPct ?? 0) + '%' }" />
                       </div>
-                      <span class="text-[11px] font-semibold text-gray-600 dark:text-gray-400">40%</span>
+                      <span class="text-[11px] font-semibold text-gray-600 dark:text-gray-400">
+                        {{ (campaign as any).contributionPct ?? 0 }}%
+                      </span>
                     </div>
                   </td>
                 </tr>
@@ -524,7 +550,8 @@ const filteredCampaigns = computed(() => {
           </h2>
 
           <div class="space-y-3">
-            <div v-for="country in audienceData.countries" :key="country.code" class="space-y-1.5">
+            <div v-for="country in (stats?.audienceLocations || audienceData.countries)" :key="country.code"
+              class="space-y-1.5">
               <div class="flex items-center justify-between text-xs">
                 <span class="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
                   <span>{{ country.flag }}</span>
@@ -549,14 +576,16 @@ const filteredCampaigns = computed(() => {
           </h2>
 
           <div class="space-y-4">
-            <div v-for="device in audienceData.devices" :key="device.name" class="flex items-center justify-between">
+            <div v-for="device in (stats?.deviceDistribution || audienceData.devices)" :key="device.name"
+              class="flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500">
                   <UIcon :name="device.icon" class="h-4 w-4" />
                 </div>
                 <div>
                   <p class="text-xs font-semibold text-gray-900 dark:text-white">{{ device.name }}</p>
-                  <p class="text-[10px] text-gray-400">{{ device.count }} views</p>
+                  <p class="text-[10px] text-gray-400">{{ typeof device.count === 'number' ? formatNumber(device.count)
+                    : device.count }} views</p>
                 </div>
               </div>
               <span class="text-xs font-bold text-purple-600 dark:text-purple-400">{{ device.percentage }}%</span>

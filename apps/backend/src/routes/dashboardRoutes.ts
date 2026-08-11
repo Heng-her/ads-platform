@@ -15,9 +15,10 @@ export const dashboardRoutes = new Hono<HonoEnv>()
     async (c) => {
       try {
         const userPayload = c.get("user")!;
+        const period = c.req.query("period") || "7d";
         const db = getDb(c.env.DB);
         const dashboardService = new DashboardService(db);
-        const stats = await dashboardService.getCreatorStats(userPayload.id);
+        const stats = await dashboardService.getCreatorStats(userPayload.id, period);
         return sendSuccess(c, stats);
       } catch (err: any) {
         return sendError(c, err.message || "Failed to fetch creator dashboard stats");

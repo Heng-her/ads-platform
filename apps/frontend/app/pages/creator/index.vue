@@ -90,7 +90,7 @@ function formatDate(dateStr?: string): string {
           <span>{{ isLoading ? 'Refreshing...' : 'Refresh' }}</span>
         </button>
 
-        <NuxtLink to="/creator/campaigns/new"
+        <NuxtLink to="/creator/campaigns/create"
           class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-primary-500">
           <UIcon name="i-heroicons-plus" class="h-4 w-4" />
           <span>Create Campaign</span>
@@ -250,7 +250,7 @@ function formatDate(dateStr?: string): string {
                   {{ campaign.status }}
                 </UBadge>
 
-                <NuxtLink to="/creator/campaigns"
+                <NuxtLink :to="`/creator/campaigns/${campaign.id}/edit`"
                   class="rounded-lg border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
                   Manage
                 </NuxtLink>
