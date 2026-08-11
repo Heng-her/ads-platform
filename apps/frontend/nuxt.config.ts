@@ -40,6 +40,14 @@ export default defineNuxtConfig({
   linkChecker: {
     enabled: false,
   },
+  icon: {
+    clientBundle: {
+      scan: true,
+      includeCustomCollections: true,
+    },
+    serverBundle: false,
+  },
+
   vite: {
     server: {
       allowedHosts: true,
@@ -51,9 +59,15 @@ export default defineNuxtConfig({
         "crypto-js",
         "sanitize-html",
         "ethers",
-        "hono"
-      ]
-    }
+        "hono",
+        "vue",
+        "vue-router",
+        "@unhead/vue",
+        "pinia",
+        "clsx",
+        "tailwind-merge",
+      ],
+    },
   },
   nitro: {
     preset:
