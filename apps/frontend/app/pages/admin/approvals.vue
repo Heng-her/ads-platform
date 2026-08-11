@@ -120,11 +120,9 @@ function formatDate(dateStr?: string) {
       </div>
 
       <div class="flex items-center gap-3">
-        <button
-          :disabled="isLoading"
+        <button :disabled="isLoading"
           class="inline-flex items-center gap-2 rounded-lg border border-gray-800 bg-gray-900 px-4 py-2.5 text-xs font-semibold text-gray-300 transition hover:bg-gray-800 hover:text-white disabled:opacity-50"
-          @click="fetchData"
-        >
+          @click="fetchData">
           <UIcon v-if="isLoading" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin text-primary-400" />
           <UIcon v-else name="i-heroicons-arrow-path" class="h-4 w-4 text-gray-400" />
           <span>{{ isLoading ? 'Refreshing...' : 'Refresh List' }}</span>
@@ -140,13 +138,8 @@ function formatDate(dateStr?: string) {
       </div>
 
       <div class="w-full sm:w-80">
-        <UInput
-          v-model="searchQuery"
-          icon="i-heroicons-magnifying-glass"
-          placeholder="Search by name, email, or role..."
-          size="sm"
-          class="w-full"
-        />
+        <UInput v-model="searchQuery" icon="i-heroicons-magnifying-glass"
+          placeholder="Search by name, email, or role..." size="sm" class="w-full" />
       </div>
     </div>
 
@@ -164,28 +157,28 @@ function formatDate(dateStr?: string) {
       </div>
 
       <div v-else class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div
-          v-for="user in filteredUsers"
-          :key="user.id"
-          class="flex flex-col justify-between rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-sm transition hover:border-gray-700"
-        >
+        <div v-for="user in filteredUsers" :key="user.id"
+          class="flex flex-col justify-between rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-sm transition hover:border-gray-700">
           <div class="space-y-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div class="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-gray-700 bg-gray-800">
+                <div
+                  class="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-gray-700 bg-gray-800">
                   <img v-if="user.avatar" :src="user.avatar" :alt="user.username" class="h-full w-full object-cover" />
                   <div v-else class="flex h-full w-full items-center justify-center text-gray-400">
                     <UIcon name="i-heroicons-user" class="h-6 w-6" />
                   </div>
                 </div>
                 <div>
-                  <h3 class="font-bold text-white text-base truncate max-w-[160px]">{{ user.username || 'Anonymous User' }}</h3>
+                  <h3 class="font-bold text-white text-base truncate max-w-[160px]">{{ user.username || 'Anonymous User'
+                    }}</h3>
                   <p class="text-xs text-gray-400 truncate max-w-[160px]">{{ user.email }}</p>
                 </div>
               </div>
 
               <div class="flex flex-col items-end gap-1 shrink-0">
-                <UBadge :color="user.role === 'ADMIN' ? 'error' : 'primary'" variant="solid" size="xs" class="font-bold uppercase">
+                <UBadge :color="user.role === 'ADMIN' ? 'error' : 'primary'" variant="solid" size="xs"
+                  class="font-bold uppercase">
                   {{ user.role || 'CREATOR' }}
                 </UBadge>
                 <UBadge
@@ -217,21 +210,17 @@ function formatDate(dateStr?: string) {
           <div class="mt-6 flex flex-wrap items-center gap-2 border-t border-gray-800/80 pt-4">
             <!-- PENDING User Actions -->
             <template v-if="user.status === 'PENDING'">
-              <button
-                :disabled="processingId === user.id"
+              <button :disabled="processingId === user.id"
                 class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
-                @click="updateUserStatus(user.id, 'ACTIVE', 'CREATOR')"
-              >
+                @click="updateUserStatus(user.id, 'ACTIVE', 'CREATOR')">
                 <UIcon v-if="processingId === user.id" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
                 <UIcon v-else name="i-heroicons-check" class="h-4 w-4" />
                 <span>Approve</span>
               </button>
 
-              <button
-                :disabled="processingId === user.id"
+              <button :disabled="processingId === user.id"
                 class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-50"
-                @click="updateUserStatus(user.id, 'ACTIVE', 'ADMIN')"
-              >
+                @click="updateUserStatus(user.id, 'ACTIVE', 'ADMIN')">
                 <UIcon v-if="processingId === user.id" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
                 <UIcon v-else name="i-heroicons-shield-check" class="h-4 w-4" />
                 <span>Make Admin</span>
@@ -240,11 +229,9 @@ function formatDate(dateStr?: string) {
 
             <!-- ACTIVE Admin -> Option to Demote to Creator -->
             <template v-else-if="user.role === 'ADMIN'">
-              <button
-                :disabled="processingId === user.id"
+              <button :disabled="processingId === user.id"
                 class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-amber-500 disabled:opacity-50"
-                @click="updateUserStatus(user.id, 'ACTIVE', 'CREATOR')"
-              >
+                @click="updateUserStatus(user.id, 'ACTIVE', 'CREATOR')">
                 <UIcon v-if="processingId === user.id" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
                 <UIcon v-else name="i-heroicons-user" class="h-4 w-4" />
                 <span>Demote to Creator</span>
@@ -253,11 +240,9 @@ function formatDate(dateStr?: string) {
 
             <!-- ACTIVE Creator -> Option to Promote to Admin -->
             <template v-else>
-              <button
-                :disabled="processingId === user.id"
+              <button :disabled="processingId === user.id"
                 class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-50"
-                @click="updateUserStatus(user.id, 'ACTIVE', 'ADMIN')"
-              >
+                @click="updateUserStatus(user.id, 'ACTIVE', 'ADMIN')">
                 <UIcon v-if="processingId === user.id" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
                 <UIcon v-else name="i-heroicons-shield-check" class="h-4 w-4" />
                 <span>Promote to Admin</span>
@@ -265,31 +250,22 @@ function formatDate(dateStr?: string) {
             </template>
 
             <!-- Suspend Button (for ACTIVE/PENDING) -->
-            <button
-              v-if="user.status !== 'SUSPENDED'"
-              :disabled="processingId === user.id"
+            <button v-if="user.status !== 'SUSPENDED'" :disabled="processingId === user.id"
               class="inline-flex items-center justify-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500/20 disabled:opacity-50"
-              @click="updateUserStatus(user.id, 'SUSPENDED')"
-            >
+              @click="updateUserStatus(user.id, 'SUSPENDED')">
               <UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
               <span>Suspend</span>
             </button>
             <!-- Reactivate Button (if SUSPENDED) -->
-            <button
-              v-else
-              :disabled="processingId === user.id"
+            <button v-else :disabled="processingId === user.id"
               class="inline-flex items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
-              @click="updateUserStatus(user.id, 'ACTIVE', user.role || 'CREATOR')"
-            >
+              @click="updateUserStatus(user.id, 'ACTIVE', user.role || 'CREATOR')">
               <UIcon name="i-heroicons-arrow-path" class="h-4 w-4" />
               <span>Reactivate</span>
             </button>
 
-            <button
-              class="rounded-lg border border-gray-800 bg-gray-800 p-2 text-gray-400 hover:text-white transition"
-              title="Inspect Details"
-              @click="selectedCreator = user"
-            >
+            <button class="rounded-lg border border-gray-800 bg-gray-800 p-2 text-gray-400 hover:text-white transition"
+              title="Inspect Details" @click="selectedCreator = user">
               <UIcon name="i-heroicons-eye" class="h-4 w-4" />
             </button>
           </div>
@@ -298,8 +274,10 @@ function formatDate(dateStr?: string) {
     </div>
 
     <!-- Modal: User Detail Inspection & Role Control -->
-    <div v-if="selectedCreator" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
-      <div class="w-full max-w-lg rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-2xl space-y-6 text-gray-100">
+    <div v-if="selectedCreator"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
+      <div
+        class="w-full max-w-lg rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-2xl space-y-6 text-gray-100">
         <div class="flex items-center justify-between border-b border-gray-800 pb-4">
           <div class="flex items-center gap-3">
             <UIcon name="i-heroicons-user-circle" class="h-6 w-6 text-primary-400" />
@@ -313,7 +291,8 @@ function formatDate(dateStr?: string) {
         <div class="space-y-4">
           <div class="flex items-center gap-4">
             <div class="relative h-16 w-16 overflow-hidden rounded-full border border-gray-700 bg-gray-800">
-              <img v-if="selectedCreator.avatar" :src="selectedCreator.avatar" :alt="selectedCreator.username" class="h-full w-full object-cover" />
+              <img v-if="selectedCreator.avatar" :src="selectedCreator.avatar" :alt="selectedCreator.username"
+                class="h-full w-full object-cover" />
               <div v-else class="flex h-full w-full items-center justify-center text-gray-400">
                 <UIcon name="i-heroicons-user" class="h-8 w-8" />
               </div>
@@ -351,27 +330,21 @@ function formatDate(dateStr?: string) {
         </div>
 
         <div class="flex flex-wrap items-center justify-end gap-2.5 border-t border-gray-800 pt-4">
-          <button
-            v-if="selectedCreator.status !== 'SUSPENDED'"
+          <button v-if="selectedCreator.status !== 'SUSPENDED'"
             class="rounded-lg border border-red-500/30 bg-red-500/10 px-3.5 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition"
-            @click="updateUserStatus(selectedCreator.id, 'SUSPENDED')"
-          >
+            @click="updateUserStatus(selectedCreator.id, 'SUSPENDED')">
             Suspend Account
           </button>
 
-          <button
-            v-if="selectedCreator.role === 'ADMIN'"
+          <button v-if="selectedCreator.role === 'ADMIN'"
             class="rounded-lg bg-amber-600 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-500 transition"
-            @click="updateUserStatus(selectedCreator.id, 'ACTIVE', 'CREATOR')"
-          >
+            @click="updateUserStatus(selectedCreator.id, 'ACTIVE', 'CREATOR')">
             Demote to Creator Role
           </button>
 
-          <button
-            v-else
+          <button v-else
             class="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition"
-            @click="updateUserStatus(selectedCreator.id, 'ACTIVE', 'ADMIN')"
-          >
+            @click="updateUserStatus(selectedCreator.id, 'ACTIVE', 'ADMIN')">
             Promote to Admin Role
           </button>
         </div>
