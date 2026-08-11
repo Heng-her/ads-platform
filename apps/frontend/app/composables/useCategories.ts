@@ -7,6 +7,12 @@ export type CategoryItem = {
   createdAt: string | null;
 };
 
+export type CustomCategoryItem = CategoryItem & {
+  userId?: string;
+  userEmail?: string;
+  username?: string;
+};
+
 /**
  * Shared category list composable. Categories are loaded once in the browser and
  * retained in Nuxt state for the rest of the session.
@@ -29,6 +35,15 @@ export function useCategories() {
   );
   const isLoadingMyCategories = useState<boolean>(
     "my-categories-shared-loading",
+    () => false,
+  );
+
+  const allCustomCategories = useState<CustomCategoryItem[]>(
+    "all-custom-categories-shared-data",
+    () => [],
+  );
+  const isLoadingAllCustomCategories = useState<boolean>(
+    "all-custom-categories-shared-loading",
     () => false,
   );
 
@@ -210,6 +225,45 @@ export function useCategories() {
     });
   }
 
+  async function fetchAllCustomCategories(force = false) {
+    if (
+      (allCustomCategories.value.length > 0 && !force) ||
+      isLoadingAllCustomCategories.value
+    ) {
+      return;
+    }
+    isLoadingAllCustomCategories.value = true;
+    try {
+      const api = useApi();
+      const res = await api.action.$post({
+        json: { action: "categories/all-custom-list" },
+      });
+      const json = (await res.json()) as {
+        code: number;
+        data?: CustomCategoryItem[];
+      };
+      if (json?.code === 1 && Array.isArray(json?.data)) {
+        allCustomCategories.value = json.data;
+      }
+    } catch (error) {
+      console.error("[POST /action categories/all-custom-list] failed:", error);
+    } finally {
+      isLoadingAllCustomCategories.value = false;
+    }
+  }
+
+  async function deleteCustomCategoryByAdmin(id: number) {
+    const api = useApi();
+    const res = await api.action.$post({
+      json: { action: "categories/delete-custom", data: { id } },
+    });
+    const json = (await res.json()) as { code: number; msg?: string };
+    if (json?.code === 1) {
+      await fetchAllCustomCategories(true);
+    }
+    return json;
+  }
+
   return {
     categories,
     isLoadingCategories,
@@ -223,6 +277,10 @@ export function useCategories() {
     createMyCategory,
     updateMyCategory,
     deleteMyCategory,
+    allCustomCategories,
+    isLoadingAllCustomCategories,
+    fetchAllCustomCategories,
+    deleteCustomCategoryByAdmin,
     allCategories,
   };
 }

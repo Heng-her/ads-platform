@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useCategories, type CategoryItem } from '~/composables/useCategories'
+import { useCategories, type CategoryItem, type CustomCategoryItem } from '~/composables/useCategories'
 import { useAppToast } from '~/composables/useAppToast'
 
 definePageMeta({
@@ -14,9 +14,10 @@ const {
   createCategory,
   updateCategory,
   deleteCategory,
-  myCategories,
-  isLoadingMyCategories,
-  fetchMyCategories
+  allCustomCategories,
+  isLoadingAllCustomCategories,
+  fetchAllCustomCategories,
+  deleteCustomCategoryByAdmin
 } = useCategories()
 
 const toast = useAppToast()
@@ -29,17 +30,19 @@ const searchQuery = ref('')
 const isAddModalOpen = ref(false)
 const isEditModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
+const isDeleteCustomModalOpen = ref(false)
 
 const newCategoryName = ref('')
 const editingCategory = ref<CategoryItem | null>(null)
 const editingName = ref('')
 const deletingCategory = ref<CategoryItem | null>(null)
+const deletingCustomCategory = ref<CustomCategoryItem | null>(null)
 
 const isSubmitting = ref(false)
 
 onMounted(() => {
   fetchCategories(true)
-  fetchMyCategories(true)
+  fetchAllCustomCategories(true)
 })
 
 // Filtered lists
@@ -51,8 +54,12 @@ const filteredSystemCategories = computed(() => {
 
 const filteredCreatorCategories = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
-  if (!query) return myCategories.value
-  return myCategories.value.filter(cat => cat.name.toLowerCase().includes(query))
+  if (!query) return allCustomCategories.value
+  return allCustomCategories.value.filter(cat =>
+    cat.name.toLowerCase().includes(query) ||
+    (cat.userEmail && cat.userEmail.toLowerCase().includes(query)) ||
+    (cat.username && cat.username.toLowerCase().includes(query))
+  )
 })
 
 // Date Formatter
@@ -69,7 +76,7 @@ function formatDate(dateStr?: string | null) {
   }
 }
 
-// Actions
+// System Category Actions
 function openAddModal() {
   newCategoryName.value = ''
   isAddModalOpen.value = true
@@ -155,6 +162,32 @@ async function handleDeleteCategory() {
     isSubmitting.value = false
   }
 }
+
+// Creator Custom Category Admin Actions
+function openDeleteCustomModal(category: CustomCategoryItem) {
+  deletingCustomCategory.value = category
+  isDeleteCustomModalOpen.value = true
+}
+
+async function handleDeleteCustomCategory() {
+  if (!deletingCustomCategory.value) return
+
+  isSubmitting.value = true
+  try {
+    const res = await deleteCustomCategoryByAdmin(deletingCustomCategory.value.id)
+    if (res?.code === 1) {
+      toast.success('Custom Category Deleted', `Creator category "${deletingCustomCategory.value.name}" removed.`)
+      isDeleteCustomModalOpen.value = false
+      deletingCustomCategory.value = null
+    } else {
+      toast.error('Delete Failed', res?.msg || 'Could not delete custom category.')
+    }
+  } catch (err: any) {
+    toast.error('Error', err.message || 'An error occurred while deleting custom category.')
+  } finally {
+    isSubmitting.value = false
+  }
+}
 </script>
 
 <template>
@@ -170,7 +203,7 @@ async function handleDeleteCategory() {
           </h1>
         </div>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Manage system-wide campaign categories, view creator custom categories, and organize content.
+          Manage system-wide campaign categories and review all custom categories created by platform creators.
         </p>
       </div>
 
@@ -201,8 +234,8 @@ async function handleDeleteCategory() {
           <UIcon name="i-heroicons-user-group" class="w-6 h-6" />
         </div>
         <div>
-          <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Creator Categories</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ myCategories.length }}</p>
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400">All Creator Categories</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ allCustomCategories.length }}</p>
         </div>
       </div>
 
@@ -215,7 +248,7 @@ async function handleDeleteCategory() {
           <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Status</p>
           <p class="text-base font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Active Sync
+            Global Sync Active
           </p>
         </div>
       </div>
@@ -237,13 +270,13 @@ async function handleDeleteCategory() {
           <button class="px-4 py-1.5 text-xs font-semibold rounded-md transition-all"
             :class="activeTab === 'creator' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'"
             @click="activeTab = 'creator'">
-            Creator Custom ({{ myCategories.length }})
+            All Creator Categories ({{ allCustomCategories.length }})
           </button>
         </div>
 
         <!-- Search Bar -->
         <div class="w-full sm:w-72">
-          <UInput v-model="searchQuery" icon="i-heroicons-magnifying-glass" placeholder="Search categories..." size="sm"
+          <UInput v-model="searchQuery" icon="i-heroicons-magnifying-glass" placeholder="Search categories or creator..." size="sm"
             color="neutral" variant="outline" />
         </div>
       </div>
@@ -257,11 +290,13 @@ async function handleDeleteCategory() {
               <th class="py-3 px-4 sm:px-6">ID</th>
               <th class="py-3 px-4 sm:px-6">Preview Badge</th>
               <th class="py-3 px-4 sm:px-6">Category Name</th>
+              <th v-if="activeTab === 'creator'" class="py-3 px-4 sm:px-6">Created By</th>
               <th class="py-3 px-4 sm:px-6">Created Date</th>
               <th class="py-3 px-4 sm:px-6 text-right">Actions</th>
             </tr>
           </thead>
 
+          <!-- System Categories Tab -->
           <tbody v-if="activeTab === 'system'" class="divide-y divide-gray-100 dark:divide-gray-800">
             <tr v-if="isLoadingCategories" class="text-center">
               <td colspan="5" class="py-8 text-gray-500 dark:text-gray-400">
@@ -306,17 +341,17 @@ async function handleDeleteCategory() {
             </tr>
           </tbody>
 
-          <!-- Creator Categories Tab -->
+          <!-- Creator Categories Tab (All Creators across platform) -->
           <tbody v-else class="divide-y divide-gray-100 dark:divide-gray-800">
-            <tr v-if="isLoadingMyCategories" class="text-center">
-              <td colspan="5" class="py-8 text-gray-500 dark:text-gray-400">
+            <tr v-if="isLoadingAllCustomCategories" class="text-center">
+              <td colspan="6" class="py-8 text-gray-500 dark:text-gray-400">
                 <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin inline-block mr-2 text-primary" />
-                Loading custom categories...
+                Loading creator custom categories...
               </td>
             </tr>
 
             <tr v-else-if="filteredCreatorCategories.length === 0" class="text-center">
-              <td colspan="5" class="py-10 text-gray-400 dark:text-gray-500">
+              <td colspan="6" class="py-10 text-gray-400 dark:text-gray-500">
                 <UIcon name="i-heroicons-user-group" class="w-8 h-8 mx-auto mb-2 opacity-50" />
                 No custom creator categories found.
               </td>
@@ -333,13 +368,18 @@ async function handleDeleteCategory() {
               <td class="py-3.5 px-4 sm:px-6 font-medium text-gray-900 dark:text-white">
                 {{ cat.name }}
               </td>
+              <td class="py-3.5 px-4 sm:px-6 text-xs text-gray-700 dark:text-gray-300">
+                <div class="flex items-center gap-1.5">
+                  <UIcon name="i-heroicons-user-circle" class="w-4 h-4 text-gray-400" />
+                  <span>{{ cat.userEmail || cat.username || cat.userId || 'Unknown Creator' }}</span>
+                </div>
+              </td>
               <td class="py-3.5 px-4 sm:px-6 text-xs text-gray-500 dark:text-gray-400">
                 {{ formatDate(cat.createdAt) }}
               </td>
               <td class="py-3.5 px-4 sm:px-6 text-right">
-                <UBadge color="secondary" variant="soft" size="xs">
-                  Creator Custom
-                </UBadge>
+                <UButton icon="i-heroicons-trash" color="error" variant="ghost" size="xs" aria-label="Delete custom category"
+                  @click="openDeleteCustomModal(cat)" />
               </td>
             </tr>
           </tbody>
@@ -347,7 +387,7 @@ async function handleDeleteCategory() {
       </div>
     </div>
 
-    <!-- Create Modal -->
+    <!-- Create System Category Modal -->
     <UModal v-model:open="isAddModalOpen">
       <template #content>
         <div class="p-6 space-y-5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
@@ -382,7 +422,7 @@ async function handleDeleteCategory() {
       </template>
     </UModal>
 
-    <!-- Edit Modal -->
+    <!-- Edit System Category Modal -->
     <UModal v-model:open="isEditModalOpen">
       <template #content>
         <div class="p-6 space-y-5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
@@ -413,7 +453,7 @@ async function handleDeleteCategory() {
       </template>
     </UModal>
 
-    <!-- Delete Modal -->
+    <!-- Delete System Category Modal -->
     <UModal v-model:open="isDeleteModalOpen">
       <template #content>
         <div class="p-6 space-y-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
@@ -436,6 +476,35 @@ async function handleDeleteCategory() {
               Cancel
             </UButton>
             <UButton color="error" variant="solid" size="sm" :loading="isSubmitting" @click="handleDeleteCategory">
+              Delete Category
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Delete Creator Custom Category Modal (Admin Action) -->
+    <UModal v-model:open="isDeleteCustomModalOpen">
+      <template #content>
+        <div class="p-6 space-y-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+          <div class="flex items-center gap-3 text-red-600 dark:text-red-400">
+            <div class="p-2 rounded-full bg-red-100 dark:bg-red-950/50">
+              <UIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6" />
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+              Delete Creator Custom Category
+            </h3>
+          </div>
+
+          <p class="text-sm text-gray-600 dark:text-gray-300">
+            Are you sure you want to delete custom category <strong class="text-gray-900 dark:text-white">"{{ deletingCustomCategory?.name }}"</strong> created by <strong class="text-gray-900 dark:text-white">{{ deletingCustomCategory?.userEmail || deletingCustomCategory?.username }}</strong>?
+          </p>
+
+          <div class="flex items-center justify-end gap-2 pt-3">
+            <UButton color="neutral" variant="subtle" size="sm" @click="isDeleteCustomModalOpen = false">
+              Cancel
+            </UButton>
+            <UButton color="error" variant="solid" size="sm" :loading="isSubmitting" @click="handleDeleteCustomCategory">
               Delete Category
             </UButton>
           </div>

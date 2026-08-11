@@ -4,6 +4,7 @@ import {
   systemCategories,
   customCategories,
   contentTypes,
+  users,
 } from "../db/schema/index";
 
 export class CategoryService {
@@ -79,6 +80,33 @@ export class CategoryService {
   }
 
   // ── Custom Categories ───────────────────────────────────────────────────────
+
+  async getAllCustomCategoriesWithUser() {
+    return this.db
+      .select({
+        id: customCategories.id,
+        name: customCategories.name,
+        userId: customCategories.userId,
+        userEmail: users.email,
+        username: users.username,
+        createdAt: customCategories.createdAt,
+      })
+      .from(customCategories)
+      .leftJoin(users, eq(customCategories.userId, users.id))
+      .orderBy(customCategories.name)
+      .all();
+  }
+
+  async deleteCustomCategoryByAdmin(id: number) {
+    const existing = await this.db
+      .select()
+      .from(customCategories)
+      .where(eq(customCategories.id, id))
+      .get();
+    if (!existing) return false;
+    await this.db.delete(customCategories).where(eq(customCategories.id, id));
+    return true;
+  }
 
   async getCustomCategoriesByUser(userId: string) {
     return this.db

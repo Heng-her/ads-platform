@@ -141,6 +141,28 @@ export async function handleCategoryAction(
     }
 
     // -------------------------------------------------------------
+    // Admin All Custom Category Actions
+    // -------------------------------------------------------------
+    case "categories/all-custom-list": {
+      const currentUser = await authenticate(c);
+      if (currentUser.role !== "ADMIN") return sendError(c, "Forbidden", null, 403);
+      const categoryService = new CategoryService(db);
+      const categories = await categoryService.getAllCustomCategoriesWithUser();
+      return sendSuccess(c, categories);
+    }
+
+    case "categories/delete-custom": {
+      const currentUser = await authenticate(c);
+      if (currentUser.role !== "ADMIN") return sendError(c, "Forbidden", null, 403);
+      const catId = payloadData?.id ? Number(payloadData.id) : null;
+      if (!catId) return sendError(c, "Custom Category ID is required");
+      const categoryService = new CategoryService(db);
+      const deleted = await categoryService.deleteCustomCategoryByAdmin(catId);
+      if (!deleted) return sendError(c, "Custom category not found", null, 404);
+      return sendSuccess(c, null, "Custom category deleted successfully");
+    }
+
+    // -------------------------------------------------------------
     // Creator Custom Category Actions (/my/categories)
     // -------------------------------------------------------------
     case "my/categories/list": {
