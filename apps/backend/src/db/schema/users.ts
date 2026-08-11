@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
@@ -9,6 +9,7 @@ export const users = sqliteTable("users", {
   portfolioLink: text("portfolio_link"), // Optional portfolio / website URL
   country: text("country"), // ISO 3166-1 alpha-2 country code (e.g. "US", "NG")
   apiKeys: text("api_keys", { mode: "json" }).$type<Record<string, string>>(), // JSON object storing API keys e.g. { "create_admin": "...", "upload_image": "..." }
+  ecpmRate: real("ecpm_rate").default(2.50).notNull(), // eCPM rate ($ per 1,000 impressions)
   role: text("role", { enum: ["ADMIN", "CREATOR"] })
     .default("CREATOR")
     .notNull(),

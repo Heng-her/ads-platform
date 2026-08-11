@@ -12,7 +12,10 @@ export async function handleUserAction(
   db: DbClient,
   action: string,
   payloadData: any,
-  authenticate: (c: Context<HonoEnv>, strict?: boolean) => Promise<UserJwtPayload>,
+  authenticate: (
+    c: Context<HonoEnv>,
+    strict?: boolean,
+  ) => Promise<UserJwtPayload>,
 ) {
   const auditLogService = new AuditLogService(db);
 
@@ -32,7 +35,12 @@ export async function handleUserAction(
       if (!existingUser) return sendError(c, "User not found", null, 404);
 
       // Strip role and status to prevent privilege escalation
-      const { role: _role, status: _status, email: _email, ...allowedData } = payloadData || {};
+      const {
+        role: _role,
+        status: _status,
+        email: _email,
+        ...allowedData
+      } = payloadData || {};
       const parseResult = updateUserSchema.safeParse(allowedData);
       if (!parseResult.success) {
         return sendError(
@@ -42,7 +50,10 @@ export async function handleUserAction(
         );
       }
 
-      const updated = await userService.updateUser(currentUser.id, parseResult.data);
+      const updated = await userService.updateUser(
+        currentUser.id,
+        parseResult.data,
+      );
       await auditLogService.createLog(
         "USER_UPDATE_PROFILE",
         currentUser.id,
@@ -134,6 +145,33 @@ export async function handleUserAction(
         }),
       );
       return sendSuccess(c, updated);
+    }
+
+    case "users/update-ecpm": {
+      const currentUser = await authenticate(c);
+      if (currentUser.role !== "ADMIN")
+        return sendError(c, "Forbidden", null, 403);
+      const userId = payloadData?.id;
+      const ecpmRate = Number(payloadData?.ecpmRate);
+      if (!userId) return sendError(c, "User ID is required");
+      if (isNaN(ecpmRate) || ecpmRate < 0)
+        return sendError(c, "Valid positive eCPM rate is required");
+
+      const userService = new UserService(db);
+      const existingUser = await userService.getUserById(userId);
+      if (!existingUser) return sendError(c, "User not found", null, 404);
+
+      const updated = await userService.updateUserEcpm(userId, ecpmRate);
+      await auditLogService.createLog(
+        "USER_UPDATE_ECPM",
+        currentUser.id,
+        getClientIp(c),
+        JSON.stringify({
+          targetUserId: userId,
+          newEcpmRate: ecpmRate,
+        }),
+      );
+      return sendSuccess(c, updated, "Creator eCPM rate updated successfully");
     }
 
     default:

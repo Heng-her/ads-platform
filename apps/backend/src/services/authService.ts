@@ -140,6 +140,7 @@ export class AuthService {
         portfolioLink: null,
         country: null,
         apiKeys: null,
+        ecpmRate: 2.50,
         role: "CREATOR",
         status: "ACTIVE",
         createdAt: new Date(),

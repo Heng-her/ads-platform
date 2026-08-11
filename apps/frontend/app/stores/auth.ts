@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { encryptData, decryptData } from "~/lib/crypto";
 
-export type UserRole = "admin" | "creator" | "advertiser";
+export type UserRole = "admin" | "creator";
 export type BackendUserRole = "ADMIN" | "CREATOR";
 export type BackendUserStatus = "ACTIVE" | "SUSPENDED" | "PENDING";
 
@@ -47,7 +47,6 @@ function normalizeRole(
 
   const normalizedRole = role.toLowerCase();
   if (normalizedRole === "admin") return "admin";
-  if (normalizedRole === "advertiser") return "advertiser";
   return "creator";
 }
 
@@ -174,11 +173,7 @@ export const useAuthStore = defineStore("auth", () => {
   function getDashboardPath(
     role: UserRole | null | undefined = user.value?.role,
   ) {
-    return role === "admin"
-      ? "/admin"
-      : role === "advertiser"
-        ? "/advertiser"
-        : "/creator";
+    return role === "admin" ? "/admin" : "/creator";
   }
 
   return {

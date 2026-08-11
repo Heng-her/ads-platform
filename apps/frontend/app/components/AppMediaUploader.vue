@@ -77,51 +77,23 @@ function onDrop(e: DragEvent) {
 
 <template>
   <div class="space-y-2">
-    <div class="flex items-center justify-between">
-      <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">
-        {{ label }}
-      </label>
-      <UBadge
-        v-if="isAdmin"
-        color="warning"
-        variant="soft"
-        size="sm"
-        class="flex items-center gap-1 font-mono text-[10px]"
-      >
-        <UIcon name="i-heroicons-bolt" class="w-3 h-3 text-amber-500" />
-        Admin Unlimited Bypass Active (up to 2GB)
-      </UBadge>
-    </div>
-
     <!-- Dropzone Area -->
-    <div
-      class="relative border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all"
-      :class="[
-        isDragging
-          ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/20'
-          : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 bg-gray-50/50 dark:bg-gray-900/50',
-        isUploading ? 'opacity-60 pointer-events-none' : ''
-      ]"
-      @click="triggerSelect"
-      @dragover.prevent="isDragging = true"
-      @dragleave.prevent="isDragging = false"
-      @drop.prevent="onDrop"
-    >
-      <input
-        ref="fileInputRef"
-        type="file"
-        class="hidden"
+    <div class="relative border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all" :class="[
+      isDragging
+        ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/20'
+        : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 bg-gray-50/50 dark:bg-gray-900/50',
+      isUploading ? 'opacity-60 pointer-events-none' : ''
+    ]" @click="triggerSelect" @dragover.prevent="isDragging = true" @dragleave.prevent="isDragging = false"
+      @drop.prevent="onDrop">
+      <input ref="fileInputRef" type="file" class="hidden"
         :accept="accept === 'video' ? 'video/*' : accept === 'image' ? 'image/*' : 'image/*,video/*'"
-        :multiple="multiple"
-        @change="onFileChange"
-      />
+        :multiple="multiple" @change="onFileChange" />
 
       <div class="flex flex-col items-center justify-center gap-2 py-2">
-        <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400">
-          <UIcon
-            :name="accept === 'video' ? 'i-heroicons-video-camera' : 'i-heroicons-cloud-arrow-up'"
-            class="w-5 h-5"
-          />
+        <div
+          class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400">
+          <UIcon :name="accept === 'video' ? 'i-heroicons-video-camera' : 'i-heroicons-cloud-arrow-up'"
+            class="w-5 h-5" />
         </div>
 
         <div class="text-sm">

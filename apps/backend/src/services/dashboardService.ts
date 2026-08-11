@@ -14,6 +14,10 @@ export interface CreatorStats {
     total: number;
     uniqueViewers: number;
   };
+  monetization: {
+    ecpmRate: number;
+    estimatedRevenue: number;
+  };
   topCampaign: {
     id: string;
     title: string;
@@ -76,6 +80,13 @@ export class DashboardService {
    * Stats for a single creator's own campaigns + impressions.
    */
   async getCreatorStats(userId: string): Promise<CreatorStats> {
+    // ── 0. Get Creator profile for eCPM rate ────────────────────────────────
+    const [userRow] = await this.db
+      .select({ ecpmRate: users.ecpmRate })
+      .from(users)
+      .where(eq(users.id, userId));
+    const ecpmRate = Number(userRow?.ecpmRate ?? 2.50);
+
     // ── 1. Campaign counts ──────────────────────────────────────────────────
     const [campaignCounts] = await this.db
       .select({
@@ -95,6 +106,9 @@ export class DashboardService {
       .from(impressions)
       .innerJoin(campaigns, eq(impressions.campaignId, campaigns.id))
       .where(eq(campaigns.userId, userId));
+
+    const totalImpressions = Number(impressionTotals?.total ?? 0);
+    const estimatedRevenue = (totalImpressions / 1000) * ecpmRate;
 
     // ── 3. Top campaign by impression count ─────────────────────────────────
     const topCampaignRows = await this.db
@@ -131,8 +145,12 @@ export class DashboardService {
         draft:  Number(campaignCounts?.draft  ?? 0),
       },
       impressions: {
-        total:         Number(impressionTotals?.total         ?? 0),
+        total:         totalImpressions,
         uniqueViewers: Number(impressionTotals?.uniqueViewers ?? 0),
+      },
+      monetization: {
+        ecpmRate,
+        estimatedRevenue,
       },
       topCampaign: topCampaignRows[0]
         ? {

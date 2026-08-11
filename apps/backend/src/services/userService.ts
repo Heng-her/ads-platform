@@ -15,6 +15,7 @@ export class UserService {
         portfolioLink: users.portfolioLink,
         country: users.country,
         apiKeys: users.apiKeys,
+        ecpmRate: users.ecpmRate,
         role: users.role,
         status: users.status,
         createdAt: users.createdAt,
@@ -55,6 +56,7 @@ export class UserService {
         portfolioLink: users.portfolioLink,
         country: users.country,
         apiKeys: users.apiKeys,
+        ecpmRate: users.ecpmRate,
         role: users.role,
         status: users.status,
         createdAt: users.createdAt,
@@ -66,11 +68,19 @@ export class UserService {
 
   async updateUserStatus(
     id: string,
-    status: "ACTIVE" | "SUSPENDED" | "PENDING"
+    status: "ACTIVE" | "SUSPENDED" | "PENDING",
   ) {
     await this.db
       .update(users)
       .set({ status, updatedAt: new Date() })
+      .where(eq(users.id, id));
+    return this.getUserById(id);
+  }
+
+  async updateUserEcpm(id: string, ecpmRate: number) {
+    await this.db
+      .update(users)
+      .set({ ecpmRate, updatedAt: new Date() })
       .where(eq(users.id, id));
     return this.getUserById(id);
   }
@@ -86,7 +96,8 @@ export class UserService {
       portfolioLink?: string | null;
       country?: string | null;
       apiKeys?: Record<string, string> | null;
-    }
+      ecpmRate?: number;
+    },
   ) {
     await this.db
       .update(users)
