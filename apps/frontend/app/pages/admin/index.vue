@@ -53,7 +53,7 @@ function calculateCategoryPercent(count: number): number {
 </script>
 
 <template>
-  <div class="mx-auto max-w-7xl space-y-8 pb-12 text-gray-100">
+  <div class="mx-auto max-w-8xl space-y-8 pb-12 text-gray-100">
     <!-- Header & Action Bar -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -69,20 +69,16 @@ function calculateCategoryPercent(count: number): number {
       </div>
 
       <div class="flex items-center gap-3">
-        <button
-          :disabled="isLoading"
+        <button :disabled="isLoading"
           class="inline-flex items-center gap-2 rounded-lg border border-gray-800 bg-gray-900 px-4 py-2 text-xs font-semibold text-gray-300 transition hover:bg-gray-800 hover:text-white disabled:opacity-50"
-          @click="fetchAdminStats"
-        >
+          @click="fetchAdminStats">
           <UIcon v-if="isLoading" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin text-primary-400" />
           <UIcon v-else name="i-heroicons-arrow-path" class="h-4 w-4 text-gray-400" />
           <span>{{ isLoading ? 'Refreshing...' : 'Refresh Data' }}</span>
         </button>
 
-        <NuxtLink
-          to="/admin/approvals"
-          class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-primary-500"
-        >
+        <NuxtLink to="/admin/approvals"
+          class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-primary-500">
           <UIcon name="i-heroicons-check-badge" class="h-4 w-4" />
           <span>Pending Approvals</span>
         </NuxtLink>
@@ -97,7 +93,8 @@ function calculateCategoryPercent(count: number): number {
     <!-- Metric Cards Grid -->
     <div v-else-if="stats" class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
       <!-- Card 1: Total Platform Users -->
-      <div class="relative overflow-hidden rounded-xl border border-gray-800 bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/30 p-6 shadow-sm">
+      <div
+        class="relative overflow-hidden rounded-xl border border-gray-800 bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/30 p-6 shadow-sm">
         <div class="flex items-center justify-between">
           <span class="text-xs font-semibold uppercase tracking-wider text-indigo-400">Total Users</span>
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
@@ -118,7 +115,8 @@ function calculateCategoryPercent(count: number): number {
       </div>
 
       <!-- Card 2: Total Campaigns -->
-      <div class="relative overflow-hidden rounded-xl border border-gray-800 bg-gradient-to-br from-gray-900 via-gray-900 to-emerald-950/30 p-6 shadow-sm">
+      <div
+        class="relative overflow-hidden rounded-xl border border-gray-800 bg-gradient-to-br from-gray-900 via-gray-900 to-emerald-950/30 p-6 shadow-sm">
         <div class="flex items-center justify-between">
           <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400">Total Campaigns</span>
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
@@ -139,7 +137,8 @@ function calculateCategoryPercent(count: number): number {
       </div>
 
       <!-- Card 3: Total Impressions & Viewers -->
-      <div class="relative overflow-hidden rounded-xl border border-gray-800 bg-gradient-to-br from-gray-900 via-gray-900 to-sky-950/30 p-6 shadow-sm">
+      <div
+        class="relative overflow-hidden rounded-xl border border-gray-800 bg-gradient-to-br from-gray-900 via-gray-900 to-sky-950/30 p-6 shadow-sm">
         <div class="flex items-center justify-between">
           <span class="text-xs font-semibold uppercase tracking-wider text-sky-400">Total Impressions</span>
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/10 text-sky-400">
@@ -150,13 +149,15 @@ function calculateCategoryPercent(count: number): number {
           <span class="text-3xl font-bold tracking-tight text-white">{{ formatNumber(stats.impressions.total) }}</span>
         </div>
         <div class="mt-4 flex items-center justify-between border-t border-gray-800/80 pt-3 text-xs text-gray-400">
-          <span>Unique Reach: <strong class="text-sky-300">{{ formatNumber(stats.impressions.uniqueViewers) }}</strong></span>
+          <span>Unique Reach: <strong class="text-sky-300">{{ formatNumber(stats.impressions.uniqueViewers)
+          }}</strong></span>
           <span>7-Day: <strong class="text-sky-400">{{ formatNumber(stats.impressions.last7Days) }}</strong></span>
         </div>
       </div>
 
       <!-- Card 4: Platform Health & Approvals Queue -->
-      <div class="relative overflow-hidden rounded-xl border border-gray-800 bg-gradient-to-br from-gray-900 via-gray-900 to-amber-950/30 p-6 shadow-sm">
+      <div
+        class="relative overflow-hidden rounded-xl border border-gray-800 bg-gradient-to-br from-gray-900 via-gray-900 to-amber-950/30 p-6 shadow-sm">
         <div class="flex items-center justify-between">
           <span class="text-xs font-semibold uppercase tracking-wider text-amber-400">Platform Health</span>
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400">
@@ -195,13 +196,11 @@ function calculateCategoryPercent(count: number): number {
           </div>
 
           <div v-else class="mt-4 divide-y divide-gray-800/60">
-            <div
-              v-for="(item, idx) in stats.topCampaigns"
-              :key="item.id"
-              class="flex items-center justify-between py-3.5 transition hover:bg-gray-800/30 px-2 rounded-lg"
-            >
+            <div v-for="(item, idx) in stats.topCampaigns" :key="item.id"
+              class="flex items-center justify-between py-3.5 transition hover:bg-gray-800/30 px-2 rounded-lg">
               <div class="flex items-center gap-3 min-w-0">
-                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-800 text-xs font-bold font-mono text-gray-300">
+                <span
+                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-800 text-xs font-bold font-mono text-gray-300">
                   #{{ idx + 1 }}
                 </span>
                 <div class="truncate">
@@ -241,13 +240,13 @@ function calculateCategoryPercent(count: number): number {
             <div v-for="cat in stats.campaignsByCategory" :key="cat.category" class="space-y-1.5">
               <div class="flex items-center justify-between text-xs font-medium">
                 <span class="text-gray-300">{{ cat.category }}</span>
-                <span class="text-gray-400">{{ formatNumber(cat.count) }} campaigns ({{ calculateCategoryPercent(cat.count) }}%)</span>
+                <span class="text-gray-400">{{ formatNumber(cat.count) }} campaigns ({{
+                  calculateCategoryPercent(cat.count) }}%)</span>
               </div>
               <div class="h-2.5 w-full overflow-hidden rounded-full bg-gray-800">
                 <div
                   class="h-full rounded-full bg-gradient-to-r from-primary-500 to-indigo-500 transition-all duration-500"
-                  :style="{ width: `${calculateCategoryPercent(cat.count)}%` }"
-                />
+                  :style="{ width: `${calculateCategoryPercent(cat.count)}%` }" />
               </div>
             </div>
           </div>
@@ -270,14 +269,12 @@ function calculateCategoryPercent(count: number): number {
           </div>
 
           <div v-else class="mt-4 divide-y divide-gray-800/60">
-            <div
-              v-for="creator in stats.topCreators"
-              :key="creator.id"
-              class="flex items-center justify-between py-3"
-            >
+            <div v-for="creator in stats.topCreators" :key="creator.id" class="flex items-center justify-between py-3">
               <div class="flex items-center gap-3 min-w-0">
-                <div class="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-gray-700 bg-gray-800">
-                  <img v-if="creator.avatar" :src="creator.avatar" :alt="creator.username" class="h-full w-full object-cover" />
+                <div
+                  class="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-gray-700 bg-gray-800">
+                  <img v-if="creator.avatar" :src="creator.avatar" :alt="creator.username"
+                    class="h-full w-full object-cover" />
                   <div v-else class="flex h-full w-full items-center justify-center text-gray-400">
                     <UIcon name="i-heroicons-user" class="h-5 w-5" />
                   </div>
@@ -302,10 +299,8 @@ function calculateCategoryPercent(count: number): number {
           </h2>
 
           <div class="grid gap-2.5">
-            <NuxtLink
-              to="/admin/approvals"
-              class="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-950/60 p-3 text-xs font-semibold text-gray-200 transition hover:border-gray-700 hover:bg-gray-800"
-            >
+            <NuxtLink to="/admin/approvals"
+              class="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-950/60 p-3 text-xs font-semibold text-gray-200 transition hover:border-gray-700 hover:bg-gray-800">
               <div class="flex items-center gap-2.5">
                 <UIcon name="i-heroicons-check-badge" class="h-4 w-4 text-amber-400" />
                 <span>Campaign Approvals</span>
@@ -313,10 +308,8 @@ function calculateCategoryPercent(count: number): number {
               <UIcon name="i-heroicons-chevron-right" class="h-4 w-4 text-gray-500" />
             </NuxtLink>
 
-            <NuxtLink
-              to="/admin/approvals"
-              class="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-950/60 p-3 text-xs font-semibold text-gray-200 transition hover:border-gray-700 hover:bg-gray-800"
-            >
+            <NuxtLink to="/admin/approvals"
+              class="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-950/60 p-3 text-xs font-semibold text-gray-200 transition hover:border-gray-700 hover:bg-gray-800">
               <div class="flex items-center gap-2.5">
                 <UIcon name="i-heroicons-users" class="h-4 w-4 text-indigo-400" />
                 <span>User Roles & Approvals</span>
@@ -324,10 +317,8 @@ function calculateCategoryPercent(count: number): number {
               <UIcon name="i-heroicons-chevron-right" class="h-4 w-4 text-gray-500" />
             </NuxtLink>
 
-            <NuxtLink
-              to="/admin/logs"
-              class="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-950/60 p-3 text-xs font-semibold text-gray-200 transition hover:border-gray-700 hover:bg-gray-800"
-            >
+            <NuxtLink to="/admin/logs"
+              class="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-950/60 p-3 text-xs font-semibold text-gray-200 transition hover:border-gray-700 hover:bg-gray-800">
               <div class="flex items-center gap-2.5">
                 <UIcon name="i-heroicons-document-text" class="h-4 w-4 text-sky-400" />
                 <span>System Security Logs</span>
@@ -335,10 +326,8 @@ function calculateCategoryPercent(count: number): number {
               <UIcon name="i-heroicons-chevron-right" class="h-4 w-4 text-gray-500" />
             </NuxtLink>
 
-            <NuxtLink
-              to="/admin/settings"
-              class="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-950/60 p-3 text-xs font-semibold text-gray-200 transition hover:border-gray-700 hover:bg-gray-800"
-            >
+            <NuxtLink to="/admin/settings"
+              class="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-950/60 p-3 text-xs font-semibold text-gray-200 transition hover:border-gray-700 hover:bg-gray-800">
               <div class="flex items-center gap-2.5">
                 <UIcon name="i-heroicons-adjustments-horizontal" class="h-4 w-4 text-emerald-400" />
                 <span>Telegram & Mail Dispatch Config</span>

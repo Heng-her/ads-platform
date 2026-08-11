@@ -94,7 +94,7 @@ export function useCampaigns() {
         },
       });
 
-      const body = await response.json();
+      const body: any = await response.json();
       if (response.ok && body.code === 1 && body.data) {
         campaignsList.value = body.data.items || [];
         totalItems.value = body.data.total || 0;
@@ -122,7 +122,7 @@ export function useCampaigns() {
           .map(([key, value]) => [key, String(value)]),
       );
       const response = await api.campaigns.me.$get({ query });
-      const body = await response.json();
+      const body: any = await response.json();
       if (response.ok && body.code === 1 && body.data) {
         campaignsList.value = body.data.items || [];
         totalItems.value = body.data.pagination?.total || 0;
@@ -143,7 +143,7 @@ export function useCampaigns() {
     error.value = null;
     try {
       const response = await api.action.$post({ json: { action: 'campaigns/admin-users', data: options } });
-      const body = await response.json();
+      const body: any = await response.json();
       if (!response.ok || body.code !== 1 || !body.data) throw new Error(body.msg || 'Failed to load users');
       return body.data as { items: AdminCampaignUser[]; total: number; totalPages: number };
     } catch (err: any) {
@@ -161,7 +161,7 @@ export function useCampaigns() {
       const response = await api.action.$post({
         json: { action: 'campaigns/admin-user-campaigns', data: { userId, page } },
       });
-      const body = await response.json();
+      const body: any = await response.json();
       if (!response.ok || body.code !== 1 || !body.data) throw new Error(body.msg || 'Failed to load user campaigns');
       return body.data as { items: CampaignData[]; total: number; totalPages: number };
     } catch (err: any) {
@@ -187,7 +187,7 @@ export function useCampaigns() {
         },
       });
 
-      const body = await response.json();
+      const body: any = await response.json();
       if (response.ok && body.code === 1 && body.data) {
         return body.data;
       } else {
@@ -216,7 +216,7 @@ export function useCampaigns() {
         },
       });
 
-      const body = await response.json();
+      const body: any = await response.json();
       if (response.ok && body.code === 1 && body.data) {
         return body.data;
       } else {
@@ -248,7 +248,7 @@ export function useCampaigns() {
         },
       });
 
-      const body = await response.json();
+      const body: any = await response.json();
       if (response.ok && body.code === 1 && body.data) {
         return body.data;
       } else {
@@ -280,7 +280,7 @@ export function useCampaigns() {
         },
       });
 
-      const body = await response.json();
+      const body: any = await response.json();
       if (response.ok && body.code === 1 && body.data) {
         return body.data;
       } else {
@@ -309,7 +309,7 @@ export function useCampaigns() {
         },
       });
 
-      const body = await response.json();
+      const body: any = await response.json();
       if (response.ok && body.code === 1) {
         campaignsList.value = campaignsList.value.filter((c) => c.id !== id);
         return true;

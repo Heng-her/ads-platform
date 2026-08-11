@@ -63,7 +63,7 @@ async function saveProfileSettings() {
       }
     })
 
-    const result = await response.json()
+    const result: any = await response.json()
     if (response.ok && result.code === 1) {
       await authStore.fetchUserMe()
       toast.success('Workspace settings updated successfully!')

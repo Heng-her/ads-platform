@@ -26,7 +26,7 @@ async function fetchData() {
     const usersRes = await api.action.$post({
       json: { action: 'users/list' }
     })
-    const usersBody = await usersRes.json()
+    const usersBody: any = await usersRes.json()
     if (usersRes.ok && usersBody.code === 1) {
       allUsers.value = usersBody.data || []
     } else {
@@ -71,7 +71,7 @@ async function updateUserStatus(userId: string, status: 'ACTIVE' | 'SUSPENDED', 
         data: payloadData
       }
     })
-    const body = await res.json()
+    const body: any = await res.json()
     if (res.ok && body.code === 1) {
       const idx = allUsers.value.findIndex(u => u.id === userId)
       if (idx !== -1) {
@@ -104,7 +104,7 @@ function formatDate(dateStr?: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-7xl space-y-8 pb-12 text-gray-100">
+  <div class="mx-auto max-w-8xl space-y-8 pb-12 text-gray-100">
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -171,7 +171,7 @@ function formatDate(dateStr?: string) {
                 </div>
                 <div>
                   <h3 class="font-bold text-white text-base truncate max-w-[160px]">{{ user.username || 'Anonymous User'
-                    }}</h3>
+                  }}</h3>
                   <p class="text-xs text-gray-400 truncate max-w-[160px]">{{ user.email }}</p>
                 </div>
               </div>

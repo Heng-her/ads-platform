@@ -7,6 +7,7 @@ import { handleCampaignAction } from "./campaignActions";
 import { handleCategoryAction } from "./categoryActions";
 import { handleAuditLogAction } from "./auditLogActions";
 import { handleDashboardAction } from "./dashboardActions";
+import { handleMonetizationAction } from "./monetizationActions";
 import { sendError } from "../utils/response";
 
 export async function dispatchAction(
@@ -60,6 +61,19 @@ export async function dispatchAction(
   // 6. Dashboard Actions
   const dashRes = await handleDashboardAction(c, db, action, authenticate);
   if (dashRes !== null) return dashRes;
+
+  // 7. Monetization Actions
+  if (action.startsWith("monetization/")) {
+    const currentUser = await authenticate(c, false);
+    const result = await handleMonetizationAction({
+      c,
+      db,
+      action,
+      data: payloadData,
+      currentUser,
+    });
+    return c.json(result);
+  }
 
   return sendError(c, `Unknown action: '${action}'`, null, 400);
 }

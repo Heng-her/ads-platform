@@ -58,7 +58,7 @@ const form = ref({
   imageDescription: '',
   images: [] as CampaignImageItem[],
   videoUrls: [] as string[],
-  adNetwork: '',
+  adNetwork: 'DUAL_AUTOMATED',
   adUnitCode: '',
   status: 'PUBLIC' as 'DRAFT' | 'PUBLIC',
 })
@@ -82,14 +82,14 @@ interface AdNetworkOption {
 
 const adNetworkOptions: AdNetworkOption[] = [
   {
-    value: '',
-    label: 'None / Custom',
-    subtitle: 'Direct placement without 3rd-party ad tags',
-    icon: 'i-heroicons-no-symbol',
-    badge: 'Default',
-    placeholder: 'e.g. ca-pub-123456789 or zone-987',
-    labelTitle: 'Ad Unit Code Snippet / Zone ID',
-    hint: 'Leave empty or enter a custom reference code for direct ad management.'
+    value: 'DUAL_AUTOMATED',
+    label: 'Dual Automated (AdSense + Adsterra)',
+    subtitle: 'Generates both Google AdSense Display & Adsterra Smartlink',
+    icon: 'i-heroicons-banknotes',
+    badge: 'Recommended',
+    placeholder: 'Auto-generated via Admin Monetization Config',
+    labelTitle: 'Auto-Generated Dual Ad Network Links',
+    hint: 'Creates Google AdSense Display Ads & Adsterra Smartlink automatically for maximum revenue yield.'
   },
   {
     value: 'GOOGLE_ADSENSE',
@@ -110,6 +110,16 @@ const adNetworkOptions: AdNetworkOption[] = [
     placeholder: 'e.g. zone-987654 or key-abc123',
     labelTitle: 'Adsterra Placement Zone ID',
     hint: 'Copy your Placement Zone ID or direct key from Adsterra Publisher Panel.'
+  },
+  {
+    value: '',
+    label: 'None / Custom',
+    subtitle: 'Direct placement without 3rd-party ad tags',
+    icon: 'i-heroicons-no-symbol',
+    badge: 'Default',
+    placeholder: 'e.g. ca-pub-123456789 or zone-987',
+    labelTitle: 'Ad Unit Code Snippet / Zone ID',
+    hint: 'Leave empty or enter a custom reference code for direct ad management.'
   },
   {
     value: 'CUSTOM',
@@ -847,37 +857,42 @@ onBeforeUnmount(() => {
               </p>
             </div>
 
-            <!-- Ad Unit Live Preview Box -->
+            <!-- Ad Unit Live Preview Box & Generated Dual Links -->
             <div class="p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 space-y-2">
               <div class="flex items-center justify-between text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                <span class="flex items-center gap-1">
-                  <UIcon name="i-heroicons-eye" class="w-3.5 h-3.5 text-blue-500" />
-                  Live Preview
+                <span class="flex items-center gap-1 font-bold text-gray-700 dark:text-gray-200">
+                  <UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5 text-amber-500" />
+                  Auto-Generated Dual Ad Links
                 </span>
-                <span
-                  class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-                  Ad Slot
-                </span>
+                <UBadge color="success" variant="soft" size="xs" class="font-semibold">Dual Active</UBadge>
               </div>
 
-              <div
-                class="h-16 rounded border-2 border-dashed flex flex-col items-center justify-center p-2 text-center transition-all"
-                :class="form.adNetwork
-                  ? 'border-blue-300 dark:border-blue-700/60 bg-blue-50/40 dark:bg-blue-950/30'
-                  : 'border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950/40'">
-                <template v-if="form.adNetwork">
-                  <div class="flex items-center gap-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300">
-                    <UIcon :name="currentAdNetworkInfo?.icon" class="w-3.5 h-3.5" />
-                    <span>{{ currentAdNetworkInfo?.label }}</span>
-                  </div>
-                  <p class="text-[10px] font-mono text-gray-500 dark:text-gray-400 truncate max-w-full px-2 mt-0.5">
-                    {{ form.adUnitCode || 'e.g. ca-pub-123456789 or zone-987' }}
-                  </p>
-                </template>
-                <template v-else>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">None / Custom</p>
-                  <p class="text-[10px] text-gray-400 dark:text-gray-500">No external ad network tag attached</p>
-                </template>
+              <!-- Link 1: Google AdSense -->
+              <div class="p-2 rounded bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 space-y-0.5">
+                <div class="flex items-center justify-between text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                  <span class="flex items-center gap-1">
+                    <UIcon name="i-heroicons-globe-alt" class="w-3 h-3" />
+                    1. Google AdSense Link
+                  </span>
+                  <span>ca-pub-987654</span>
+                </div>
+                <p class="text-[10px] font-mono text-gray-600 dark:text-gray-300 truncate">
+                  https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js
+                </p>
+              </div>
+
+              <!-- Link 2: Adsterra Smartlink -->
+              <div class="p-2 rounded bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 space-y-0.5">
+                <div class="flex items-center justify-between text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                  <span class="flex items-center gap-1">
+                    <UIcon name="i-heroicons-bolt" class="w-3 h-3" />
+                    2. Adsterra Smartlink
+                  </span>
+                  <span>High CPM</span>
+                </div>
+                <p class="text-[10px] font-mono text-gray-600 dark:text-gray-300 truncate">
+                  https://www.highperformancecpmgate.com/direct-link-hash
+                </p>
               </div>
             </div>
           </div>

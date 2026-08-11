@@ -13,9 +13,8 @@ const authStore = useAuthStore()
 const api = useApi()
 const toast = useAppToast()
 
-const activeTab = ref<'platform' | 'monetization' | 'dispatch' | 'adminprofile'>('platform')
+const activeTab = ref<'platform' | 'dispatch' | 'adminprofile'>('platform')
 const isSaving = ref(false)
-const isTestingTelegram = ref(false)
 const isTestingMail = ref(false)
 
 // Platform Configuration State
@@ -25,22 +24,6 @@ const platformConfig = ref({
   defaultLanguage: 'en',
   allowRegistrations: true
 })
-
-// Monetization & eCPM State
-const globalDefaultEcpm = ref(2.50)
-const isLoadingCreators = ref(false)
-const isUpdatingEcpm = ref(false)
-const creatorsList = ref<Array<{
-  id: string
-  username: string
-  email: string
-  avatar: string | null
-  role: string
-  status: string
-  ecpmRate?: number
-}>>([])
-const editingCreatorId = ref<string | null>(null)
-const tempEcpmRate = ref<number>(2.50)
 
 // Telegram & Mail Channel Notification Config State
 const isTestingPublicChannel = ref(false)
@@ -79,69 +62,6 @@ const adminProfile = ref({
   avatar: ''
 })
 
-async function fetchCreators() {
-  isLoadingCreators.value = true
-  try {
-    const res = await api.action.$post({
-      json: {
-        action: 'users/list',
-        data: {}
-      }
-    })
-    const data = await res.json()
-    if (res.ok && data.code === 1) {
-      creatorsList.value = (data.data || []).filter((u: any) => u.role === 'CREATOR')
-    } else {
-      toast.error('Failed to load creators', data.msg || 'Could not fetch creators list')
-    }
-  } catch (err: any) {
-    toast.error('Network Error', err.message || 'Failed to connect to server')
-  } finally {
-    isLoadingCreators.value = false
-  }
-}
-
-function startEditEcpm(creator: any) {
-  editingCreatorId.value = creator.id
-  tempEcpmRate.value = creator.ecpmRate ?? 2.50
-}
-
-function cancelEditEcpm() {
-  editingCreatorId.value = null
-}
-
-async function saveCreatorEcpm(creatorId: string) {
-  if (tempEcpmRate.value < 0 || isNaN(tempEcpmRate.value)) {
-    toast.error('Invalid Rate', 'eCPM rate must be a non-negative number')
-    return
-  }
-
-  isUpdatingEcpm.value = true
-  try {
-    const res = await api.action.$post({
-      json: {
-        action: 'users/update-ecpm',
-        data: {
-          id: creatorId,
-          ecpmRate: tempEcpmRate.value
-        }
-      }
-    })
-    const data = await res.json()
-    if (res.ok && data.code === 1) {
-      toast.success('eCPM Updated', 'Creator eCPM rate updated successfully!')
-      editingCreatorId.value = null
-      await fetchCreators()
-    } else {
-      toast.error('Update Failed', data.msg || 'Failed to update creator eCPM rate')
-    }
-  } catch (err: any) {
-    toast.error('Update Error', err.message || 'Could not update eCPM rate')
-  } finally {
-    isUpdatingEcpm.value = false
-  }
-}
-
 function populateAdminSettings() {
   authStore.initAuth()
   if (authStore.user) {
@@ -157,7 +77,6 @@ function populateAdminSettings() {
         const parsed = JSON.parse(savedConfig)
         if (parsed.platform) platformConfig.value = { ...platformConfig.value, ...parsed.platform }
         if (parsed.channels) channelConfig.value = { ...channelConfig.value, ...parsed.channels }
-        if (parsed.globalDefaultEcpm) globalDefaultEcpm.value = parsed.globalDefaultEcpm
       } catch { }
     }
   }
@@ -166,7 +85,7 @@ function populateAdminSettings() {
 const route = useRoute()
 const router = useRouter()
 
-function setTab(tabName: 'platform' | 'monetization' | 'dispatch' | 'adminprofile') {
+function setTab(tabName: 'platform' | 'dispatch' | 'adminprofile') {
   activeTab.value = tabName
   if (import.meta.client) {
     router.replace({ query: { ...route.query, tab: tabName } })
@@ -174,11 +93,14 @@ function setTab(tabName: 'platform' | 'monetization' | 'dispatch' | 'adminprofil
 }
 
 onMounted(() => {
-  if (route.query.tab && ['platform', 'monetization', 'dispatch', 'adminprofile'].includes(route.query.tab as string)) {
+  if (route.query.tab === 'monetization') {
+    void router.replace('/admin/monetization')
+    return
+  }
+  if (route.query.tab && ['platform', 'dispatch', 'adminprofile'].includes(route.query.tab as string)) {
     activeTab.value = route.query.tab as any
   }
   populateAdminSettings()
-  fetchCreators()
   void authStore.fetchUserMe().then(() => populateAdminSettings())
 })
 
@@ -197,18 +119,20 @@ async function saveAdminSettings() {
       }
     })
 
-    const result = await response.json()
+    const result: any = await response.json()
     if (response.ok && result.code === 1) {
       // 2. Persist platform global parameters in local storage
       if (import.meta.client) {
-        localStorage.setItem(
-          'admin_platform_config',
-          JSON.stringify({
-            platform: platformConfig.value,
-            channels: channelConfig.value,
-            globalDefaultEcpm: globalDefaultEcpm.value
-          })
-        )
+        const savedConfig = localStorage.getItem('admin_platform_config')
+        let parsed: any = {}
+        if (savedConfig) {
+          try {
+            parsed = JSON.parse(savedConfig)
+          } catch { }
+        }
+        parsed.platform = platformConfig.value
+        parsed.channels = channelConfig.value
+        localStorage.setItem('admin_platform_config', JSON.stringify(parsed))
       }
 
       await authStore.fetchUserMe()
@@ -282,7 +206,7 @@ function onAdminAvatarError(msg: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl space-y-6 pb-12 text-gray-100">
+  <div class="mx-auto max-w-8xl space-y-6 pb-12 text-gray-100">
     <!-- Header -->
     <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
       <div>
@@ -311,16 +235,6 @@ function onAdminAvatarError(msg: string) {
         ]" @click="setTab('platform')">
           <UIcon name="i-heroicons-adjustments-horizontal" class="h-4 w-4" />
           <span>Platform General</span>
-        </button>
-
-        <button :class="[
-          activeTab === 'monetization'
-            ? 'border-primary-500 text-primary-400'
-            : 'border-transparent text-gray-400 hover:border-gray-700 hover:text-gray-200',
-          'flex items-center gap-2 border-b-2 py-3 px-1 text-sm font-medium whitespace-nowrap'
-        ]" @click="setTab('monetization')">
-          <UIcon name="i-heroicons-banknotes" class="h-4 w-4" />
-          <span>Monetization & eCPM</span>
         </button>
 
         <button :class="[
@@ -372,131 +286,6 @@ function onAdminAvatarError(msg: string) {
             <textarea v-model="platformConfig.siteDescription" rows="2"
               class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: Monetization & eCPM Rates -->
-    <div v-if="activeTab === 'monetization'" class="space-y-6">
-      <!-- Global eCPM Default Setting -->
-      <div class="rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-sm">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-semibold text-white">Global Monetization Baseline</h2>
-            <p class="mt-1 text-sm text-gray-400">Configure global default eCPM rate ($ USD) per 1,000 ad impressions.
-            </p>
-          </div>
-          <UBadge color="primary" variant="soft" size="sm" class="font-semibold">
-            CPM Model
-          </UBadge>
-        </div>
-
-        <div class="mt-6 max-w-md space-y-2">
-          <label class="block text-xs font-semibold text-gray-300">Global Default eCPM Rate ($ / 1,000 Views)</label>
-          <div class="relative flex items-center">
-            <span class="absolute left-3.5 text-sm font-semibold text-gray-400">$</span>
-            <input v-model.number="globalDefaultEcpm" type="number" step="0.10" min="0"
-              class="w-full rounded-lg border border-gray-700 bg-gray-800 pl-8 pr-3.5 py-2 text-sm text-white font-semibold focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
-          </div>
-          <p class="text-[11px] text-gray-400">Default rate applied to new creators unless a custom rate override is set
-            below.</p>
-        </div>
-      </div>
-
-      <!-- Creator Specific eCPM Rate Override Table -->
-      <div class="rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-sm space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h2 class="text-lg font-semibold text-white">Creator eCPM Rate Overrides</h2>
-            <p class="text-sm text-gray-400">Manage individual monetization payout rates for active platform creators.
-            </p>
-          </div>
-          <button :disabled="isLoadingCreators"
-            class="inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-300 hover:bg-gray-700 disabled:opacity-50"
-            @click="fetchCreators">
-            <UIcon v-if="isLoadingCreators" name="i-heroicons-arrow-path" class="h-3.5 w-3.5 animate-spin" />
-            <UIcon v-else name="i-heroicons-arrow-path" class="h-3.5 w-3.5 text-gray-400" />
-            <span>Refresh List</span>
-          </button>
-        </div>
-
-        <div v-if="isLoadingCreators" class="py-12 text-center text-sm text-gray-400">
-          <UIcon name="i-heroicons-arrow-path" class="h-6 w-6 animate-spin mx-auto text-primary-500 mb-2" />
-          Loading creator accounts...
-        </div>
-
-        <div v-else-if="creatorsList.length === 0" class="py-12 text-center text-sm text-gray-500">
-          No creators found in system.
-        </div>
-
-        <div v-else class="overflow-x-auto">
-          <table class="w-full text-left text-sm text-gray-300">
-            <thead class="bg-gray-950/60 text-xs uppercase tracking-wider text-gray-400 border-b border-gray-800">
-              <tr>
-                <th class="px-4 py-3 font-semibold">Creator</th>
-                <th class="px-4 py-3 font-semibold">Email</th>
-                <th class="px-4 py-3 font-semibold">Status</th>
-                <th class="px-4 py-3 font-semibold">Assigned eCPM Rate</th>
-                <th class="px-4 py-3 font-semibold text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-800/60">
-              <tr v-for="creator in creatorsList" :key="creator.id" class="hover:bg-gray-800/30">
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-3">
-                    <div
-                      class="h-8 w-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
-                      <img v-if="creator.avatar" :src="creator.avatar" class="h-full w-full object-cover" />
-                      <span v-else>{{ creator.username?.charAt(0).toUpperCase() || 'C' }}</span>
-                    </div>
-                    <div>
-                      <p class="font-semibold text-white text-sm">{{ creator.username }}</p>
-                      <p class="text-[11px] text-gray-500">ID: {{ creator.id }}</p>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-4 py-3 text-xs text-gray-400">{{ creator.email }}</td>
-                <td class="px-4 py-3">
-                  <UBadge :color="creator.status === 'ACTIVE' ? 'success' : 'warning'" variant="soft" size="xs">
-                    {{ creator.status }}
-                  </UBadge>
-                </td>
-                <td class="px-4 py-3 font-semibold">
-                  <div v-if="editingCreatorId === creator.id" class="flex items-center gap-2">
-                    <span class="text-xs text-gray-400">$</span>
-                    <input v-model.number="tempEcpmRate" type="number" step="0.25" min="0"
-                      class="w-24 rounded border border-primary-500 bg-gray-800 px-2 py-1 text-xs text-white focus:outline-none" />
-                    <span class="text-[11px] text-gray-400">/ 1k views</span>
-                  </div>
-                  <div v-else class="flex items-center gap-1.5 text-amber-400 font-bold">
-                    <span>${{ (creator.ecpmRate ?? 2.50).toFixed(2) }}</span>
-                    <span class="text-[11px] font-normal text-gray-400">/ 1k views</span>
-                  </div>
-                </td>
-                <td class="px-4 py-3 text-right">
-                  <div v-if="editingCreatorId === creator.id" class="flex items-center justify-end gap-2">
-                    <button :disabled="isUpdatingEcpm"
-                      class="inline-flex items-center gap-1 rounded bg-primary-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-primary-500 disabled:opacity-50"
-                      @click="saveCreatorEcpm(creator.id)">
-                      <UIcon v-if="isUpdatingEcpm" name="i-heroicons-arrow-path" class="h-3 w-3 animate-spin" />
-                      <span>Save</span>
-                    </button>
-                    <button
-                      class="rounded border border-gray-700 px-2.5 py-1 text-xs font-medium text-gray-400 hover:bg-gray-800"
-                      @click="cancelEditEcpm">
-                      Cancel
-                    </button>
-                  </div>
-                  <button v-else
-                    class="inline-flex items-center gap-1 rounded border border-gray-700 bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-300 hover:bg-gray-700"
-                    @click="startEditEcpm(creator)">
-                    <UIcon name="i-heroicons-pencil-square" class="h-3.5 w-3.5 text-primary-400" />
-                    <span>Edit Rate</span>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
     </div>

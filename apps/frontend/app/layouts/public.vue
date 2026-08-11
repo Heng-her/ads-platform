@@ -110,7 +110,7 @@ async function fetchSuggestions(query: string) {
                 data: { q }
             }
         })
-        const json = await res.json()
+        const json: any = await res.json()
         if (json?.code === 1 && Array.isArray(json?.data)) {
             suggestions.value = json.data
         } else {

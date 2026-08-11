@@ -151,7 +151,7 @@ async function loadRelatedCampaigns(targetPage = 1, append = false) {
         const response = await api.action.$post({
             json: { action: 'campaigns/list', data: { category: campaign.value.category, page: targetPage, limit: 3 } }
         })
-        const json = await response.json()
+        const json: any = await response.json()
         if (json.code !== 1) throw new Error(json.msg || 'Failed to load related campaigns')
         const items = (json.data?.items || []).filter((item: CampaignItem) => item.id !== campaign.value?.id)
         relatedCampaigns.value = append ? [...relatedCampaigns.value, ...items] : items
@@ -307,6 +307,9 @@ watch(campaign, (currentCampaign) => {
                             </template>
                         </div>
                     </section>
+
+                    <!-- Auto Monetized Ad Banner Placement (Google AdSense & Adsterra) -->
+                    <AdBanner slot-type="in-article" />
 
                     <!-- Main Content Body -->
                     <div
