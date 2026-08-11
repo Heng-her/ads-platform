@@ -22,7 +22,7 @@ const props = withDefaults(
 
 const router = useRouter()
 const { getCampaign, createCampaign, updateCampaign, isLoading } = useCampaigns()
-const { categories, fetchCategories } = useCategories()
+const { categories, fetchCategories, myCategories } = useCategories()
 const { deleteMediaByUrl } = useCloudinaryUpload()
 const authStore = useAuthStore()
 const { getDraft, saveDraft, removeDraft } = useCampaignDraft()
@@ -574,9 +574,17 @@ onBeforeUnmount(() => {
             <select v-model="form.category"
               class="w-full text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-2 text-gray-900 dark:text-gray-100 focus:outline-none">
               <option value="GENERAL">General</option>
-              <option v-for="cat in categories" :key="cat.id" :value="cat.name">
-                {{ cat.name }}
-              </option>
+              <optgroup v-if="myCategories.length > 0" label="My Categories">
+                <option v-for="cat in myCategories" :key="'my-' + cat.id" :value="cat.name">
+                  {{ cat.name }}
+                </option>
+              </optgroup>
+              <optgroup label="Default">
+                <option v-for="cat in categories.filter(c => c.name !== 'OTHER')" :key="'sys-' + cat.id"
+                  :value="cat.name">
+                  {{ cat.name }}
+                </option>
+              </optgroup>
             </select>
           </div>
 

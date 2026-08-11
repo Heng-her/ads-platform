@@ -9,7 +9,7 @@ definePageMeta({
 })
 
 const { campaignsList, totalPages, isLoading, fetchMyCampaigns, updateCampaignStatus, deleteCampaign } = useCampaigns()
-const { categories } = useCategories()
+const { categories, myCategories } = useCategories()
 
 const searchQuery = ref('')
 const selectedCategory = ref('')
@@ -142,9 +142,16 @@ onMounted(() => {
         <select v-model="selectedCategory"
           class="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-2.5 py-1.5 text-gray-700 dark:text-gray-200 focus:outline-none">
           <option value="">All Categories</option>
-          <option v-for="cat in categories" :key="cat.id" :value="cat.name">
-            {{ cat.name }}
-          </option>
+          <optgroup v-if="myCategories.length > 0" label="My Custom Categories">
+            <option v-for="cat in myCategories" :key="'my-' + cat.id" :value="cat.name">
+              {{ cat.name }}
+            </option>
+          </optgroup>
+          <optgroup label="Default">
+            <option v-for="cat in categories.filter(c => c.name !== 'OTHER')" :key="'sys-' + cat.id" :value="cat.name">
+              {{ cat.name }}
+            </option>
+          </optgroup>
         </select>
       </div>
     </div>
@@ -171,11 +178,14 @@ onMounted(() => {
     <!-- Campaigns List Table -->
     <div v-else
       class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
-      <div v-if="totalPages > 1" class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-800">
+      <div v-if="totalPages > 1"
+        class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-800">
         <span class="text-xs text-gray-500 dark:text-gray-400">Page {{ currentPage }} of {{ totalPages }}</span>
         <div class="flex gap-2">
-          <UButton color="neutral" variant="outline" size="xs" :disabled="currentPage === 1" @click="currentPage--; loadData()">Previous</UButton>
-          <UButton color="neutral" variant="outline" size="xs" :disabled="currentPage === totalPages" @click="currentPage++; loadData()">Next</UButton>
+          <UButton color="neutral" variant="outline" size="xs" :disabled="currentPage === 1"
+            @click="currentPage--; loadData()">Previous</UButton>
+          <UButton color="neutral" variant="outline" size="xs" :disabled="currentPage === totalPages"
+            @click="currentPage++; loadData()">Next</UButton>
         </div>
       </div>
       <div class="no-scrollbar overflow-x-auto">
@@ -202,7 +212,8 @@ onMounted(() => {
                     :aria-label="`Open ${item.title} image preview`">
                     <img :src="getPreviewImage(item)" :alt="item.imageTitle || item.title"
                       class="h-full w-full object-cover transition-transform duration-200 group-hover:scale-110" />
-                    <span class="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity group-hover:opacity-100">
+                    <span
+                      class="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity group-hover:opacity-100">
                       <UIcon name="i-heroicons-magnifying-glass-plus" class="h-4 w-4 text-white" />
                     </span>
                   </button>
@@ -233,7 +244,10 @@ onMounted(() => {
                 {{ item.contentType || 'ARTICLE' }}
               </td>
 
-              <td class="py-3 px-4"><CampaignStatusToggle :title="item.title" :status="item.status" :disabled="updatingStatusIds.has(item.id)" @change="handleStatusToggle(item, $event)" /></td>
+              <td class="py-3 px-4">
+                <CampaignStatusToggle :title="item.title" :status="item.status"
+                  :disabled="updatingStatusIds.has(item.id)" @change="handleStatusToggle(item, $event)" />
+              </td>
 
               <td class="py-3 px-4 font-mono font-medium">
                 {{ item.totalImpressions || 0 }}
@@ -243,7 +257,10 @@ onMounted(() => {
                 {{ new Date(item.createdAt).toLocaleDateString() }}
               </td>
 
-              <td class="py-3 px-4 text-right"><CampaignRowActions :article-url="getArticleUrl(item)" :edit-url="`/creator/campaigns/${item.id}/edit`" @delete="confirmDelete(item)" /></td>
+              <td class="py-3 px-4 text-right">
+                <CampaignRowActions :article-url="getArticleUrl(item)" :edit-url="`/creator/campaigns/${item.id}/edit`"
+                  @delete="confirmDelete(item)" />
+              </td>
             </tr>
           </tbody>
         </table>

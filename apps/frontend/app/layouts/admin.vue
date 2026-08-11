@@ -4,6 +4,7 @@ import { useSidebar } from '~/composables/useSidebar'
 const adminNav = [
   { label: 'Overview', icon: 'i-heroicons-chart-pie', to: '/admin' },
   { label: 'Campaigns', icon: 'i-heroicons-megaphone', to: '/admin/campaigns' },
+  { label: 'Categories', icon: 'i-heroicons-tag', to: '/admin/categories' },
   { label: 'Approvals & Users', icon: 'i-heroicons-check-badge', to: '/admin/approvals' },
   { label: 'System Logs', icon: 'i-heroicons-document-text', to: '/admin/logs' },
   { label: 'Settings', icon: 'i-heroicons-adjustments-horizontal', to: '/admin/settings' }
@@ -15,32 +16,18 @@ const { isMobileOpen } = useSidebar()
 <template>
   <div class="h-screen flex overflow-hidden bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
     <!-- Admin Sidebar (Desktop/Tablet) -->
-    <AppSidebar
-      :links="adminNav"
-      role="admin"
-      title="Admin Control"
-      icon="i-heroicons-shield-check"
-      icon-class="text-red-500"
-    />
+    <AppSidebar :links="adminNav" role="admin" title="Admin Control" icon="i-heroicons-shield-check"
+      icon-class="text-red-500" />
 
     <!-- Admin Content Area -->
     <div class="flex-1 flex flex-col min-w-0 min-h-0">
-      <AppHeader class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
+      <AppHeader
+        class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
         <template #left>
           <!-- Mobile Sidebar Toggle -->
-          <UButton
-            icon="i-heroicons-bars-3"
-            color="neutral"
-            variant="ghost"
-            class="md:hidden"
-            aria-label="Open navigation"
-            @click="isMobileOpen = true"
-          />
-          <UBadge
-            color="error"
-            variant="soft"
-            class="font-semibold"
-          >
+          <UButton icon="i-heroicons-bars-3" color="neutral" variant="ghost" class="md:hidden"
+            aria-label="Open navigation" @click="isMobileOpen = true" />
+          <UBadge color="error" variant="soft" class="font-semibold">
             System Admin Mode
           </UBadge>
         </template>
@@ -48,13 +35,7 @@ const { isMobileOpen } = useSidebar()
         <template #right>
           <div class="flex items-center gap-1.5 sm:gap-3">
             <LanguageSwitcher />
-            <UButton
-              to="/creator"
-              color="neutral"
-              variant="subtle"
-              size="xs"
-              class="hidden sm:inline-flex"
-            >
+            <UButton to="/creator" color="neutral" variant="subtle" size="xs" class="hidden sm:inline-flex">
               Switch to Creator
             </UButton>
             <UserMenu role="admin" />
@@ -69,14 +50,7 @@ const { isMobileOpen } = useSidebar()
 
 
     <!-- Mobile Drawer -->
-    <MobileDrawer
-      v-model:open="isMobileOpen"
-      side="left"
-      title="Admin Control"
-      icon="i-heroicons-shield-check"
-      icon-class="text-red-500"
-      :links="adminNav"
-      role="admin"
-    />
+    <MobileDrawer v-model:open="isMobileOpen" side="left" title="Admin Control" icon="i-heroicons-shield-check"
+      icon-class="text-red-500" :links="adminNav" role="admin" />
   </div>
 </template>

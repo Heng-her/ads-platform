@@ -23,6 +23,15 @@ export function useCategories() {
     () => false,
   );
 
+  const myCategories = useState<CategoryItem[]>(
+    "my-categories-shared-data",
+    () => [],
+  );
+  const isLoadingMyCategories = useState<boolean>(
+    "my-categories-shared-loading",
+    () => false,
+  );
+
   async function fetchCategories(force = false) {
     if ((categories.value.length > 0 && !force) || isLoadingCategories.value) {
       return;
@@ -47,6 +56,146 @@ export function useCategories() {
     }
   }
 
+  async function createCategory(name: string) {
+    const api = useApi();
+    const res = await api.action.$post({
+      json: { action: "categories/create", data: { name } },
+    });
+    const json = (await res.json()) as {
+      code: number;
+      msg?: string;
+      data?: CategoryItem;
+    };
+    if (json?.code === 1) {
+      await fetchCategories(true);
+    }
+    return json;
+  }
+
+  async function updateCategory(id: number, name: string) {
+    const api = useApi();
+    const res = await api.action.$post({
+      json: { action: "categories/update", data: { id, name } },
+    });
+    const json = (await res.json()) as {
+      code: number;
+      msg?: string;
+      data?: CategoryItem;
+    };
+    if (json?.code === 1) {
+      await fetchCategories(true);
+    }
+    return json;
+  }
+
+  async function deleteCategory(id: number) {
+    const api = useApi();
+    const res = await api.action.$post({
+      json: { action: "categories/delete", data: { id } },
+    });
+    const json = (await res.json()) as { code: number; msg?: string };
+    if (json?.code === 1) {
+      await fetchCategories(true);
+    }
+    return json;
+  }
+
+  async function fetchMyCategories(force = false) {
+    if (
+      (myCategories.value.length > 0 && !force) ||
+      isLoadingMyCategories.value
+    ) {
+      return;
+    }
+    isLoadingMyCategories.value = true;
+    try {
+      const api = useApi();
+      const res = await api.action.$post({
+        json: { action: "my/categories/list" },
+      });
+      const json = (await res.json()) as {
+        code: number;
+        data?: CategoryItem[];
+      };
+      if (json?.code === 1 && Array.isArray(json?.data)) {
+        myCategories.value = json.data;
+      }
+    } catch (error) {
+      console.error("[POST /action my/categories/list] failed:", error);
+    } finally {
+      isLoadingMyCategories.value = false;
+    }
+  }
+
+  async function createMyCategory(name: string) {
+    const api = useApi();
+    const res = await api.action.$post({
+      json: { action: "my/categories/create", data: { name } },
+    });
+    const json = (await res.json()) as {
+      code: number;
+      msg?: string;
+      data?: CategoryItem;
+    };
+    if (json?.code === 1) {
+      await fetchMyCategories(true);
+    }
+    return json;
+  }
+
+  async function updateMyCategory(id: number, name: string) {
+    const api = useApi();
+    const res = await api.action.$post({
+      json: { action: "my/categories/update", data: { id, name } },
+    });
+    const json = (await res.json()) as {
+      code: number;
+      msg?: string;
+      data?: CategoryItem;
+    };
+    if (json?.code === 1) {
+      await fetchMyCategories(true);
+    }
+    return json;
+  }
+
+  async function deleteMyCategory(id: number) {
+    const api = useApi();
+    const res = await api.action.$post({
+      json: { action: "my/categories/delete", data: { id } },
+    });
+    const json = (await res.json()) as { code: number; msg?: string };
+    if (json?.code === 1) {
+      await fetchMyCategories(true);
+    }
+    return json;
+  }
+
+  const allCategories = computed(() => {
+    const list: CategoryItem[] = [];
+    const seen = new Set<string>();
+
+    for (const cat of myCategories.value) {
+      if (cat.name && !seen.has(cat.name.toLowerCase())) {
+        seen.add(cat.name.toLowerCase());
+        list.push(cat);
+      }
+    }
+
+    for (const cat of categories.value) {
+      if (
+        cat.name &&
+        cat.name !== "OTHER" &&
+        !seen.has(cat.name.toLowerCase())
+      ) {
+        seen.add(cat.name.toLowerCase());
+        list.push(cat);
+      }
+    }
+
+    return list;
+  });
+
   // Do not request during SSR: this asynchronous request is not awaited by SSR,
   // so hydration would request it again. Mounted components share the loading
   // guard above, leaving one request per refresh.
@@ -55,8 +204,25 @@ export function useCategories() {
       if (categories.value.length === 0) {
         fetchCategories();
       }
+      if (myCategories.value.length === 0) {
+        fetchMyCategories();
+      }
     });
   }
 
-  return { categories, isLoadingCategories, fetchCategories };
+  return {
+    categories,
+    isLoadingCategories,
+    fetchCategories,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    myCategories,
+    isLoadingMyCategories,
+    fetchMyCategories,
+    createMyCategory,
+    updateMyCategory,
+    deleteMyCategory,
+    allCategories,
+  };
 }
