@@ -30,8 +30,7 @@ const route = useRoute()
 // Predefined role navs fallback
 const adminNavLinks: NavLink[] = [
   { label: 'Overview', icon: 'i-heroicons-chart-pie', to: '/admin' },
-  { label: 'Users & Roles', icon: 'i-heroicons-users', to: '/admin/users' },
-  { label: 'Approvals', icon: 'i-heroicons-check-badge', to: '/admin/approvals' },
+  { label: 'Approvals & Users', icon: 'i-heroicons-check-badge', to: '/admin/approvals' },
   { label: 'System Logs', icon: 'i-heroicons-document-text', to: '/admin/logs' },
   { label: 'Settings', icon: 'i-heroicons-adjustments-horizontal', to: '/admin/settings' }
 ]

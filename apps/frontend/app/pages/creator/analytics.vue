@@ -152,7 +152,8 @@ const filteredCampaigns = computed(() => {
 <template>
   <div class="mx-auto max-w-7xl space-y-8 pb-16 text-gray-900 dark:text-gray-100">
     <!-- Header with Time Range Select -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 dark:border-gray-800 pb-6">
+    <div
+      class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 dark:border-gray-800 pb-6">
       <div>
         <div class="flex items-center gap-2">
           <UIcon name="i-heroicons-chart-pie" class="h-7 w-7 text-primary-500" />
@@ -167,33 +168,27 @@ const filteredCampaigns = computed(() => {
 
       <div class="flex items-center gap-3 shrink-0">
         <!-- Time Range Selector -->
-        <div class="flex items-center rounded-lg border border-gray-200 bg-white p-1 shadow-sm dark:border-gray-800 dark:bg-gray-900 text-xs">
-          <button
-            v-for="option in [
-              { label: '7 Days', val: '7d' },
-              { label: '30 Days', val: '30d' },
-              { label: '90 Days', val: '90d' },
-              { label: 'All Time', val: 'all' }
-            ]"
-            :key="option.val"
-            :class="[
-              timeRange === option.val
-                ? 'bg-primary-600 font-semibold text-white shadow'
-                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white',
-              'rounded-md px-3 py-1.5 transition whitespace-nowrap'
-            ]"
-            @click="timeRange = option.val as any"
-          >
+        <div
+          class="flex items-center rounded-lg border border-gray-200 bg-white p-1 shadow-sm dark:border-gray-800 dark:bg-gray-900 text-xs">
+          <button v-for="option in [
+            { label: '7 Days', val: '7d' },
+            { label: '30 Days', val: '30d' },
+            { label: '90 Days', val: '90d' },
+            { label: 'All Time', val: 'all' }
+          ]" :key="option.val" :class="[
+            timeRange === option.val
+              ? 'bg-primary-600 font-semibold text-white shadow'
+              : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white',
+            'rounded-md px-3 py-1.5 transition whitespace-nowrap'
+          ]" @click="timeRange = option.val as any">
             {{ option.label }}
           </button>
         </div>
 
         <!-- Refresh Button -->
-        <button
-          :disabled="isLoading"
+        <button :disabled="isLoading"
           class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 disabled:opacity-50"
-          @click="fetchAnalyticsData"
-        >
+          @click="fetchAnalyticsData">
           <UIcon v-if="isLoading" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin text-primary-500" />
           <UIcon v-else name="i-heroicons-arrow-path" class="h-4 w-4 text-gray-400" />
           <span>Refresh</span>
@@ -203,7 +198,8 @@ const filteredCampaigns = computed(() => {
 
     <!-- Skeleton Loading -->
     <div v-if="isLoading && !stats" class="grid gap-6 md:grid-cols-4">
-      <div v-for="i in 4" :key="i" class="h-32 animate-pulse rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900" />
+      <div v-for="i in 4" :key="i"
+        class="h-32 animate-pulse rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900" />
     </div>
 
     <!-- Top 4 Summary KPI Grid -->
@@ -211,7 +207,8 @@ const filteredCampaigns = computed(() => {
       <!-- Card 1: Total Impressions -->
       <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">Total Impressions</span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">Total
+            Impressions</span>
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/10 text-sky-500">
             <UIcon name="i-heroicons-eye" class="h-5 w-5" />
           </div>
@@ -221,7 +218,8 @@ const filteredCampaigns = computed(() => {
             {{ formatNumber(stats.impressions.total) }}
           </span>
         </div>
-        <div class="mt-4 flex items-center gap-1 text-xs text-emerald-500 font-semibold border-t border-gray-100 pt-3 dark:border-gray-800">
+        <div
+          class="mt-4 flex items-center gap-1 text-xs text-emerald-500 font-semibold border-t border-gray-100 pt-3 dark:border-gray-800">
           <UIcon name="i-heroicons-arrow-trending-up" class="h-4 w-4" />
           <span>+18.4% vs previous {{ timeRange }}</span>
         </div>
@@ -230,7 +228,8 @@ const filteredCampaigns = computed(() => {
       <!-- Card 2: Unique Viewers Reach -->
       <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">Unique Reach</span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">Unique
+            Reach</span>
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500">
             <UIcon name="i-heroicons-user-group" class="h-5 w-5" />
           </div>
@@ -240,17 +239,20 @@ const filteredCampaigns = computed(() => {
             {{ formatNumber(stats.impressions.uniqueViewers) }}
           </span>
         </div>
-        <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
+        <div
+          class="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
           <span>Audience Reach Rate: <strong class="text-gray-900 dark:text-white">
-            {{ stats.impressions.total > 0 ? Math.round((stats.impressions.uniqueViewers / stats.impressions.total) * 100) : 0 }}%
-          </strong></span>
+              {{ stats.impressions.total > 0 ? Math.round((stats.impressions.uniqueViewers / stats.impressions.total) *
+                100) : 0 }}%
+            </strong></span>
         </div>
       </div>
 
       <!-- Card 3: Estimated Earnings -->
       <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">Est. Earnings</span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">Est.
+            Earnings</span>
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
             <UIcon name="i-heroicons-banknotes" class="h-5 w-5" />
           </div>
@@ -260,7 +262,8 @@ const filteredCampaigns = computed(() => {
             {{ formatCurrency(stats.monetization?.estimatedRevenue) }}
           </span>
         </div>
-        <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
+        <div
+          class="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
           <span>Status: <strong class="text-emerald-500 font-semibold">Monetized</strong></span>
         </div>
       </div>
@@ -268,7 +271,8 @@ const filteredCampaigns = computed(() => {
       <!-- Card 4: Effective eCPM Rate -->
       <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Effective eCPM</span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Effective
+            eCPM</span>
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
             <UIcon name="i-heroicons-sparkles" class="h-5 w-5" />
           </div>
@@ -279,16 +283,19 @@ const filteredCampaigns = computed(() => {
           </span>
           <span class="text-xs text-gray-500 dark:text-gray-400">/ 1k views</span>
         </div>
-        <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
+        <div
+          class="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
           <span>Assigned Payout Rate</span>
         </div>
       </div>
     </div>
 
     <!-- Enhanced Side-by-Side Period Comparison Chart Visualizer -->
-    <div v-if="stats" class="rounded-xl border border-primary-500/30 bg-white p-6 shadow-md dark:border-primary-500/20 dark:bg-gray-900 space-y-6">
+    <div v-if="stats"
+      class="rounded-xl border border-primary-500/30 bg-white p-6 shadow-md dark:border-primary-500/20 dark:bg-gray-900 space-y-6">
       <!-- Chart Top Header & Peak Spotlight Banner -->
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-gray-100 pb-5 dark:border-gray-800">
+      <div
+        class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-gray-100 pb-5 dark:border-gray-800">
         <div>
           <div class="flex items-center gap-2">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -305,15 +312,18 @@ const filteredCampaigns = computed(() => {
         </div>
 
         <!-- Highlight Peak Performance Badge Card -->
-        <div v-if="comparisonData.peakItem" class="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 shrink-0">
+        <div v-if="comparisonData.peakItem"
+          class="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 shrink-0">
           <div class="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500 text-white shadow">
             <UIcon name="i-heroicons-trophy" class="h-5 w-5" />
           </div>
           <div>
-            <p class="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">🏆 Highest Peak Period</p>
+            <p class="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">🏆 Highest
+              Peak Period</p>
             <p class="text-xs font-bold text-gray-900 dark:text-white">
               {{ comparisonData.peakItem.label }}:
-              <span class="text-primary-600 dark:text-primary-400">{{ formatNumber(comparisonData.peakItem.currentImp) }} views</span>
+              <span class="text-primary-600 dark:text-primary-400">{{ formatNumber(comparisonData.peakItem.currentImp)
+                }} views</span>
               <span class="text-emerald-500 ml-1">({{ formatCurrency(comparisonData.peakItem.currentRev) }})</span>
             </p>
           </div>
@@ -321,40 +331,38 @@ const filteredCampaigns = computed(() => {
       </div>
 
       <!-- Comparison Legend & View Switcher -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 p-3 rounded-lg dark:bg-gray-950/60 border border-gray-100 dark:border-gray-800 text-xs">
+      <div
+        class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 p-3 rounded-lg dark:bg-gray-950/60 border border-gray-100 dark:border-gray-800 text-xs">
         <div class="flex items-center gap-6 font-semibold">
           <!-- Current Period Legend -->
           <div class="flex items-center gap-2">
             <span class="h-3.5 w-3.5 rounded-sm bg-gradient-to-t from-primary-600 to-primary-400 shadow-sm" />
-            <span class="text-gray-800 dark:text-gray-200">Current Period (Total: {{ formatNumber(comparisonData.totalCurrentImp) }})</span>
+            <span class="text-gray-800 dark:text-gray-200">Current Period (Total: {{
+              formatNumber(comparisonData.totalCurrentImp) }})</span>
           </div>
 
           <!-- Previous Period Legend -->
           <div class="flex items-center gap-2">
-            <span class="h-3.5 w-3.5 rounded-sm bg-gray-300 dark:bg-gray-700 border border-gray-400 dark:border-gray-600" />
-            <span class="text-gray-500 dark:text-gray-400">Previous Period (Total: {{ formatNumber(comparisonData.totalPrevImp) }})</span>
+            <span
+              class="h-3.5 w-3.5 rounded-sm bg-gray-300 dark:bg-gray-700 border border-gray-400 dark:border-gray-600" />
+            <span class="text-gray-500 dark:text-gray-400">Previous Period (Total: {{
+              formatNumber(comparisonData.totalPrevImp) }})</span>
           </div>
         </div>
 
         <!-- Metric Display Switcher -->
         <div class="flex items-center gap-2">
           <span class="text-[11px] text-gray-400 font-medium">Show Metric:</span>
-          <button
-            :class="[
-              compareMetric === 'impressions' ? 'bg-primary-600 text-white font-bold' : 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-              'rounded px-2.5 py-1 transition'
-            ]"
-            @click="compareMetric = 'impressions'"
-          >
+          <button :class="[
+            compareMetric === 'impressions' ? 'bg-primary-600 text-white font-bold' : 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+            'rounded px-2.5 py-1 transition'
+          ]" @click="compareMetric = 'impressions'">
             Impressions
           </button>
-          <button
-            :class="[
-              compareMetric === 'revenue' ? 'bg-amber-500 text-white font-bold' : 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-              'rounded px-2.5 py-1 transition'
-            ]"
-            @click="compareMetric = 'revenue'"
-          >
+          <button :class="[
+            compareMetric === 'revenue' ? 'bg-amber-500 text-white font-bold' : 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+            'rounded px-2.5 py-1 transition'
+          ]" @click="compareMetric = 'revenue'">
             Earnings ($)
           </button>
         </div>
@@ -362,27 +370,26 @@ const filteredCampaigns = computed(() => {
 
       <!-- Side-by-Side Dual Bar Visualizer Chart -->
       <div class="pt-6 pb-2">
-        <div class="relative flex items-end justify-between gap-4 sm:gap-6 h-64 px-4 border-b-2 border-gray-200 dark:border-gray-800">
-          
-          <div
-            v-for="item in comparisonData.items"
-            :key="item.label"
-            class="flex-1 flex flex-col items-center justify-end h-full group relative"
-          >
+        <div
+          class="relative flex items-end justify-between gap-4 sm:gap-6 h-64 px-4 border-b-2 border-gray-200 dark:border-gray-800">
+
+          <div v-for="item in comparisonData.items" :key="item.label"
+            class="flex-1 flex flex-col items-center justify-end h-full group relative">
             <!-- Highest Peak Crown Badge -->
-            <div
-              v-if="item.isPeak"
-              class="absolute -top-7 flex items-center gap-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md animate-bounce z-20"
-            >
+            <div v-if="item.isPeak"
+              class="absolute -top-7 flex items-center gap-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md animate-bounce z-20">
               <UIcon name="i-heroicons-sparkles" class="h-3 w-3" />
               <span>PEAK</span>
             </div>
 
             <!-- Hover Tooltip -->
-            <div class="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[11px] rounded-lg p-2.5 shadow-xl whitespace-nowrap absolute -top-16 z-30 border border-gray-700 pointer-events-none">
+            <div
+              class="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[11px] rounded-lg p-2.5 shadow-xl whitespace-nowrap absolute -top-16 z-30 border border-gray-700 pointer-events-none">
               <p class="font-bold text-amber-400 border-b border-gray-800 pb-1 mb-1">{{ item.label }} Performance</p>
-              <p class="text-sky-300 font-semibold">Current: {{ formatNumber(item.currentImp) }} views (${{ item.currentRev.toFixed(2) }})</p>
-              <p class="text-gray-400">Previous: {{ formatNumber(item.prevImp) }} views (${{ item.prevRev.toFixed(2) }})</p>
+              <p class="text-sky-300 font-semibold">Current: {{ formatNumber(item.currentImp) }} views (${{
+                item.currentRev.toFixed(2) }})</p>
+              <p class="text-gray-400">Previous: {{ formatNumber(item.prevImp) }} views (${{ item.prevRev.toFixed(2) }})
+              </p>
               <p class="text-emerald-400 font-bold mt-1">Growth: +{{ item.diffPct }}% ↗</p>
             </div>
 
@@ -391,22 +398,24 @@ const filteredCampaigns = computed(() => {
               <!-- Current Period Bar (Tall, Bold Primary Gradient) -->
               <div
                 class="w-1/2 max-w-[28px] bg-gradient-to-t from-primary-600 via-primary-500 to-sky-400 rounded-t-md transition-all duration-300 hover:brightness-110 shadow-sm relative group/bar"
-                :style="{ height: item.currentHeightPct + '%' }"
-              >
+                :style="{ height: item.currentHeightPct + '%' }">
                 <!-- Top Value Pill -->
-                <span class="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-extrabold text-primary-600 dark:text-primary-400 opacity-90 group-hover/bar:scale-110 transition">
-                  {{ compareMetric === 'impressions' ? (item.currentImp > 1000 ? Math.round(item.currentImp / 1000) + 'k' : item.currentImp) : '$' + Math.round(item.currentRev) }}
+                <span
+                  class="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-extrabold text-primary-600 dark:text-primary-400 opacity-90 group-hover/bar:scale-110 transition">
+                  {{ compareMetric === 'impressions' ? (item.currentImp > 1000 ? Math.round(item.currentImp / 1000) +
+                    'k' : item.currentImp) : '$' + Math.round(item.currentRev) }}
                 </span>
               </div>
 
               <!-- Previous Period Bar (Muted Muted Neutral Bar) -->
               <div
                 class="w-1/2 max-w-[28px] bg-gray-200 dark:bg-gray-700 rounded-t-md transition-all duration-300 hover:bg-gray-300 dark:hover:bg-gray-600 relative opacity-80"
-                :style="{ height: item.prevHeightPct + '%' }"
-              >
+                :style="{ height: item.prevHeightPct + '%' }">
                 <!-- Top Value Pill -->
-                <span class="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-medium text-gray-400 opacity-80">
-                  {{ compareMetric === 'impressions' ? (item.prevImp > 1000 ? Math.round(item.prevImp / 1000) + 'k' : item.prevImp) : '$' + Math.round(item.prevRev) }}
+                <span
+                  class="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-medium text-gray-400 opacity-80">
+                  {{ compareMetric === 'impressions' ? (item.prevImp > 1000 ? Math.round(item.prevImp / 1000) + 'k' :
+                    item.prevImp) : '$' + Math.round(item.prevRev) }}
                 </span>
               </div>
             </div>
@@ -414,12 +423,10 @@ const filteredCampaigns = computed(() => {
             <!-- Bottom X-Axis Label & Diff Indicator -->
             <div class="mt-3 text-center space-y-0.5">
               <span class="block text-xs font-bold text-gray-800 dark:text-gray-200">{{ item.label }}</span>
-              <span
-                :class="[
-                  item.diffPct >= 0 ? 'text-emerald-500 bg-emerald-500/10' : 'text-rose-500 bg-rose-500/10',
-                  'inline-block text-[10px] font-extrabold px-1.5 py-0.2 rounded'
-                ]"
-              >
+              <span :class="[
+                item.diffPct >= 0 ? 'text-emerald-500 bg-emerald-500/10' : 'text-rose-500 bg-rose-500/10',
+                'inline-block text-[10px] font-extrabold px-1.5 py-0.2 rounded'
+              ]">
                 {{ item.diffPct >= 0 ? '+' + item.diffPct : item.diffPct }}%
               </span>
             </div>
@@ -433,25 +440,24 @@ const filteredCampaigns = computed(() => {
     <div v-if="stats" class="grid gap-8 lg:grid-cols-3">
       <!-- Left Column (2 Cols): Campaign Performance Breakdown Table -->
       <div class="lg:col-span-2 space-y-6">
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4 dark:border-gray-800">
+        <div
+          class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 space-y-4">
+          <div
+            class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4 dark:border-gray-800">
             <div>
               <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <UIcon name="i-heroicons-megaphone" class="h-5 w-5 text-sky-500" />
                 Campaign Performance Breakdown
               </h2>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Individual metrics and earnings contribution per campaign.</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Individual metrics and earnings contribution per
+                campaign.</p>
             </div>
 
             <!-- Instant Search Input -->
             <div class="relative max-w-xs w-full">
               <UIcon name="i-heroicons-magnifying-glass" class="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <input
-                v-model="searchQuery"
-                type="text"
-                placeholder="Search campaigns..."
-                class="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3.5 py-1.5 text-xs text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-800 dark:bg-gray-800 dark:text-white"
-              />
+              <input v-model="searchQuery" type="text" placeholder="Search campaigns..."
+                class="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3.5 py-1.5 text-xs text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-800 dark:bg-gray-800 dark:text-white" />
             </div>
           </div>
 
@@ -461,7 +467,8 @@ const filteredCampaigns = computed(() => {
 
           <div v-else class="overflow-x-auto">
             <table class="w-full text-left text-xs">
-              <thead class="bg-gray-50 dark:bg-gray-950/60 uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
+              <thead
+                class="bg-gray-50 dark:bg-gray-950/60 uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
                 <tr>
                   <th class="px-4 py-3 font-semibold">Campaign Title</th>
                   <th class="px-4 py-3 font-semibold">Status</th>
@@ -471,9 +478,11 @@ const filteredCampaigns = computed(() => {
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                <tr v-for="campaign in filteredCampaigns" :key="campaign.id" class="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
+                <tr v-for="campaign in filteredCampaigns" :key="campaign.id"
+                  class="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
                   <td class="px-4 py-3">
-                    <p class="font-semibold text-gray-900 dark:text-white truncate max-w-[200px]">{{ campaign.title }}</p>
+                    <p class="font-semibold text-gray-900 dark:text-white truncate max-w-[200px]">{{ campaign.title }}
+                    </p>
                     <p class="text-[10px] text-gray-400">ID: {{ campaign.id }}</p>
                   </td>
                   <td class="px-4 py-3">
@@ -485,7 +494,8 @@ const filteredCampaigns = computed(() => {
                     {{ formatNumber(stats.impressions.total > 0 ? Math.round(stats.impressions.total * 0.4) : 0) }}
                   </td>
                   <td class="px-4 py-3 text-right font-bold text-amber-600 dark:text-amber-400">
-                    {{ formatCurrency(stats.monetization?.estimatedRevenue ? stats.monetization.estimatedRevenue * 0.4 : 0) }}
+                    {{ formatCurrency(stats.monetization?.estimatedRevenue ? stats.monetization.estimatedRevenue * 0.4 :
+                      0) }}
                   </td>
                   <td class="px-4 py-3 text-right">
                     <div class="flex items-center justify-end gap-2">
@@ -505,8 +515,10 @@ const filteredCampaigns = computed(() => {
       <!-- Right Column (1 Col): Demographics & Device Distribution -->
       <div class="space-y-6">
         <!-- Top Geographic Locations -->
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 space-y-4">
-          <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-100 pb-3 dark:border-gray-800">
+        <div
+          class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 space-y-4">
+          <h2
+            class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-100 pb-3 dark:border-gray-800">
             <UIcon name="i-heroicons-globe-alt" class="h-5 w-5 text-emerald-500" />
             Top Audience Locations
           </h2>
@@ -528,8 +540,10 @@ const filteredCampaigns = computed(() => {
         </div>
 
         <!-- Device & Platform Breakdown -->
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 space-y-4">
-          <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-100 pb-3 dark:border-gray-800">
+        <div
+          class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 space-y-4">
+          <h2
+            class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-100 pb-3 dark:border-gray-800">
             <UIcon name="i-heroicons-device-phone-mobile" class="h-5 w-5 text-purple-500" />
             Device Distribution
           </h2>

@@ -314,12 +314,12 @@ function calculateCategoryPercent(count: number): number {
             </NuxtLink>
 
             <NuxtLink
-              to="/admin/users"
+              to="/admin/approvals"
               class="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-950/60 p-3 text-xs font-semibold text-gray-200 transition hover:border-gray-700 hover:bg-gray-800"
             >
               <div class="flex items-center gap-2.5">
                 <UIcon name="i-heroicons-users" class="h-4 w-4 text-indigo-400" />
-                <span>User Roles & Status</span>
+                <span>User Roles & Approvals</span>
               </div>
               <UIcon name="i-heroicons-chevron-right" class="h-4 w-4 text-gray-500" />
             </NuxtLink>

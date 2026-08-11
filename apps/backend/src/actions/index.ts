@@ -14,22 +14,43 @@ export async function dispatchAction(
   db: DbClient,
   action: string,
   payloadData: any,
-  authenticate: (c: Context<HonoEnv>, strict?: boolean) => Promise<UserJwtPayload>,
+  authenticate: (
+    c: Context<HonoEnv>,
+    strict?: boolean,
+  ) => Promise<UserJwtPayload>,
 ) {
   // 1. Auth Actions
   const authRes = await handleAuthAction(c, db, action, payloadData);
   if (authRes !== null) return authRes;
 
   // 2. User Actions
-  const userRes = await handleUserAction(c, db, action, payloadData, authenticate);
+  const userRes = await handleUserAction(
+    c,
+    db,
+    action,
+    payloadData,
+    authenticate,
+  );
   if (userRes !== null) return userRes;
 
   // 3. Campaign Actions
-  const campaignRes = await handleCampaignAction(c, db, action, payloadData, authenticate);
+  const campaignRes = await handleCampaignAction(
+    c,
+    db,
+    action,
+    payloadData,
+    authenticate,
+  );
   if (campaignRes !== null) return campaignRes;
 
   // 4. Category Actions
-  const categoryRes = await handleCategoryAction(c, db, action, payloadData, authenticate);
+  const categoryRes = await handleCategoryAction(
+    c,
+    db,
+    action,
+    payloadData,
+    authenticate,
+  );
   if (categoryRes !== null) return categoryRes;
 
   // 5. Audit Log Actions

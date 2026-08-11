@@ -133,8 +133,7 @@ onMounted(() => loadLogs())
           icon="i-heroicons-device-phone-mobile" @keyup.enter="applyFilters" />
         <UInput v-model="fromDate" type="date" label="From date" icon="i-heroicons-calendar"
           @keyup.enter="applyFilters" />
-        <UInput v-model="toDate" type="date" label="To date" icon="i-heroicons-calendar"
-          @keyup.enter="applyFilters" />
+        <UInput v-model="toDate" type="date" label="To date" icon="i-heroicons-calendar" @keyup.enter="applyFilters" />
       </div>
       <div
         class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4 dark:border-gray-800">
@@ -143,7 +142,8 @@ onMounted(() => loadLogs())
           <UButton color="neutral" variant="ghost" size="sm" @click="resetFilters">Reset</UButton>
         </div>
         <div class="flex flex-wrap items-end gap-2">
-          <UInput v-model="clearBeforeDate" type="date" label="Clear before date (optional)" icon="i-heroicons-calendar" size="sm" />
+          <UInput v-model="clearBeforeDate" type="date" label="Clear before date (optional)" icon="i-heroicons-calendar"
+            size="sm" />
           <UButton color="error" variant="soft" size="sm" icon="i-heroicons-trash" :loading="isClearing"
             @click="clearLogs">{{ clearButtonLabel }}</UButton>
         </div>

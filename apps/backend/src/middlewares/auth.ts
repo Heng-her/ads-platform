@@ -50,12 +50,18 @@ interface AuthOptions {
   strict?: boolean;
 }
 
-export const authMiddleware = (options: AuthOptions = {}): MiddlewareHandler<HonoEnv> => {
+export const authMiddleware = (
+  options: AuthOptions = {},
+): MiddlewareHandler<HonoEnv> => {
   return async (c, next) => {
     const authHeader = c.req.header("Authorization");
 
     // Dev Mode Bypass: Allowed only if strict is false
-    if (!options.strict && !authHeader && c.env?.ENVIRONMENT === "development") {
+    if (
+      !options.strict &&
+      !authHeader &&
+      c.env?.ENVIRONMENT === "development"
+    ) {
       await ensureDevUser(c);
       c.set("user", DEV_USER);
       return await next();
@@ -63,7 +69,12 @@ export const authMiddleware = (options: AuthOptions = {}): MiddlewareHandler<Hon
 
     const token = extractBearerToken(authHeader);
     if (!token) {
-      return sendError(c, "Unauthorized. Authorization token required.", null, 401);
+      return sendError(
+        c,
+        "Unauthorized. Authorization token required.",
+        null,
+        401,
+      );
     }
 
     const user = await verifyToken(token, getJwtSecret(c));
@@ -71,12 +82,30 @@ export const authMiddleware = (options: AuthOptions = {}): MiddlewareHandler<Hon
       return sendError(c, "Unauthorized. Invalid or expired token.", null, 401);
     }
 
+    const db = getDb(c.env.DB);
+    const dbUser = await db
+      .select({ status: users.status })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .get();
+
+    if (dbUser?.status === "SUSPENDED") {
+      return sendError(
+        c,
+        "Forbidden. Your account has been suspended by an administrator.",
+        null,
+        403,
+      );
+    }
+
     c.set("user", user);
     await next();
   };
 };
 
-export const requireRole = (allowedRoles: ("ADMIN" | "CREATOR")[]): MiddlewareHandler<HonoEnv> => {
+export const requireRole = (
+  allowedRoles: ("ADMIN" | "CREATOR")[],
+): MiddlewareHandler<HonoEnv> => {
   return async (c, next) => {
     const user = c.get("user");
     if (!user) {
@@ -84,7 +113,12 @@ export const requireRole = (allowedRoles: ("ADMIN" | "CREATOR")[]): MiddlewareHa
     }
 
     if (!allowedRoles.includes(user.role)) {
-      return sendError(c, "Forbidden. Insufficient permissions for this resource.", null, 403);
+      return sendError(
+        c,
+        "Forbidden. Insufficient permissions for this resource.",
+        null,
+        403,
+      );
     }
 
     await next();

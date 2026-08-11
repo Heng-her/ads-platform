@@ -6,6 +6,9 @@ import { sendError } from "../utils/response";
 import { getJwtSecret } from "../utils/env";
 import { extractBearerToken, verifyToken } from "../utils/jwt";
 
+import { users } from "../db/schema/index";
+import { eq } from "drizzle-orm";
+
 /**
  * Helper to verify JWT token dynamically for actions requiring authentication
  */
@@ -29,6 +32,19 @@ async function authenticate(
 
   const user = await verifyToken(token, getJwtSecret(c));
   if (!user) throw new Error("Unauthorized. Invalid or expired token.");
+
+  // Check user status in DB
+  const db = getDb(c.env.DB);
+  const dbUser = await db
+    .select({ status: users.status })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .get();
+
+  if (dbUser?.status === "SUSPENDED") {
+    throw new Error("Your account has been suspended by an administrator.");
+  }
+
   return user;
 }
 
@@ -43,7 +59,10 @@ export const actionRoutes = new Hono<HonoEnv>()
       const payloadData = body?.data || {};
 
       if (!action || typeof action !== "string") {
-        return sendError(c, "Missing or invalid 'action' field in request body.");
+        return sendError(
+          c,
+          "Missing or invalid 'action' field in request body.",
+        );
       }
 
       const db = getDb(c.env.DB);
@@ -65,7 +84,10 @@ export const actionRoutes = new Hono<HonoEnv>()
       const payloadData = body?.data || {};
 
       if (!action || typeof action !== "string") {
-        return sendError(c, "Missing or invalid 'action' field in request body.");
+        return sendError(
+          c,
+          "Missing or invalid 'action' field in request body.",
+        );
       }
 
       const db = getDb(c.env.DB);
