@@ -6,6 +6,7 @@ const props = defineProps<{
   categories?: Array<{ id?: string | number; name: string }>
   selectedCategory: string
   activeFilterCount: number
+  widthClass?: string
 }>()
 
 const emit = defineEmits<{
@@ -26,7 +27,7 @@ function formatText(val?: string) {
 </script>
 
 <template>
-  <aside class="hidden lg:flex lg:flex-col lg:w-[250px] shrink-0 gap-6 sticky top-20">
+  <aside :class="['hidden lg:flex lg:flex-col shrink-0 gap-6 sticky top-20', widthClass || 'lg:w-[280px]']">
     <!-- Main Filter Box Container -->
     <div
       class="rounded-2xl p-5 border shadow-sm bg-white dark:bg-[#122131] border-gray-200 dark:border-[#273647] space-y-6">
@@ -69,5 +70,6 @@ function formatText(val?: string) {
         </nav>
       </div>
     </div>
+    <slot name="bottom" />
   </aside>
 </template>

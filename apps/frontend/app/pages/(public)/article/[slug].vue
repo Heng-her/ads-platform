@@ -219,13 +219,17 @@ watch(campaign, (currentCampaign) => {
 
         <!-- Main Content Grid -->
         <div v-else class="flex gap-6 items-start">
-            <PublicFilterSidebar :categories="categories" :selected-category="campaign.category || ''"
-                :active-filter-count="campaign.category ? 1 : 0"
+            <PublicFilterSidebar width-class="w-86" :categories="categories"
+                :selected-category="campaign.category || ''" :active-filter-count="campaign.category ? 1 : 0"
                 @select-category="(category) => router.push({ path: '/article', query: category ? { category } : {} })"
-                @reset-filters="router.push('/article')" />
+                @reset-filters="router.push('/article')">
+                <template #bottom>
+                    <AdBanner slot-type="sidebar" />
+                </template>
+            </PublicFilterSidebar>
             <div class="min-w-0 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-                <!-- Left Main Column (Details & Article Content) -->
+                <!-- Center Main Column (Details & Article Content) -->
                 <article class="lg:col-span-8 space-y-6">
 
                     <!-- Hero Header Card -->
@@ -308,9 +312,6 @@ watch(campaign, (currentCampaign) => {
                         </div>
                     </section>
 
-                    <!-- Auto Monetized Ad Banner Placement (Google AdSense & Adsterra) -->
-                    <AdBanner slot-type="in-article" />
-
                     <!-- Main Content Body -->
                     <div
                         class="rounded-2xl p-6 sm:p-8 border leading-relaxed text-gray-800 dark:text-gray-200 font-body space-y-4 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
@@ -369,10 +370,9 @@ watch(campaign, (currentCampaign) => {
                     </section>
                 </article>
 
-                <!-- Right Sidebar Column (Metrics & Ad Info) -->
+                <!-- Right Sidebar Column (Ads & Category Link) -->
                 <aside class="lg:col-span-4 space-y-6 sticky top-20">
-                    <PublicPerformanceStats :total-impressions="campaign.totalImpressions"
-                        :unique-viewers="campaign.uniqueViewers" />
+                    <AdBanner slot-type="sidebar" />
 
                     <PublicAdIntegrationCard :ad-network="campaign.adNetwork" :ad-unit-code="campaign.adUnitCode" />
 

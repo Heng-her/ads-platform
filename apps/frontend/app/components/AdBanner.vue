@@ -27,21 +27,22 @@ onMounted(() => {
     }
   }
 })
+const isSidebar = computed(() => props.slotType === 'sidebar')
 </script>
 
 <template>
-  <div class="my-6 space-y-3">
+  <div :class="isSidebar ? 'space-y-3' : 'my-6 space-y-3'">
     <div
       class="flex items-center justify-between text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-1">
-      <span class="flex items-center gap-1.5">
-        <UIcon name="i-heroicons-banknotes" class="w-4 h-4 text-emerald-500" />
-        Dual Ad Network Monetization (Google AdSense + Adsterra Smartlink)
+      <span class="flex items-center gap-1.5 truncate">
+        <UIcon name="i-heroicons-banknotes" class="w-4 h-4 text-emerald-500 shrink-0" />
+        {{ isSidebar ? 'Sponsored Ads' : 'Dual Ad Network Monetization (Google AdSense + Adsterra Smartlink)' }}
       </span>
-      <span class="text-[10px] font-mono text-emerald-500 font-bold">Dual Revenue Active 💰</span>
+      <span class="text-[10px] font-mono text-emerald-500 font-bold shrink-0">Active 💰</span>
     </div>
 
     <!-- Dual Ad Network Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div :class="isSidebar ? 'grid grid-cols-1 gap-3' : 'grid grid-cols-1 md:grid-cols-2 gap-4'">
 
       <!-- AD NETWORK 1: Google AdSense Display Ads -->
       <div v-if="adConfig.enableGoogleAdsense"
@@ -73,11 +74,6 @@ onMounted(() => {
           <p class="text-[11px] text-gray-500 dark:text-gray-400">
             Programmatic AdSense impressions credited to creator total revenue.
           </p>
-        </div>
-
-        <div class="mt-2 flex items-center justify-between text-[11px] text-blue-600 dark:text-blue-400 font-medium">
-          <span>AdSense Impression Revenue</span>
-          <span class="font-bold">+$1.25 / 1k</span>
         </div>
       </div>
 
@@ -114,25 +110,7 @@ onMounted(() => {
             Click to launch sponsor offer & generate maximum yield.
           </p>
         </div>
-
-        <div class="mt-2 flex items-center justify-between text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-          <span>Adsterra Smartlink Revenue</span>
-          <span class="font-bold">+$3.25 / 1k</span>
-        </div>
       </a>
-
-    </div>
-
-    <!-- Total Revenue Aggregation Bar -->
-    <div
-      class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-      <div class="flex items-center gap-2">
-        <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 shrink-0" />
-        <span>Dual Ad Networks active: Combining Google AdSense + Adsterra Smartlink</span>
-      </div>
-      <div class="font-mono font-extrabold text-sm">
-        = Total Revenue 💰
-      </div>
     </div>
   </div>
 </template>

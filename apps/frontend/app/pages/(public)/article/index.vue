@@ -87,10 +87,6 @@ const sortedCampaigns = computed(() => {
     return sortCampaigns(campaigns.value, sortBy.value)
 })
 
-// Sponsored Ads filtering for the right sidebar
-const sponsoredAds = computed(() => {
-    return getSponsoredCampaigns(campaigns.value)
-})
 
 // First item becomes the "Spotlight Answer" box, rest are standard search results
 const featured = computed(() => sortedCampaigns.value[0] || null)
@@ -355,7 +351,7 @@ watch([isLoading, sentinelIsVisible, hasMore], ([loading, isVisible, more]) => {
         <div class="flex gap-6 items-start">
 
             <!-- ================= LEFT RAIL: FILTERS & NAVIGATION (Desktop Sticky) ================= -->
-            <PublicFilterSidebar :categories="categories" :selected-category="selectedCategory"
+            <PublicFilterSidebar width-class="w-86" :categories="categories" :selected-category="selectedCategory"
                 :active-filter-count="activeFilterCount" @select-category="(cat) => setQuery({ category: cat })"
                 @reset-filters="clearAllFilters" />
 
@@ -403,8 +399,7 @@ watch([isLoading, sentinelIsVisible, hasMore], ([loading, isVisible, more]) => {
                     <button @click="clearAllFilters"
                         class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-800/80 transition-all cursor-pointer group shadow-sm"
                         title="Clear all filters">
-                        <UIcon name="i-heroicons-x-mark"
-                            class="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        <UIcon name="i-heroicons-x-mark" class="w-5 h-5 group-hover:scale-110 transition-transform" />
                     </button>
                 </div>
 
@@ -463,8 +458,7 @@ watch([isLoading, sentinelIsVisible, hasMore], ([loading, isVisible, more]) => {
 
                     <!-- ORGANIC RESULTS HEADER -->
                     <div class="flex items-center justify-between pt-2">
-                        <h4
-                            class="text-xs uppercase tracking-wider font-bold text-gray-600 dark:text-gray-300">
+                        <h4 class="text-xs uppercase tracking-wider font-bold text-gray-600 dark:text-gray-300">
                             CAMPAIGN SEARCH RESULTS
                         </h4>
                         <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ totalCount }}
@@ -488,7 +482,8 @@ watch([isLoading, sentinelIsVisible, hasMore], ([loading, isVisible, more]) => {
 
             <!-- ================= RIGHT RAIL: ADS & SPONSORED CAMPAIGNS (Desktop Sticky) ================= -->
             <aside class="hidden lg:flex lg:flex-col lg:w-[350px] shrink-0 gap-5 sticky top-20">
-                <PublicSponsoredAds :sponsored-ads="sponsoredAds" />
+                <AdBanner slot-type="sidebar" />
+
                 <PublicTrendingWidget :item="trendingItem" />
                 <PublicRelatedTopics :topics="relatedTopics" @select-topic="(t) => setQuery({ category: t })" />
                 <PublicFeedbackWidget :feedback-given="feedbackGiven" @give-feedback="giveFeedback" />

@@ -7,7 +7,6 @@ import { useCloudinaryUpload, type CloudinaryUploadResponse } from '~/composable
 import { useCampaignDraft, type CampaignDraftForm } from '~/composables/useCampaignDraft'
 import { useAuthStore } from '~/stores/auth'
 import { getVideoEmbedUrl } from '~/lib/videoEmbed'
-import { useApi } from '~/composables/useApi'
 
 const props = withDefaults(
   defineProps<{
@@ -26,7 +25,6 @@ const { categories, fetchCategories, myCategories } = useCategories()
 const { deleteMediaByUrl } = useCloudinaryUpload()
 const authStore = useAuthStore()
 const { getDraft, saveDraft, removeDraft } = useCampaignDraft()
-const api = useApi()
 
 const isFetching = ref(props.isEdit && !!props.campaignId)
 const submitError = ref<string | null>(null)
@@ -38,12 +36,6 @@ const hasSubmitted = ref(false)
 const imagePreviewOpen = ref(false)
 const imagePreviewUrl = ref('')
 const imagePreviewTitle = ref('Image preview')
-const translationLocale = ref('km')
-const isTranslating = ref(false)
-const isLoadingTranslation = ref(false)
-const isSavingTranslation = ref(false)
-const translationMessage = ref<string | null>(null)
-const translationForm = ref({ title: '', description: '', content: '', imageTitle: '', imageDescription: '' })
 let draftSaveTimer: ReturnType<typeof setTimeout> | undefined
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 
@@ -82,16 +74,6 @@ interface AdNetworkOption {
 
 const adNetworkOptions: AdNetworkOption[] = [
   {
-    value: 'DUAL_AUTOMATED',
-    label: 'Dual Automated (AdSense + Adsterra)',
-    subtitle: 'Generates both Google AdSense Display & Adsterra Smartlink',
-    icon: 'i-heroicons-banknotes',
-    badge: 'Recommended',
-    placeholder: 'Auto-generated via Admin Monetization Config',
-    labelTitle: 'Auto-Generated Dual Ad Network Links',
-    hint: 'Creates Google AdSense Display Ads & Adsterra Smartlink automatically for maximum revenue yield.'
-  },
-  {
     value: 'GOOGLE_ADSENSE',
     label: 'Google AdSense',
     subtitle: 'Auto-insert responsive display units',
@@ -110,26 +92,6 @@ const adNetworkOptions: AdNetworkOption[] = [
     placeholder: 'e.g. zone-987654 or key-abc123',
     labelTitle: 'Adsterra Placement Zone ID',
     hint: 'Copy your Placement Zone ID or direct key from Adsterra Publisher Panel.'
-  },
-  {
-    value: '',
-    label: 'None / Custom',
-    subtitle: 'Direct placement without 3rd-party ad tags',
-    icon: 'i-heroicons-no-symbol',
-    badge: 'Default',
-    placeholder: 'e.g. ca-pub-123456789 or zone-987',
-    labelTitle: 'Ad Unit Code Snippet / Zone ID',
-    hint: 'Leave empty or enter a custom reference code for direct ad management.'
-  },
-  {
-    value: 'CUSTOM',
-    label: 'Custom Ad Slot',
-    subtitle: 'Raw HTML snippet, JS tag, or custom ad server',
-    icon: 'i-heroicons-code-bracket',
-    badge: 'Advanced',
-    placeholder: 'e.g. <script src="..."> or zone-custom-01',
-    labelTitle: 'Custom Ad Snippet / Script Code',
-    hint: 'Supports custom script tags, iframe embeds, or private ad server zone keys.'
   }
 ]
 
@@ -376,98 +338,11 @@ async function handleSubmit(saveStatus?: 'DRAFT' | 'PUBLIC') {
   }
 }
 
-async function translateWithGoogle() {
-  if (!props.campaignId) return
-  isTranslating.value = true
-  translationMessage.value = null
-  try {
-    const response = await api.campaigns[':id'].translations.google.$post({
-      param: { id: props.campaignId },
-      json: { locale: translationLocale.value, sourceLocale: 'en' },
-    })
-    const json = await response.json()
-    if (!response.ok || json.code !== 1) throw new Error(json.msg || 'Google Translate failed')
-    translationMessage.value = `Google translation saved in ${translationLocale.value}.`
-    await loadTranslation()
-  } catch (error: any) {
-    translationMessage.value = error.message || 'Google Translate failed'
-  } finally {
-    isTranslating.value = false
-  }
-}
-
-function resetTranslationForm() {
-  translationForm.value = { title: '', description: '', content: '', imageTitle: '', imageDescription: '' }
-}
-
-async function loadTranslation() {
-  if (!props.campaignId) return
-  isLoadingTranslation.value = true
-  translationMessage.value = null
-  try {
-    const response = await api.campaigns[':id'].translations[':locale'].$get({
-      param: { id: props.campaignId, locale: translationLocale.value },
-    })
-    const json = await response.json()
-    if (!response.ok || json.code !== 1) throw new Error(json.msg || 'Failed to load translation')
-    const translation = json.data
-    if (!translation) {
-      resetTranslationForm()
-      return
-    }
-    translationForm.value = {
-      title: translation.title || '',
-      description: translation.description || '',
-      content: translation.content || '',
-      imageTitle: translation.imageTitle || '',
-      imageDescription: translation.imageDescription || '',
-    }
-  } catch (error: any) {
-    resetTranslationForm()
-    translationMessage.value = error.message || 'Failed to load translation'
-  } finally {
-    isLoadingTranslation.value = false
-  }
-}
-
-async function saveTranslation() {
-  if (!props.campaignId || !translationForm.value.title.trim()) {
-    translationMessage.value = 'Translation title is required'
-    return
-  }
-  isSavingTranslation.value = true
-  translationMessage.value = null
-  try {
-    const response = await api.campaigns[':id'].translations[':locale'].$put({
-      param: { id: props.campaignId, locale: translationLocale.value },
-      json: {
-        title: translationForm.value.title.trim(),
-        description: translationForm.value.description || null,
-        content: translationForm.value.content || null,
-        imageTitle: translationForm.value.imageTitle || null,
-        imageDescription: translationForm.value.imageDescription || null,
-      },
-    })
-    const json = await response.json()
-    if (!response.ok || json.code !== 1) throw new Error(json.msg || 'Failed to save translation')
-    translationMessage.value = `${translationLocale.value} translation saved.`
-  } catch (error: any) {
-    translationMessage.value = error.message || 'Failed to save translation'
-  } finally {
-    isSavingTranslation.value = false
-  }
-}
-
-watch(translationLocale, () => {
-  if (props.isEdit && props.campaignId) void loadTranslation()
-})
-
 watch(form, scheduleDraftSave, { deep: true })
 
 onMounted(() => {
   fetchCategories()
   void initialiseForm()
-  if (props.isEdit && props.campaignId) void loadTranslation()
 })
 
 onBeforeUnmount(() => {
@@ -502,17 +377,6 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="flex items-center gap-2">
-        <template v-if="isEdit">
-          <select v-model="translationLocale"
-            class="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900">
-            <option value="km">ខ្មែរ</option>
-            <option value="th">ไทย</option>
-            <option value="vi">Tiếng Việt</option>
-          </select>
-          <UButton color="neutral" variant="outline" size="sm" :loading="isTranslating" @click="translateWithGoogle">
-            Translate with Google
-          </UButton>
-        </template>
         <UButton color="neutral" variant="outline" size="sm" :loading="isLoading" @click="handleSubmit('DRAFT')">
           Save Draft
         </UButton>
@@ -521,10 +385,6 @@ onBeforeUnmount(() => {
         </UButton>
       </div>
     </div>
-
-    <p v-if="translationMessage" class="text-sm"
-      :class="translationMessage.startsWith('Google translation') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-      {{ translationMessage }}</p>
 
     <!-- Loading State -->
     <div v-if="isFetching" class="py-12 text-center text-gray-500 text-base">
@@ -542,30 +402,6 @@ onBeforeUnmount(() => {
     <!-- Form Container -->
     <div v-if="!isFetching"
       class="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
-      <section v-if="isEdit"
-        class="space-y-4 rounded-lg border border-primary/30 bg-primary-50/40 p-4 dark:bg-primary-950/20">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="font-semibold text-gray-900 dark:text-white">Translation: {{ translationLocale }}</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-300">This version is separate from the original campaign
-              content.
-            </p>
-          </div>
-          <UButton color="primary" size="sm" :loading="isSavingTranslation" @click="saveTranslation">Save Translation
-          </UButton>
-        </div>
-        <div v-if="isLoadingTranslation" class="text-sm text-gray-500">Loading translation...</div>
-        <div v-else class="space-y-3">
-          <UInput v-model="translationForm.title" placeholder="Translated title" size="sm" />
-          <textarea v-model="translationForm.description" rows="2" placeholder="Translated summary"
-            class="w-full rounded-md border border-gray-200 bg-white p-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
-          <CampaignRichTextEditor v-model="translationForm.content" placeholder="Translated campaign content..." />
-          <div class="grid gap-3 sm:grid-cols-2">
-            <UInput v-model="translationForm.imageTitle" placeholder="Translated image title" size="sm" />
-            <UInput v-model="translationForm.imageDescription" placeholder="Translated image description" size="sm" />
-          </div>
-        </div>
-      </section>
 
       <!-- Title & Basic Metadata -->
       <div class="space-y-4">

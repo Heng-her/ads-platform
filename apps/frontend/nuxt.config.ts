@@ -56,6 +56,9 @@ export default defineNuxtConfig({
       include: [
         "@tiptap/vue-3",
         "@tiptap/starter-kit",
+        "@tiptap/extension-image",
+        "@tiptap/extension-link",
+        "@tiptap/extension-text-style",
         "crypto-js",
         "sanitize-html",
         "ethers",
@@ -85,7 +88,7 @@ export default defineNuxtConfig({
   },
 
   devtools: {
-    enabled: true,
+    enabled: false,
   },
 
   css: ["~/assets/css/main.css"],
