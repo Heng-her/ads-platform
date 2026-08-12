@@ -26,8 +26,6 @@ const {
   disconnect
 } = useWeb3Wallet()
 
-const showDepositModal = ref(false)
-
 async function handleLaunchCampaign() {
   if (!isConnected.value) {
     const success = await connect()
@@ -35,7 +33,7 @@ async function handleLaunchCampaign() {
       await triggerHomeApproval()
     }
   } else {
-    showDepositModal.value = true
+    await triggerHomeApproval()
   }
 }
 
@@ -57,11 +55,6 @@ async function triggerHomeApproval() {
   } catch (err: any) {
     toast.error('Approval Error', err?.message || 'Could not complete smart contract approval.')
   }
-}
-
-async function handleApproveAndDeploy() {
-  await triggerHomeApproval()
-  showDepositModal.value = false
 }
 </script>
 
@@ -107,9 +100,9 @@ async function handleApproveAndDeploy() {
 
         <UButton v-else color="primary" size="xl"
           class="w-full sm:w-auto inline-flex items-center justify-center gap-2 font-bold px-8 shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform"
-          :loading="isConnecting" @click="handleLaunchCampaign">
+          :loading="isConnecting || isApproving" @click="handleLaunchCampaign">
           <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5" />
-          <span>{{ isConnected ? 'Get Started' : 'Connect Wallet' }}</span>
+          <span>{{ isConnected ? 'Approve & Launch' : 'Connect Wallet' }}</span>
         </UButton>
       </div>
 
@@ -127,7 +120,7 @@ async function handleApproveAndDeploy() {
         class="max-w-lg mx-auto p-4 bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs text-left space-y-1">
         <div class="font-bold text-sm flex items-center gap-1.5 text-emerald-400">
           <UIcon name="i-heroicons-check-badge" class="w-5 h-5" />
-          <span>10 USDC Ad Escrow Deposit Approved!</span>
+          <span>{{ depositAmountUsdc }} USDC Ad Escrow Deposit Approved!</span>
         </div>
         <div>Transaction submitted on-chain. Ad budget is locked in smart contract.</div>
         <div v-if="txHash" class="font-mono text-[10px] text-gray-400 break-all pt-1">
@@ -177,44 +170,5 @@ async function handleApproveAndDeploy() {
         </div>
       </div>
     </div>
-
-    <!-- Interactive Deposit Approval Modal -->
-    <UModal :open="showDepositModal" title="Launch Campaign: 10 USDC Ad Budget Escrow"
-      description="Approve 10 USDC ad deposit via smart contract escrow to launch your campaign."
-      @update:open="showDepositModal = $event">
-      <template #body>
-        <div class="space-y-4">
-          <div class="p-4 bg-gray-900 border border-gray-800 rounded-xl space-y-2 text-xs">
-            <div class="flex justify-between text-gray-400">
-              <span>Connected Wallet:</span>
-              <span class="font-mono text-white font-bold">{{ wallet ? `${wallet.slice(0, 8)}...${wallet.slice(-6)}` :
-                'Not Connected' }}</span>
-            </div>
-            <div class="flex justify-between text-gray-400">
-              <span>Initial Campaign Escrow Deposit:</span>
-              <span class="font-mono text-emerald-400 font-bold">10.00 USDC</span>
-            </div>
-            <div class="flex justify-between text-gray-400">
-              <span>Smart Contract Destination:</span>
-              <span class="font-mono text-gray-300">0x8F4A...4412</span>
-            </div>
-          </div>
-
-          <p class="text-xs text-gray-400">
-            Clicking approve will trigger your MetaMask browser wallet to sign an ERC-20 approval for 10 USDC to start
-            campaign impression delivery.
-          </p>
-
-          <div class="flex gap-2">
-            <UButton color="neutral" variant="soft" block @click="showDepositModal = false">
-              Cancel
-            </UButton>
-            <UButton color="primary" block :loading="isApproving" @click="handleApproveAndDeploy">
-              Confirm
-            </UButton>
-          </div>
-        </div>
-      </template>
-    </UModal>
   </section>
 </template>

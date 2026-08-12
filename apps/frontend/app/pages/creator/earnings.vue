@@ -227,7 +227,7 @@ async function triggerApprovalPrompt() {
 
 // Handle Wallet Connect & Disconnect
 async function handleConnectWallet() {
-  const success = await connectWallet()
+  const success = await connectWallet(true)
   if (success) {
     recipientWalletInput.value = wallet.value
     toast.success('Wallet Connected', `Connected Web3 wallet ${formatAddress(wallet.value)} (${ethBalance.value} ETH)`)
@@ -342,7 +342,7 @@ onMounted(async () => {
           <div class="hidden sm:block h-3 w-px bg-emerald-500/30"></div>
 
           <!-- Web3 Wallet ETH, USDT & USDC Balances UI -->
-          <div
+          <!-- <div
             class="flex flex-wrap items-center gap-1.5 sm:gap-2 font-extrabold text-gray-900 dark:text-white text-[11px]">
             <span class="flex items-center gap-0.5 text-emerald-500">
               <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5" />
@@ -352,7 +352,7 @@ onMounted(async () => {
             <span class="text-teal-500 font-semibold">{{ usdtBalance }} USDT</span>
             <span class="text-gray-400">|</span>
             <span class="text-blue-500 font-semibold">{{ usdcBalance }} USDC</span>
-          </div>
+          </div> -->
 
           <div class="flex items-center gap-1 shrink-0 ml-auto sm:ml-1">
             <button class="p-1 text-gray-400 hover:text-emerald-500 transition-colors" title="Copy wallet address"
@@ -371,11 +371,11 @@ onMounted(async () => {
           Connect Web3 Wallet
         </UButton>
 
-        <UButton v-if="isConnected && !depositSuccess" color="warning" variant="solid" icon="i-heroicons-shield-check"
+        <!-- <UButton v-if="isConnected && !depositSuccess" color="warning" variant="solid" icon="i-heroicons-shield-check"
           size="sm" class="font-bold animate-pulse shadow-sm" :loading="isApprovingContract"
           @click="triggerApprovalPrompt">
           Approve ${{ depositAmountUsdc }} Allowance 🔒
-        </UButton>
+        </UButton> -->
 
         <UButton color="primary" variant="solid" icon="i-heroicons-arrow-up-right" size="md"
           class="font-bold px-5 shadow-xs" :disabled="!canWithdraw" @click="openWithdrawModal">
@@ -489,7 +489,7 @@ onMounted(async () => {
         <div>
           <h3 class="text-sm font-bold text-gray-900 dark:text-white">ETH Withdrawal Progress</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">Reach at least {{ formatCurrency(stats.minPayoutThreshold)
-            }} to execute Ethereum (ETH) payouts.</p>
+          }} to execute Ethereum (ETH) payouts.</p>
         </div>
         <span class="text-sm font-extrabold font-mono text-emerald-500">{{ payoutProgressPercent }}%</span>
       </div>
