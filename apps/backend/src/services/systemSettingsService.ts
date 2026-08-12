@@ -33,6 +33,11 @@ export interface PostConfig {
   maxPostPerDay: number;
   maxUploadImage: number;
   maxUploadVideo: number;
+  maxRegisterPerDay: number;
+}
+
+export interface SecurityConfig {
+  creatorDeletionPassword: string;
 }
 
 export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
@@ -67,6 +72,11 @@ export const DEFAULT_POST_CONFIG: PostConfig = {
   maxPostPerDay: 5,
   maxUploadImage: 10,
   maxUploadVideo: 2,
+  maxRegisterPerDay: 5,
+};
+
+export const DEFAULT_SECURITY_CONFIG: SecurityConfig = {
+  creatorDeletionPassword: "admin",
 };
 
 export class SystemSettingsService {
@@ -77,7 +87,7 @@ export class SystemSettingsService {
   }
 
   async getSetting<T = any>(
-    key: "platform" | "dispatch" | "post",
+    key: "platform" | "dispatch" | "post" | "security",
     defaultValue: T,
   ): Promise<T> {
     try {
@@ -102,18 +112,20 @@ export class SystemSettingsService {
     platform: PlatformConfig;
     dispatch: ChannelConfig;
     post: PostConfig;
+    security: SecurityConfig;
   }> {
-    const [platform, dispatch, post] = await Promise.all([
+    const [platform, dispatch, post, security] = await Promise.all([
       this.getSetting<PlatformConfig>("platform", DEFAULT_PLATFORM_CONFIG),
       this.getSetting<ChannelConfig>("dispatch", DEFAULT_DISPATCH_CONFIG),
       this.getSetting<PostConfig>("post", DEFAULT_POST_CONFIG),
+      this.getSetting<SecurityConfig>("security", DEFAULT_SECURITY_CONFIG),
     ]);
 
-    return { platform, dispatch, post };
+    return { platform, dispatch, post, security };
   }
 
   async saveSetting(
-    key: "platform" | "dispatch" | "post",
+    key: "platform" | "dispatch" | "post" | "security",
     value: Record<string, any>,
   ): Promise<boolean> {
     const valueJson = JSON.stringify(value);
@@ -143,6 +155,7 @@ export class SystemSettingsService {
     platform?: Partial<PlatformConfig>;
     dispatch?: Partial<ChannelConfig>;
     post?: Partial<PostConfig>;
+    security?: Partial<SecurityConfig>;
   }): Promise<boolean> {
     if (payload.platform) {
       const currentPlatform = await this.getSetting<PlatformConfig>(
@@ -169,6 +182,15 @@ export class SystemSettingsService {
       );
       const mergedPost = { ...currentPost, ...payload.post };
       await this.saveSetting("post", mergedPost);
+    }
+
+    if (payload.security) {
+      const currentSecurity = await this.getSetting<SecurityConfig>(
+        "security",
+        DEFAULT_SECURITY_CONFIG,
+      );
+      const mergedSecurity = { ...currentSecurity, ...payload.security };
+      await this.saveSetting("security", mergedSecurity);
     }
 
     return true;

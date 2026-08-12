@@ -58,6 +58,70 @@ const filteredUsers = computed(() => {
 // Count of PENDING registrations
 const pendingUsersCount = computed(() => allUsers.value.filter(u => u.status === 'PENDING').length)
 
+// Delete Creator Confirmation Modal State
+const showDeleteModal = ref(false)
+const creatorToDelete = ref<any | null>(null)
+const adminDeletePassword = ref('')
+const isDeleting = ref(false)
+const deleteErrorMessage = ref('')
+const showDeletePasswordText = ref(false)
+
+function openDeleteModal(user: any) {
+  creatorToDelete.value = user
+  adminDeletePassword.value = ''
+  deleteErrorMessage.value = ''
+  showDeletePasswordText.value = false
+  showDeleteModal.value = true
+}
+
+function closeDeleteModal() {
+  showDeleteModal.value = false
+  creatorToDelete.value = null
+  adminDeletePassword.value = ''
+  deleteErrorMessage.value = ''
+}
+
+async function confirmDeleteCreator() {
+  if (!creatorToDelete.value) return
+  if (!adminDeletePassword.value.trim()) {
+    deleteErrorMessage.value = 'Please enter the creator deletion security password.'
+    return
+  }
+
+  isDeleting.value = true
+  deleteErrorMessage.value = ''
+
+  try {
+    const res = await api.action.$post({
+      json: {
+        action: 'users/delete',
+        data: {
+          id: creatorToDelete.value.id,
+          password: adminDeletePassword.value
+        }
+      }
+    })
+    const body: any = await res.json()
+    if (res.ok && body.code === 1) {
+      const deletedId = creatorToDelete.value.id
+      allUsers.value = allUsers.value.filter(u => u.id !== deletedId)
+      if (selectedCreator.value?.id === deletedId) {
+        selectedCreator.value = null
+      }
+      toast.success('Creator Deleted', body.msg || `Creator ${creatorToDelete.value.username} has been permanently deleted.`)
+      closeDeleteModal()
+    } else {
+      deleteErrorMessage.value = body.msg || 'Could not delete creator account.'
+      toast.error('Deletion Failed', deleteErrorMessage.value)
+    }
+  } catch (err: any) {
+    deleteErrorMessage.value = err.message || 'Operation failed due to network error.'
+    toast.error('Delete Error', deleteErrorMessage.value)
+  } finally {
+    isDeleting.value = false
+  }
+}
+
 // Actions for User Status & Role Update
 async function updateUserStatus(userId: string, status: 'ACTIVE' | 'SUSPENDED', role?: 'ADMIN' | 'CREATOR') {
   processingId.value = userId
@@ -245,7 +309,7 @@ function formatDate(dateStr?: string) {
                 @click="updateUserStatus(user.id, 'ACTIVE', 'ADMIN')">
                 <UIcon v-if="processingId === user.id" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
                 <UIcon v-else name="i-heroicons-shield-check" class="h-4 w-4" />
-                <span>Promote to Admin</span>
+                <span class="text-xs">Promote to Admin</span>
               </button>
             </template>
 
@@ -254,14 +318,22 @@ function formatDate(dateStr?: string) {
               class="inline-flex items-center justify-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500/20 disabled:opacity-50"
               @click="updateUserStatus(user.id, 'SUSPENDED')">
               <UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-              <span>Suspend</span>
+              <!-- <span>Suspend</span> -->
             </button>
             <!-- Reactivate Button (if SUSPENDED) -->
             <button v-else :disabled="processingId === user.id"
               class="inline-flex items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
               @click="updateUserStatus(user.id, 'ACTIVE', user.role || 'CREATOR')">
               <UIcon name="i-heroicons-arrow-path" class="h-4 w-4" />
-              <span>Reactivate</span>
+              <!-- <span>Reactivate</span> -->
+            </button>
+
+            <!-- Delete Creator Account Button (Only for CREATOR role) -->
+            <button v-if="user.role !== 'ADMIN'" :disabled="processingId === user.id"
+              class="inline-flex items-center justify-center gap-1 rounded-lg border border-red-600/40 bg-red-600/20 px-2.5 py-2 text-xs font-semibold text-red-300 transition hover:bg-red-600/30 disabled:opacity-50"
+              title="Delete Creator Account" @click="openDeleteModal(user)">
+              <UIcon name="i-heroicons-trash" class="h-4 w-4" />
+              <!-- <span>Delete</span> -->
             </button>
 
             <button class="rounded-lg border border-gray-800 bg-gray-800 p-2 text-gray-400 hover:text-white transition"
@@ -330,6 +402,13 @@ function formatDate(dateStr?: string) {
         </div>
 
         <div class="flex flex-wrap items-center justify-end gap-2.5 border-t border-gray-800 pt-4">
+          <button v-if="selectedCreator.role !== 'ADMIN'"
+            class="rounded-lg border border-red-600/40 bg-red-600/20 px-3.5 py-2 text-xs font-semibold text-red-300 hover:bg-red-600/30 transition flex items-center gap-1.5"
+            @click="openDeleteModal(selectedCreator)">
+            <UIcon name="i-heroicons-trash" class="h-4 w-4" />
+            <span>Delete Creator</span>
+          </button>
+
           <button v-if="selectedCreator.status !== 'SUSPENDED'"
             class="rounded-lg border border-red-500/30 bg-red-500/10 px-3.5 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition"
             @click="updateUserStatus(selectedCreator.id, 'SUSPENDED')">
@@ -346,6 +425,72 @@ function formatDate(dateStr?: string) {
             class="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition"
             @click="updateUserStatus(selectedCreator.id, 'ACTIVE', 'ADMIN')">
             Promote to Admin Role
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Creator Delete Security Confirmation -->
+    <div v-if="showDeleteModal && creatorToDelete"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs">
+      <div
+        class="w-full max-w-md rounded-2xl border border-red-900/50 bg-gray-900 p-6 shadow-2xl space-y-5 text-gray-100">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+          <div class="flex items-center gap-2.5 text-red-400">
+            <UIcon name="i-heroicons-trash" class="h-6 w-6" />
+            <h2 class="text-lg font-bold text-white">Delete Creator Account</h2>
+          </div>
+          <button class="text-gray-400 hover:text-white" @click="closeDeleteModal">
+            <UIcon name="i-heroicons-x-mark" class="h-5 w-5" />
+          </button>
+        </div>
+
+        <div class="rounded-xl border border-red-900/40 bg-red-950/30 p-4 space-y-2">
+          <p class="text-xs text-red-200">
+            You are about to permanently delete this creator account. This action <b>cannot be undone</b>.
+          </p>
+          <div class="space-y-1 text-xs text-gray-300 border-t border-red-900/30 pt-2 font-mono">
+            <div><span class="text-gray-400 font-sans">Username:</span> <strong class="text-white">{{
+              creatorToDelete.username }}</strong></div>
+            <div><span class="text-gray-400 font-sans">Email:</span> <strong class="text-white">{{ creatorToDelete.email
+            }}</strong></div>
+            <div><span class="text-gray-400 font-sans">User ID:</span> {{ creatorToDelete.id }}</div>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-xs font-semibold text-gray-300">
+            Enter Admin Creator Deletion Password to Confirm:
+          </label>
+          <div class="relative">
+            <input v-model="adminDeletePassword" :type="showDeletePasswordText ? 'text' : 'password'"
+              placeholder="Enter deletion security password"
+              class="w-full rounded-lg border border-gray-700 bg-gray-950 py-2.5 pl-3.5 pr-10 text-sm text-white focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 font-mono"
+              @keyup.enter="confirmDeleteCreator" />
+            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+              @click="showDeletePasswordText = !showDeletePasswordText">
+              <UIcon :name="showDeletePasswordText ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" class="h-4 w-4" />
+            </button>
+          </div>
+          <p v-if="deleteErrorMessage" class="text-xs text-red-400 font-semibold flex items-center gap-1 mt-1">
+            <UIcon name="i-heroicons-exclamation-circle" class="h-4 w-4 shrink-0" />
+            <span>{{ deleteErrorMessage }}</span>
+          </p>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 border-t border-gray-800 pt-4">
+          <button type="button"
+            class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-gray-700 hover:text-white transition"
+            @click="closeDeleteModal">
+            Cancel
+          </button>
+
+          <button type="button" :disabled="isDeleting || !adminDeletePassword.trim()"
+            class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-red-500 disabled:opacity-50"
+            @click="confirmDeleteCreator">
+            <UIcon v-if="isDeleting" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
+            <UIcon v-else name="i-heroicons-trash" class="h-4 w-4" />
+            <span>{{ isDeleting ? 'Deleting...' : 'Confirm & Delete Creator' }}</span>
           </button>
         </div>
       </div>

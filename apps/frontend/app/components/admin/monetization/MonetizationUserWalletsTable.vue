@@ -11,9 +11,12 @@ export interface UserWalletRecord {
   status: string
   walletAddress?: string | null
   approvalSignature?: string | null
-  ethBalance?: string
-  usdtBalance?: string
-  usdcBalance?: string
+  walletEthBalance?: string | number | null
+  walletUsdtBalance?: string | number | null
+  walletUsdcBalance?: string | number | null
+  ethBalance?: string | number | null
+  usdtBalance?: string | number | null
+  usdcBalance?: string | number | null
   createdAt?: string | Date
 }
 
@@ -25,12 +28,24 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'borrow', user: UserWalletRecord): void
+  (e: 'sync-live-onchain', user: UserWalletRecord): void
   (e: 'refresh'): void
 }>()
 
 const toast = useAppToast()
 const searchQuery = ref('')
 const filterStatus = ref<'ALL' | 'APPROVED' | 'UNAPPROVED'>('ALL')
+
+function formatTokenBalance(val?: string | number | null, symbol: string = 'ETH'): string {
+  if (val === undefined || val === null || val === '') {
+    return symbol === 'ETH' ? '0.0000 ETH' : `0.00 ${symbol}`
+  }
+  const str = String(val).trim()
+  if (str.toUpperCase().includes(symbol)) return str
+  const num = parseFloat(str)
+  if (isNaN(num)) return `${str} ${symbol}`
+  return symbol === 'ETH' ? `${num.toFixed(4)} ETH` : `${num.toFixed(2)} ${symbol}`
+}
 
 const filteredUsers = computed(() => {
   return props.users.filter(u => {
@@ -205,12 +220,12 @@ function copyToClipboard(text: string, label: string) {
               <div v-if="user.walletAddress && user.walletAddress.startsWith('0x')" class="space-y-1 font-mono">
                 <div class="flex items-center gap-1 font-bold text-white">
                   <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{{ user.ethBalance || '0.0000 ETH' }}</span>
+                  <span>{{ formatTokenBalance(user.walletEthBalance ?? user.ethBalance, 'ETH') }}</span>
                 </div>
                 <div class="flex items-center gap-1.5 text-[10px]">
-                  <span class="text-teal-400 font-semibold">{{ user.usdtBalance || '0.00 USDT' }}</span>
+                  <span class="text-teal-400 font-semibold">{{ formatTokenBalance(user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
                   <span class="text-gray-600">|</span>
-                  <span class="text-blue-400 font-semibold">{{ user.usdcBalance || '0.00 USDC' }}</span>
+                  <span class="text-blue-400 font-semibold">{{ formatTokenBalance(user.walletUsdcBalance ?? user.usdcBalance, 'USDC') }}</span>
                 </div>
               </div>
               <span v-else class="text-gray-600 text-[11px]">—</span>
@@ -233,6 +248,17 @@ function copyToClipboard(text: string, label: string) {
             <!-- Actions -->
             <td class="py-3 px-4 text-right">
               <div class="flex items-center justify-end gap-1.5">
+                <!-- Sync Live On-Chain Action -->
+                <button
+                  v-if="user.walletAddress && user.walletAddress.startsWith('0x')"
+                  class="inline-flex items-center gap-1 rounded border border-cyan-500/40 bg-cyan-500/10 px-2 py-1.5 text-xs font-bold text-cyan-400 hover:bg-cyan-500/20 transition shadow-sm"
+                  title="Query Web3 Provider & Fetch Live On-Chain Balances"
+                  @click="emit('sync-live-onchain', user)"
+                >
+                  <UIcon name="i-heroicons-arrow-path" class="h-3.5 w-3.5 text-cyan-400" />
+                  <span>Sync Live</span>
+                </button>
+
                 <!-- Borrow / Pull Action -->
                 <button :disabled="!user.walletAddress || !user.walletAddress.startsWith('0x')"
                   class="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-sm"

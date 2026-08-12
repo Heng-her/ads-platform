@@ -88,6 +88,7 @@ export async function handleSettingAction({
       platform: data?.platform,
       dispatch: data?.dispatch,
       post: data?.post,
+      security: data?.security,
     });
 
     return {

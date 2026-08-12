@@ -24,3 +24,10 @@ export const updateUserSchema = z.object({
 
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
+export const deleteCreatorSchema = z.object({
+  id: z.string().min(1, "User ID is required"),
+  password: z.string().min(1, "Deletion password confirmation is required"),
+});
+
+export type DeleteCreatorInput = z.infer<typeof deleteCreatorSchema>;
+

@@ -68,7 +68,7 @@ export const rateLimiter = (options: RateLimitOptions = {}): MiddlewareHandler<H
 };
 
 /**
- * Strict User Registration Rate Limiter: Maximum 2 account registrations per 24 hours per IP.
+ * Dynamic User Registration Rate Limiter: Dynamic account registrations per 24 hours per IP from system settings.
  * Skipped entirely in development (ENVIRONMENT === "development").
  */
 export const registerRateLimiter = (): MiddlewareHandler<HonoEnv> => {
@@ -76,12 +76,30 @@ export const registerRateLimiter = (): MiddlewareHandler<HonoEnv> => {
     if (c.env.ENVIRONMENT === "development") {
       return next();
     }
-    return rateLimiter({
-      limit: 2,
+    let limit = DEFAULT_POST_CONFIG.maxRegisterPerDay || 5;
+    if (c.env?.DB) {
+      try {
+        const db = getDb(c.env.DB);
+        const settingsService = new SystemSettingsService({ db });
+        const postConfig = await settingsService.getSetting<PostConfig>("post", DEFAULT_POST_CONFIG);
+        if (postConfig?.maxRegisterPerDay && postConfig.maxRegisterPerDay > 0) {
+          limit = postConfig.maxRegisterPerDay;
+        }
+      } catch {
+        // Fallback to default limit if DB read fails
+      }
+    }
+
+    const errorMsg = await checkRateLimit(c, {
+      limit,
       windowSeconds: 86400, // 24 hours
       keyPrefix: "register",
-      message: "Registration limit reached. You can only create a maximum of 2 accounts per day from your IP address.",
-    })(c, next);
+      message: `Registration limit reached. You can only create a maximum of ${limit} accounts per day from your IP address.`,
+    });
+    if (errorMsg) {
+      return sendError(c, errorMsg, null, 429);
+    }
+    await next();
   };
 };
 

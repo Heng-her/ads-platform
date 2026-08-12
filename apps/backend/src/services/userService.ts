@@ -115,4 +115,10 @@ export class UserService {
       .where(eq(users.id, id));
     return this.getUserById(id);
   }
+
+  async deleteUser(id: string) {
+    await this.db.delete(users).where(eq(users.id, id));
+    return true;
+  }
 }
+

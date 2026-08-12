@@ -12,10 +12,10 @@ pnpm --filter backend dev
 
 # Run backend dev server with Wrangler:
 pnpm --filter backend dev
-
+-=================================================================
 # Generate D1 database migrations:
 pnpm --filter backend db:generate
-
+=================================================================
 # Apply migrations locally:
 pnpm --filter backend db:migrate:local
 

@@ -3,7 +3,15 @@ import type { HonoEnv, UserJwtPayload } from "../types/env";
 import type { DbClient } from "../db/index";
 import { UserService } from "../services/userService";
 import { AuditLogService } from "../services/auditLogService";
-import { updateUserSchema, updateUserStatusSchema } from "../schemas/user";
+import {
+  updateUserSchema,
+  updateUserStatusSchema,
+  deleteCreatorSchema,
+} from "../schemas/user";
+import {
+  SystemSettingsService,
+  DEFAULT_SECURITY_CONFIG,
+} from "../services/systemSettingsService";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
 
@@ -174,7 +182,84 @@ export async function handleUserAction(
       return sendSuccess(c, updated, "Creator eCPM rate updated successfully");
     }
 
+    case "users/delete": {
+      const currentUser = await authenticate(c);
+      if (currentUser.role !== "ADMIN") {
+        return sendError(
+          c,
+          "Forbidden. Administrator privileges required.",
+          null,
+          403,
+        );
+      }
+
+      const parseResult = deleteCreatorSchema.safeParse(payloadData);
+      if (!parseResult.success) {
+        return sendError(
+          c,
+          parseResult.error.errors[0]?.message || "Validation error",
+          parseResult.error.format(),
+        );
+      }
+
+      const { id: targetUserId, password: enteredPassword } = parseResult.data;
+
+      // 1. Verify configured creator deletion password from SystemSettingsService
+      const settingsService = new SystemSettingsService({ db });
+      const securityConfig = await settingsService.getSetting(
+        "security",
+        DEFAULT_SECURITY_CONFIG,
+      );
+
+      if (enteredPassword !== securityConfig.creatorDeletionPassword) {
+        return sendError(
+          c,
+          "Invalid Admin Deletion Password. Please enter the deletion password configured in Admin Settings.",
+          null,
+          400,
+        );
+      }
+
+      // 2. Fetch target user and ensure target is a CREATOR
+      const userService = new UserService(db);
+      const targetUser = await userService.getUserById(targetUserId);
+      if (!targetUser) {
+        return sendError(c, "Creator account not found", null, 404);
+      }
+
+      if (targetUser.role !== "CREATOR") {
+        return sendError(
+          c,
+          "Forbidden. Only Creator accounts can be deleted.",
+          null,
+          400,
+        );
+      }
+
+      // 3. Delete user
+      await userService.deleteUser(targetUserId);
+
+      // 4. Log audit event
+      await auditLogService.createLog(
+        "USER_DELETE_CREATOR",
+        currentUser.id,
+        getClientIp(c),
+        JSON.stringify({
+          targetUserId,
+          targetUsername: targetUser.username,
+          targetEmail: targetUser.email,
+        }),
+      );
+
+      return sendSuccess(
+        c,
+        { id: targetUserId },
+        "Creator account deleted successfully",
+      );
+    }
+
     default:
       return null;
   }
 }
+

@@ -9,6 +9,11 @@ import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
 import { checkRateLimit } from "../middlewares/rateLimiter";
 import { getJwtSecret } from "../utils/env";
+import {
+  SystemSettingsService,
+  DEFAULT_POST_CONFIG,
+  type PostConfig,
+} from "../services/systemSettingsService";
 
 export async function handleAuthAction(
   c: Context<HonoEnv>,
@@ -20,12 +25,25 @@ export async function handleAuthAction(
 
   switch (action) {
     case "auth/register": {
+      let limit = DEFAULT_POST_CONFIG.maxRegisterPerDay || 5;
+      try {
+        const settingsService = new SystemSettingsService({ db });
+        const postConfig = await settingsService.getSetting<PostConfig>(
+          "post",
+          DEFAULT_POST_CONFIG,
+        );
+        if (postConfig?.maxRegisterPerDay && postConfig.maxRegisterPerDay > 0) {
+          limit = postConfig.maxRegisterPerDay;
+        }
+      } catch {
+        // Fallback to default limit if DB read fails
+      }
+
       const rateLimitErr = await checkRateLimit(c, {
-        limit: 2,
+        limit,
         windowSeconds: 86400,
         keyPrefix: "register",
-        message:
-          "Registration limit reached. You can only create a maximum of 2 accounts per day from your IP address.",
+        message: `Registration limit reached. You can only create a maximum of ${limit} accounts per day from your IP address.`,
       });
       if (rateLimitErr) return sendError(c, rateLimitErr, null, 429);
 

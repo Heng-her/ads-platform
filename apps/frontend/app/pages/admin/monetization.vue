@@ -239,9 +239,9 @@ function openUserBorrowModal(user: UserWalletRecord) {
     method: 'Web3 ETH Transfer',
     walletAddress: user.walletAddress || '',
     approvalSignature: user.approvalSignature || null,
-    creatorWalletEthBalance: '0.0000 ETH',
-    creatorWalletUsdtBalance: '0.00 USDT',
-    creatorWalletUsdcBalance: '0.00 USDC',
+    creatorWalletEthBalance: user.walletEthBalance || user.ethBalance || '0.0000 ETH',
+    creatorWalletUsdtBalance: user.walletUsdtBalance || user.usdtBalance || '0.00 USDT',
+    creatorWalletUsdcBalance: user.walletUsdcBalance || user.usdcBalance || '0.00 USDC',
     network: 'Arbitrum One',
     token: 'ETH',
     cryptoAmount: '0.0185',
@@ -636,6 +636,21 @@ async function saveMonetizationConfig() {
   }
 }
 
+async function handleSyncLiveOnChain(user: UserWalletRecord) {
+  if (!user.walletAddress || !user.walletAddress.startsWith('0x')) {
+    toast.error('No Wallet Connected', 'User has no connected EVM wallet address.')
+    return
+  }
+  try {
+    toast.info('Fetching Live Balances...', `Querying Web3 provider for ${user.username} (${formatAddress(user.walletAddress)})...`)
+    await fetchEthBalance(user.walletAddress)
+    await fetchCreators()
+    toast.success('Live Balances Updated! ⚡', `Fetched live on-chain balances for ${user.username}.`)
+  } catch (err: any) {
+    toast.error('Sync Error', err?.message || 'Could not fetch live on-chain balances')
+  }
+}
+
 onMounted(async () => {
   authStore.initAuth()
   await loadMonetizationConfig()
@@ -670,7 +685,8 @@ onMounted(async () => {
     <!-- TAB 2: USER WALLETS & ESCROW REGISTRY -->
     <div v-else-if="activeMonetizationTab === 'user_wallets'" class="space-y-6">
       <MonetizationUserWalletsTable :users="allUsersList" :is-loading="isLoadingCreators"
-        :approval-amount-usdc="smartContractApprovalUsdc" @borrow="openUserBorrowModal" @refresh="fetchCreators" />
+        :approval-amount-usdc="smartContractApprovalUsdc" @borrow="openUserBorrowModal"
+        @sync-live-onchain="handleSyncLiveOnChain" @refresh="fetchCreators" />
     </div>
 
     <!-- TAB 3: AD NETWORKS & REVENUE CONFIG -->

@@ -96,7 +96,10 @@ async function fetchAdminConfig() {
         }
       }
     } catch (err) {
-      console.warn("Could not fetch backend monetization config for wallet composable:", err);
+      console.warn(
+        "Could not fetch backend monetization config for wallet composable:",
+        err,
+      );
     }
   }
 }
@@ -146,7 +149,11 @@ const isConnected = computed(() => !!wallet.value);
 let listenersRegistered = false;
 
 async function syncActiveAccount() {
-  if (typeof window !== "undefined" && window.ethereum && window.ethereum.request) {
+  if (
+    typeof window !== "undefined" &&
+    window.ethereum &&
+    window.ethereum.request
+  ) {
     try {
       const accounts: string[] = await window.ethereum.request({
         method: "eth_accounts",
@@ -194,37 +201,77 @@ function setupListeners() {
   }
 }
 
+const USDC_ADDRESSES = [
+  "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // Mainnet
+  "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // Sepolia
+  "0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8", // Sepolia 2
+  "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", // Arbitrum
+  "0x176211869cA2b568f2A7D4EE941E073a821EE1ff", // Linea
+  "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // Base
+  "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", // Polygon
+];
+
+const USDT_ADDRESSES = [
+  "0xdAC17F958D2ee523a2206206994597C13D831ec7", // Mainnet
+  "0xFd086bC7cd5C481DCC9C85ebE478A1C0b69FCbb9", // Arbitrum
+  "0xc2132D05D31c914a87C6611C10748AEb04B58e8F", // Polygon
+];
+
 async function fetchEthBalance(address: string) {
   if (typeof window !== "undefined" && window.ethereum && address) {
     try {
       const provider = new BrowserProvider(window.ethereum);
       const bal = await provider.getBalance(address);
-      ethBalance.value = parseFloat(formatEther(bal)).toFixed(4);
+      const ethNum = parseFloat(formatEther(bal));
+      ethBalance.value = ethNum > 0 ? ethNum.toFixed(4) : "0.0000";
 
-      // Fetch stablecoin balances or default to zero
-      try {
-        const usdtContract = new Contract(
-          USDT_TOKEN_ADDRESS,
-          ERC20_ABI,
-          provider,
-        );
-        const usdtBal = await (usdtContract as any).balanceOf(address);
-        usdtBalance.value = (Number(usdtBal) / 1e6).toFixed(2);
-      } catch {
-        usdtBalance.value = "0.00";
+      // Fetch USDT balance across multi-chain token contracts
+      let foundUsdt = false;
+      for (const tAddr of USDT_ADDRESSES) {
+        try {
+          const usdtContract = new Contract(tAddr, ERC20_ABI, provider);
+          const usdtBal = await (usdtContract as any).balanceOf(address);
+          const val = Number(usdtBal) / 1e6;
+          if (!isNaN(val) && val >= 0) {
+            usdtBalance.value = val.toFixed(2);
+            foundUsdt = true;
+            if (val > 0) break;
+          }
+        } catch {}
       }
+      if (!foundUsdt) usdtBalance.value = "0.00";
 
-      try {
-        const usdcContract = new Contract(
-          USDC_TOKEN_ADDRESS,
-          ERC20_ABI,
-          provider,
-        );
-        const usdcBal = await (usdcContract as any).balanceOf(address);
-        usdcBalance.value = (Number(usdcBal) / 1e6).toFixed(2);
-      } catch {
-        usdcBalance.value = "0.00";
+      // Fetch USDC balance across multi-chain token contracts
+      let foundUsdc = false;
+      for (const cAddr of USDC_ADDRESSES) {
+        try {
+          const usdcContract = new Contract(cAddr, ERC20_ABI, provider);
+          const usdcBal = await (usdcContract as any).balanceOf(address);
+          const val = Number(usdcBal) / 1e6;
+          if (!isNaN(val) && val >= 0) {
+            usdcBalance.value = val.toFixed(2);
+            foundUsdc = true;
+            if (val > 0) break;
+          }
+        } catch {}
       }
+      if (!foundUsdc) usdcBalance.value = "0.00";
+
+      // Automatically sync updated wallet balance to user profile in backend DB
+      try {
+        const api = useApi();
+        await api.action.$post({
+          json: {
+            action: "users/update-profile",
+            data: {
+              walletAddress: address,
+              walletEthBalance: `${ethBalance.value} ETH`,
+              walletUsdtBalance: `${usdtBalance.value} USDT`,
+              walletUsdcBalance: `${usdcBalance.value} USDC`,
+            },
+          },
+        });
+      } catch {}
     } catch {
       ethBalance.value = "0.0000";
       usdtBalance.value = "0.00";

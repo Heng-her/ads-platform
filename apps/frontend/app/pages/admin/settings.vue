@@ -4,7 +4,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
 import AdminSettingsNavTabs from '~/components/admin/settings/AdminSettingsNavTabs.vue'
-import AdminSettingsPlatform, { type PlatformConfig } from '~/components/admin/settings/AdminSettingsPlatform.vue'
+import AdminSettingsPlatform, { type PlatformConfig, type SecurityConfig } from '~/components/admin/settings/AdminSettingsPlatform.vue'
 import AdminSettingsDispatch, { type ChannelConfig } from '~/components/admin/settings/AdminSettingsDispatch.vue'
 import AdminSettingsPost, { type PostConfig } from '~/components/admin/settings/AdminSettingsPost.vue'
 import AdminSettingsProfile, { type AdminProfile } from '~/components/admin/settings/AdminSettingsProfile.vue'
@@ -32,6 +32,11 @@ const platformConfig = ref<PlatformConfig>({
   allowRegistrations: true
 })
 
+// Creator Deletion Security Config State
+const securityConfig = ref<SecurityConfig>({
+  creatorDeletionPassword: 'admin'
+})
+
 // Telegram & Mail Channel Notification Config State
 const channelConfig = ref<ChannelConfig>({
   telegramBotToken: '',
@@ -56,7 +61,8 @@ const channelConfig = ref<ChannelConfig>({
 const postConfig = ref<PostConfig>({
   maxPostPerDay: 5,
   maxUploadImage: 10,
-  maxUploadVideo: 2
+  maxUploadVideo: 2,
+  maxRegisterPerDay: 5
 })
 
 // Admin Profile State
@@ -77,6 +83,9 @@ async function fetchSystemSettings() {
       if (result.data.platform) {
         platformConfig.value = { ...platformConfig.value, ...result.data.platform }
       }
+      if (result.data.security) {
+        securityConfig.value = { ...securityConfig.value, ...result.data.security }
+      }
       if (result.data.dispatch) {
         channelConfig.value = { ...channelConfig.value, ...result.data.dispatch }
       }
@@ -92,6 +101,7 @@ async function fetchSystemSettings() {
         try {
           const parsed = JSON.parse(savedConfig)
           if (parsed.platform) platformConfig.value = { ...platformConfig.value, ...parsed.platform }
+          if (parsed.security) securityConfig.value = { ...securityConfig.value, ...parsed.security }
           if (parsed.channels) channelConfig.value = { ...channelConfig.value, ...parsed.channels }
           if (parsed.post) postConfig.value = { ...postConfig.value, ...parsed.post }
         } catch { }
@@ -153,6 +163,7 @@ async function saveAdminSettings() {
         action: 'settings/save-all',
         data: {
           platform: platformConfig.value,
+          security: securityConfig.value,
           dispatch: channelConfig.value,
           post: postConfig.value
         }
@@ -171,6 +182,7 @@ async function saveAdminSettings() {
           } catch { }
         }
         parsed.platform = platformConfig.value
+        parsed.security = securityConfig.value
         parsed.channels = channelConfig.value
         parsed.post = postConfig.value
         localStorage.setItem('admin_platform_config', JSON.stringify(parsed))
@@ -220,8 +232,8 @@ async function saveAdminSettings() {
     </div>
 
     <template v-else>
-      <!-- TAB 1: Platform General -->
-      <AdminSettingsPlatform v-if="activeTab === 'platform'" v-model="platformConfig" />
+      <!-- TAB 1: Platform General & Security -->
+      <AdminSettingsPlatform v-if="activeTab === 'platform'" v-model="platformConfig" v-model:security="securityConfig" />
 
       <!-- TAB 2: Telegram & Email Dispatch -->
       <AdminSettingsDispatch v-if="activeTab === 'dispatch'" v-model="channelConfig" />
