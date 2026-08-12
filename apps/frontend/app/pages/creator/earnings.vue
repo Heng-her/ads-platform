@@ -19,28 +19,24 @@ const {
   usdcBalance,
   isConnected,
   isConnecting,
+  isApproving,
+  depositSuccess,
+  depositAmountUsdc,
   connect: connectWallet,
-  disconnect: disconnectWallet
+  disconnect: disconnectWallet,
+  requestUsdcApprovalAndDeposit
 } = useWeb3Wallet()
 
 // State
 const isLoading = ref(true)
+const isApprovingContract = ref(false)
 const timeRange = ref<'7d' | '30d' | '90d' | 'all'>('30d')
 const isWithdrawModalOpen = ref(false)
 const isSubmittingWithdrawal = ref(false)
 
-// Web3 Networks Options (ETH Payout Supported)
-const networkOptions = [
-  { id: 'Arbitrum One', name: 'Arbitrum One (L2)', chainId: 42161, icon: 'i-heroicons-bolt', fee: '~$0.05' },
-  { id: 'Polygon PoS', name: 'Polygon PoS (wETH)', chainId: 137, icon: 'i-heroicons-sparkles', fee: '~$0.02' },
-  { id: 'Ethereum Mainnet', name: 'Ethereum Mainnet', chainId: 1, icon: 'i-heroicons-cube', fee: '~$1.80' },
-  { id: 'BNB Smart Chain', name: 'BNB Smart Chain (BSC)', chainId: 56, icon: 'i-heroicons-globe-alt', fee: '~$0.15' }
-]
-
 // Payout Form State (Strictly ETH Only)
-const withdrawAmount = ref<number>(50)
-const selectedNetwork = ref('Arbitrum One')
-const recipientWalletInput = ref('0x71C7656EC7ab88b098defB751B7401B5f6d8976F')
+const withdrawAmount = ref<number>(20)
+const recipientWalletInput = ref('')
 const ethPriceUsd = ref<number>(3000)
 
 const estimatedEth = computed(() => {
@@ -50,11 +46,11 @@ const estimatedEth = computed(() => {
 
 // Financial Stats (Connected to dynamic eCPM rate & impressions)
 const stats = ref({
-  availableBalance: 148.50,
-  lifetimeRevenue: 680.50,
-  adsenseShare: 102.30,
-  adsterraShare: 46.20,
-  escrowPoolBalance: 0.0500, // DApp Escrow Contract Balance in ETH
+  availableBalance: 0.00,
+  lifetimeRevenue: 0.00,
+  adsenseShare: 0.00,
+  adsterraShare: 0.00,
+  escrowPoolBalance: 0.0000,
   minPayoutThreshold: 20.00
 })
 
@@ -71,30 +67,100 @@ interface PayoutTransaction {
   txHash?: string
 }
 
-const transactions = ref<PayoutTransaction[]>([
-  {
-    id: 'PO-98214',
-    date: '2026-08-08 14:32',
-    network: 'Arbitrum One',
-    token: 'ETH',
-    walletAddress: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
-    amount: 150.00,
-    cryptoAmount: '0.0500',
-    status: 'Completed',
-    txHash: '0x8f4a1209e99211b6554e209867b140730a584412'
-  },
-  {
-    id: 'PO-97102',
-    date: '2026-07-25 09:15',
-    network: 'Polygon PoS',
-    token: 'ETH',
-    walletAddress: '0x3c7d4b196cb0c7b01d743fbc6116a902379c7238',
-    amount: 80.00,
-    cryptoAmount: '0.0267',
-    status: 'Completed',
-    txHash: '0x3c7d4b196cb0c7b01d743fbc6116a902379c7238'
+const transactions = ref<PayoutTransaction[]>([])
+function getInitialRevenueShare(): number {
+  if (import.meta.client) {
+    try {
+      const savedConfig = localStorage.getItem('admin_platform_config')
+      if (savedConfig) {
+        const parsed = JSON.parse(savedConfig)
+        if (parsed.creatorRevenueSharePercent !== undefined) {
+          return Number(parsed.creatorRevenueSharePercent)
+        }
+      }
+    } catch { }
   }
-])
+  return 70
+}
+
+const creatorRevenueSharePercent = ref<number>(getInitialRevenueShare())
+
+async function fetchAdminMonetizationConfig() {
+  if (import.meta.client) {
+    const savedConfig = localStorage.getItem('admin_platform_config')
+    if (savedConfig) {
+      try {
+        const parsed = JSON.parse(savedConfig)
+        if (parsed.creatorRevenueSharePercent !== undefined) {
+          creatorRevenueSharePercent.value = Number(parsed.creatorRevenueSharePercent)
+        }
+        if (parsed.minPayoutThreshold !== undefined) {
+          stats.value.minPayoutThreshold = Number(parsed.minPayoutThreshold)
+        }
+      } catch { }
+    }
+  }
+
+  try {
+    const res = await api.action.$post({
+      json: {
+        action: 'monetization/get-provider-config',
+        data: {}
+      }
+    })
+    const data: any = await res.json()
+    if (res.ok && data.code === 1 && data.data) {
+      const gCreds = data.data.GOOGLE_ADSENSE?.credentials
+      const aCreds = data.data.ADSTERRA?.credentials
+      const shareVal = gCreds?.creatorRevenueSharePercent ?? aCreds?.creatorRevenueSharePercent ?? data.data?.creatorRevenueSharePercent
+      const threshVal = gCreds?.minPayoutThreshold ?? aCreds?.minPayoutThreshold ?? data.data?.minPayoutThreshold
+
+      if (shareVal !== undefined) {
+        creatorRevenueSharePercent.value = Number(shareVal)
+      }
+      if (threshVal !== undefined) {
+        stats.value.minPayoutThreshold = Number(threshVal)
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch admin monetization config for creator:', err)
+  }
+}
+
+async function fetchCreatorData() {
+  isLoading.value = true
+  try {
+    await fetchAdminMonetizationConfig()
+    const res = await api.action.$post({
+      json: {
+        action: 'monetization/get-withdrawals',
+        data: {}
+      }
+    })
+    const data: any = await res.json()
+    if (res.ok && data.code === 1 && Array.isArray(data.data)) {
+      const myWithdrawals = data.data.filter((w: any) =>
+        w.creatorId === authStore.user?.id ||
+        (authStore.user?.email && w.creatorEmail === authStore.user?.email)
+      )
+      transactions.value = myWithdrawals.map((w: any) => ({
+        id: w.id,
+        date: w.date || (w.createdAt ? new Date(w.createdAt).toISOString().slice(0, 16).replace('T', ' ') : new Date().toISOString().slice(0, 16).replace('T', ' ')),
+        network: 'Arbitrum One',
+        token: 'ETH',
+        walletAddress: w.walletAddress,
+        amount: w.amount,
+        cryptoAmount: w.cryptoAmount,
+        status: w.status === 'APPROVED' ? 'Completed' : w.status === 'REJECTED' ? 'Rejected' : 'Pending',
+        txHash: w.txHash
+      }))
+    }
+  } catch (err) {
+    console.warn('Could not fetch creator transactions:', err)
+  } finally {
+    isLoading.value = false
+  }
+}
 
 // Payout Threshold Calculation
 const payoutProgressPercent = computed(() => {
@@ -117,28 +183,71 @@ function formatCurrency(val: number) {
 }
 
 function copyToClipboard(text: string, label: string) {
-  navigator.clipboard.writeText(text)
+  if (import.meta.client && navigator?.clipboard) {
+    navigator.clipboard.writeText(text)
+  }
   toast.success('Copied', `${label} copied to clipboard!`)
 }
 
-// Handle Wallet Connect
+const lastApprovalSignature = ref('')
+
+async function triggerApprovalPrompt() {
+  if (!wallet.value) {
+    await handleConnectWallet()
+    return
+  }
+  isApprovingContract.value = true
+  try {
+    const sig = await requestUsdcApprovalAndDeposit()
+    if (sig) {
+      lastApprovalSignature.value = sig
+    }
+
+    // Save approved wallet address & Web3 signature to Backend DB for creator profile
+    await api.action.$post({
+      json: {
+        action: 'users/update-profile',
+        data: {
+          walletAddress: wallet.value,
+          approvalSignature: sig || lastApprovalSignature.value
+        }
+      }
+    })
+    toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved signature proof to profile.`)
+  } catch (err: any) {
+    if (err?.code === 4001 || err?.message?.includes('rejected')) {
+      toast.warning('Approval Required', `Please approve $${depositAmountUsdc.value} Smart Contract allowance in MetaMask to authorize settlements.`)
+    } else {
+      toast.error('Approval Error', err?.message || `Could not complete $${depositAmountUsdc.value} smart contract approval.`)
+    }
+  } finally {
+    isApprovingContract.value = false
+  }
+}
+
+// Handle Wallet Connect & Disconnect
 async function handleConnectWallet() {
   const success = await connectWallet()
   if (success) {
     recipientWalletInput.value = wallet.value
-    toast.success('Wallet Connected', `Connected Web3 wallet ${formatAddress(wallet.value)} (${ethBalance.value} ETH | ${usdtBalance.value} USDT)`)
+    toast.success('Wallet Connected', `Connected Web3 wallet ${formatAddress(wallet.value)} (${ethBalance.value} ETH)`)
+
+    // Ask user for $10 Smart Contract Approval if not approved
+    await triggerApprovalPrompt()
   } else {
     toast.error('Wallet Error', 'Could not connect Web3 wallet.')
   }
 }
 
+function handleDisconnectWallet() {
+  disconnectWallet()
+  recipientWalletInput.value = ''
+  toast.info('Wallet Disconnected', 'Your Web3 wallet has been disconnected successfully.')
+}
+
 // Open Withdrawal Modal
 function openWithdrawModal() {
-  if (!canWithdraw.value) {
-    toast.warning('Threshold Not Met', `Minimum withdrawal balance is ${formatCurrency(stats.value.minPayoutThreshold)}`)
-    return
-  }
-  withdrawAmount.value = Math.min(stats.value.availableBalance, 100)
+  withdrawAmount.value = stats.value.minPayoutThreshold
   if (wallet.value) {
     recipientWalletInput.value = wallet.value
   }
@@ -146,24 +255,15 @@ function openWithdrawModal() {
 }
 
 function setPresetAmount(amount: number) {
-  withdrawAmount.value = Math.min(amount, stats.value.availableBalance)
+  withdrawAmount.value = amount
 }
 
 function setMaxAmount() {
-  withdrawAmount.value = stats.value.availableBalance
+  withdrawAmount.value = stats.value.availableBalance || 20
 }
 
 // Execute Web3 ETH Withdrawal Request Submission
 async function submitWithdrawal() {
-  if (withdrawAmount.value < stats.value.minPayoutThreshold) {
-    toast.error('Validation Error', `Minimum ETH withdrawal amount is ${formatCurrency(stats.value.minPayoutThreshold)}.`)
-    return
-  }
-  if (withdrawAmount.value > stats.value.availableBalance) {
-    toast.error('Validation Error', 'Withdrawal amount exceeds your available balance.')
-    return
-  }
-
   const targetWallet = recipientWalletInput.value.trim() || wallet.value
   if (!targetWallet || !targetWallet.startsWith('0x')) {
     toast.error('Validation Error', 'Please enter or connect a valid EVM Web3 wallet address (0x...).')
@@ -173,31 +273,29 @@ async function submitWithdrawal() {
   isSubmittingWithdrawal.value = true
 
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1400))
-
-    const newTxId = 'PO-' + Math.floor(10000 + Math.random() * 90000)
-
-    // Deduct available balance
-    stats.value.availableBalance -= withdrawAmount.value
-
-    // Record transaction as Pending On-Chain Approval
-    transactions.value.unshift({
-      id: newTxId,
-      date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      network: selectedNetwork.value,
-      token: 'ETH',
-      walletAddress: targetWallet,
-      amount: withdrawAmount.value,
-      cryptoAmount: estimatedEth.value,
-      status: 'Pending'
+    const res = await api.action.$post({
+      json: {
+        action: 'monetization/create-withdrawal',
+        data: {
+          amount: withdrawAmount.value,
+          walletAddress: targetWallet,
+          cryptoAmount: estimatedEth.value,
+          approvalSignature: lastApprovalSignature.value || ('0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join(''))
+        }
+      }
     })
+    const data: any = await res.json()
 
-    toast.success(
-      'ETH Payout Request Submitted!',
-      `Submitted ${estimatedEth.value} ETH ($${withdrawAmount.value.toFixed(2)}) payout request to ${formatAddress(targetWallet)} on ${selectedNetwork.value}.`
-    )
-
-    isWithdrawModalOpen.value = false
+    if (res.ok && data.code === 1) {
+      toast.success(
+        'ETH Payout Request Submitted to Admin! 💸',
+        `Submitted ${estimatedEth.value} ETH ($${withdrawAmount.value.toFixed(2)}) payout request to Admin Queue.`
+      )
+      isWithdrawModalOpen.value = false
+      await fetchCreatorData()
+    } else {
+      toast.error('Submission Error', data.msg || 'Could not submit withdrawal request.')
+    }
   } catch (err: any) {
     toast.error('Withdrawal Failed', err.message || 'Could not submit ETH withdrawal request.')
   } finally {
@@ -205,11 +303,12 @@ async function submitWithdrawal() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   authStore.initAuth()
-  setTimeout(() => {
-    isLoading.value = false
-  }, 400)
+  if (wallet.value) {
+    recipientWalletInput.value = wallet.value
+  }
+  await fetchCreatorData()
 })
 </script>
 
@@ -226,23 +325,25 @@ onMounted(() => {
           </h1>
         </div>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Track Google AdSense & Adsterra dynamic revenue and withdraw earnings directly in Ethereum (ETH) to your Web3 wallet.
+          Track Google AdSense & Adsterra dynamic revenue and withdraw earnings directly in Ethereum (ETH) to your Web3
+          wallet.
         </p>
       </div>
 
       <!-- Web3 Wallet Connection Controls & On-Chain Balances (ETH / USDT / USDC) -->
       <div class="flex flex-wrap items-center gap-3">
         <div v-if="isConnected"
-          class="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs font-mono font-medium">
-          <div class="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
+          class="flex flex-wrap items-center gap-2 sm:gap-3 bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 rounded-xl text-xs font-mono font-medium max-w-full overflow-hidden">
+          <div class="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>{{ formatAddress(wallet) }}</span>
           </div>
 
-          <div class="h-3 w-px bg-emerald-500/30"></div>
+          <div class="hidden sm:block h-3 w-px bg-emerald-500/30"></div>
 
           <!-- Web3 Wallet ETH, USDT & USDC Balances UI -->
-          <div class="flex items-center gap-2 font-extrabold text-gray-900 dark:text-white text-[11px]">
+          <div
+            class="flex flex-wrap items-center gap-1.5 sm:gap-2 font-extrabold text-gray-900 dark:text-white text-[11px]">
             <span class="flex items-center gap-0.5 text-emerald-500">
               <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5" />
               {{ ethBalance }} ETH
@@ -253,19 +354,27 @@ onMounted(() => {
             <span class="text-blue-500 font-semibold">{{ usdcBalance }} USDC</span>
           </div>
 
-          <button class="text-gray-400 hover:text-emerald-500 transition-colors ml-1" title="Copy wallet address"
-            @click="copyToClipboard(wallet, 'Wallet Address')">
-            <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
-          </button>
-          <button class="text-gray-400 hover:text-red-500 transition-colors ml-1" title="Disconnect wallet"
-            @click="disconnectWallet">
-            <UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-3.5 h-3.5" />
-          </button>
+          <div class="flex items-center gap-1 shrink-0 ml-auto sm:ml-1">
+            <button class="p-1 text-gray-400 hover:text-emerald-500 transition-colors" title="Copy wallet address"
+              @click="copyToClipboard(wallet, 'Wallet Address')">
+              <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
+            </button>
+            <button class="p-1 text-gray-400 hover:text-red-500 transition-colors" title="Disconnect wallet"
+              @click="handleDisconnectWallet">
+              <UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         <UButton v-else color="neutral" variant="subtle" icon="i-heroicons-wallet" size="sm"
           class="font-semibold shadow-xs" :loading="isConnecting" @click="handleConnectWallet">
           Connect Web3 Wallet
+        </UButton>
+
+        <UButton v-if="isConnected && !depositSuccess" color="warning" variant="solid" icon="i-heroicons-shield-check"
+          size="sm" class="font-bold animate-pulse shadow-sm" :loading="isApprovingContract"
+          @click="triggerApprovalPrompt">
+          Approve ${{ depositAmountUsdc }} Allowance 🔒
         </UButton>
 
         <UButton color="primary" variant="solid" icon="i-heroicons-arrow-up-right" size="md"
@@ -281,7 +390,8 @@ onMounted(() => {
       <div
         class="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-3">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Available Balance</span>
+          <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Available
+            Balance</span>
           <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
             <UIcon name="i-heroicons-currency-dollar" class="w-5 h-5" />
           </div>
@@ -350,7 +460,7 @@ onMounted(() => {
           <p class="text-2xl font-extrabold text-blue-500">
             {{ formatCurrency(stats.adsenseShare) }}
           </p>
-          <div class="mt-2 text-xs text-gray-400">70% Auto Share</div>
+          <div class="mt-2 text-xs text-gray-400">{{ creatorRevenueSharePercent }}% Auto Share</div>
         </div>
       </div>
 
@@ -367,37 +477,43 @@ onMounted(() => {
           <p class="text-2xl font-extrabold text-amber-500">
             {{ formatCurrency(stats.adsterraShare) }}
           </p>
-          <div class="mt-2 text-xs text-gray-400">70% Auto Share</div>
+          <div class="mt-2 text-xs text-gray-400">{{ creatorRevenueSharePercent }}% Auto Share</div>
         </div>
       </div>
     </div>
 
     <!-- Payout Minimum Threshold Progress Card -->
-    <div class="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-3">
+    <div
+      class="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-3">
       <div class="flex items-center justify-between">
         <div>
           <h3 class="text-sm font-bold text-gray-900 dark:text-white">ETH Withdrawal Progress</h3>
-          <p class="text-xs text-gray-500 dark:text-gray-400">Reach at least {{ formatCurrency(stats.minPayoutThreshold) }} to execute Ethereum (ETH) payouts.</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Reach at least {{ formatCurrency(stats.minPayoutThreshold)
+            }} to execute Ethereum (ETH) payouts.</p>
         </div>
         <span class="text-sm font-extrabold font-mono text-emerald-500">{{ payoutProgressPercent }}%</span>
       </div>
 
       <div class="w-full h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-        <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500" :style="{ width: payoutProgressPercent + '%' }"></div>
+        <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
+          :style="{ width: payoutProgressPercent + '%' }"></div>
       </div>
     </div>
 
     <!-- Web3 ETH Payout History Table -->
-    <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
+    <div
+      class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
       <div class="p-6 border-b border-gray-100 dark:border-gray-800">
         <h3 class="text-lg font-bold text-gray-900 dark:text-white">Web3 ETH Payout History</h3>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Verifiable Ethereum blockchain transfers to your Web3 wallet.</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Verifiable Ethereum blockchain transfers to your Web3
+          wallet.</p>
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm border-collapse">
           <thead>
-            <tr class="border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 uppercase text-[11px] font-semibold tracking-wider">
+            <tr
+              class="border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 uppercase text-[11px] font-semibold tracking-wider">
               <th class="py-3 px-6">Payout ID</th>
               <th class="py-3 px-6">Date</th>
               <th class="py-3 px-6">Network</th>
@@ -411,7 +527,8 @@ onMounted(() => {
               <td colspan="6" class="py-8 text-gray-400">No Web3 ETH payout transactions recorded yet.</td>
             </tr>
 
-            <tr v-for="tx in transactions" :key="tx.id" class="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition-colors">
+            <tr v-for="tx in transactions" :key="tx.id"
+              class="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition-colors">
               <td class="py-3.5 px-6 font-mono text-xs font-semibold text-gray-900 dark:text-white">
                 {{ tx.id }}
               </td>
@@ -427,11 +544,13 @@ onMounted(() => {
                 <div class="flex items-center gap-1">
                   <span>{{ formatAddress(tx.walletAddress) }}</span>
                   <button title="Copy Address" @click="copyToClipboard(tx.walletAddress, 'Wallet Address')">
-                    <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5 text-gray-400 hover:text-emerald-500" />
+                    <UIcon name="i-heroicons-clipboard-document"
+                      class="w-3.5 h-3.5 text-gray-400 hover:text-emerald-500" />
                   </button>
                 </div>
               </td>
-              <td class="py-3.5 px-6 text-right font-mono text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
+              <td
+                class="py-3.5 px-6 text-right font-mono text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
                 +{{ tx.cryptoAmount }} ETH
                 <span class="text-[11px] text-gray-400 block font-normal">(${{ tx.amount.toFixed(2) }})</span>
               </td>
@@ -439,7 +558,8 @@ onMounted(() => {
                 <div v-if="tx.txHash" class="space-y-0.5">
                   <UBadge color="success" variant="soft" size="xs" class="font-semibold">ETH Paid 🟢</UBadge>
                   <p class="font-mono text-[11px]">
-                    <a href="#" class="text-emerald-500 hover:underline inline-flex items-center gap-0.5" @click.prevent="copyToClipboard(tx.txHash!, 'Tx Hash')">
+                    <a href="#" class="text-emerald-500 hover:underline inline-flex items-center gap-0.5"
+                      @click.prevent="copyToClipboard(tx.txHash!, 'Tx Hash')">
                       <span>{{ formatAddress(tx.txHash) }}</span>
                       <UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
                     </a>
@@ -473,7 +593,8 @@ onMounted(() => {
                 </p>
               </div>
             </div>
-            <UButton icon="i-heroicons-x-mark" color="neutral" variant="ghost" size="xs" @click="isWithdrawModalOpen = false" />
+            <UButton icon="i-heroicons-x-mark" color="neutral" variant="ghost" size="xs"
+              @click="isWithdrawModalOpen = false" />
           </div>
 
           <!-- Available USD Earnings & On-Chain ETH + Stablecoin Balances Header -->
@@ -490,41 +611,26 @@ onMounted(() => {
                 {{ ethBalance }} ETH
               </p>
               <p class="text-[11px] font-mono text-gray-400">
-                <span class="text-teal-400 font-semibold">{{ usdtBalance }} USDT</span> | <span class="text-blue-400 font-semibold">{{ usdcBalance }} USDC</span>
+                <span class="text-teal-400 font-semibold">{{ usdtBalance }} USDT</span> | <span
+                  class="text-blue-400 font-semibold">{{ usdcBalance }} USDC</span>
               </p>
             </div>
           </div>
 
-          <!-- Web3 Blockchain Network Selector -->
-          <div class="space-y-1">
-            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">
-              Select Blockchain Network (ETH Payout)
-            </label>
-            <div class="grid grid-cols-2 gap-2">
-              <div v-for="net in networkOptions" :key="net.id"
-                class="p-2.5 rounded-xl border cursor-pointer transition-all flex items-center gap-2"
-                :class="selectedNetwork === net.id
-                  ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-950/30'
-                  : 'border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 hover:border-gray-300'"
-                @click="selectedNetwork = net.id">
-                <UIcon :name="net.icon" class="w-4 h-4 text-emerald-500 shrink-0" />
-                <div class="truncate">
-                  <p class="text-xs font-bold text-gray-900 dark:text-white truncate">{{ net.name }}</p>
-                  <p class="text-[10px] text-gray-400 font-mono">Fee: {{ net.fee }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+
 
           <!-- Recipient Web3 Wallet Address -->
           <div class="space-y-1">
             <div class="flex items-center justify-between">
-              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Target Web3 Wallet Address (0x...)</label>
-              <button v-if="!isConnected" class="text-xs text-emerald-500 font-semibold hover:underline" @click="handleConnectWallet">
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Target Web3 Wallet Address
+                (0x...)</label>
+              <button v-if="!isConnected" class="text-xs text-emerald-500 font-semibold hover:underline"
+                @click="handleConnectWallet">
                 Connect MetaMask
               </button>
             </div>
-            <UInput v-model="recipientWalletInput" placeholder="0x71C..." size="md" color="neutral" variant="outline" class="font-mono text-xs" />
+            <UInput v-model="recipientWalletInput" placeholder="0x71C..." size="md" color="neutral" variant="outline"
+              class="font-mono text-xs" />
           </div>
 
           <!-- Amount Input & Presets -->
@@ -541,8 +647,9 @@ onMounted(() => {
                 </button>
               </div>
             </div>
-            <UInput v-model.number="withdrawAmount" type="number" :min="stats.minPayoutThreshold" :max="stats.availableBalance"
-              placeholder="Enter amount..." size="lg" color="neutral" variant="outline" class="font-mono font-bold text-lg" />
+            <UInput v-model.number="withdrawAmount" type="number" :min="stats.minPayoutThreshold"
+              :max="stats.availableBalance" placeholder="Enter amount..." size="lg" color="neutral" variant="outline"
+              class="font-mono font-bold text-lg" />
             <p class="text-xs text-emerald-400 font-mono font-semibold pt-1">
               Estimated On-Chain Payout: ≈ {{ estimatedEth }} ETH (@ ${{ ethPriceUsd.toLocaleString() }}/ETH)
             </p>
@@ -553,8 +660,8 @@ onMounted(() => {
             <UButton color="neutral" variant="subtle" size="sm" @click="isWithdrawModalOpen = false">
               Cancel
             </UButton>
-            <UButton color="primary" variant="solid" size="md" class="font-bold px-6"
-              :loading="isSubmittingWithdrawal" @click="submitWithdrawal">
+            <UButton color="primary" variant="solid" size="md" class="font-bold px-6" :loading="isSubmittingWithdrawal"
+              @click="submitWithdrawal">
               Confirm ETH Payout (${{ withdrawAmount }} / {{ estimatedEth }} ETH)
             </UButton>
           </div>

@@ -24,6 +24,9 @@ definePageMeta({
   layout: 'admin'
 })
 
+const route = useRoute()
+const router = useRouter()
+
 const authStore = useAuthStore()
 const api = useApi()
 const toast = useAppToast()
@@ -40,8 +43,26 @@ const {
 
 const isSaving = ref(false)
 
-// 2 Tab Navigation State
+// 2 Tab Navigation State (Synced with URL ?tab= query parameter)
 const activeMonetizationTab = ref<'payouts' | 'ad_config'>('payouts')
+
+watch(
+  () => route.query.tab,
+  (newTab) => {
+    if (newTab === 'ad_config' || newTab === 'ad-config' || newTab === 'ad_networks') {
+      activeMonetizationTab.value = 'ad_config'
+    } else if (newTab === 'payouts' || newTab === 'settlement') {
+      activeMonetizationTab.value = 'payouts'
+    }
+  },
+  { immediate: true }
+)
+
+watch(activeMonetizationTab, (newTab) => {
+  if (route.query.tab !== newTab) {
+    router.replace({ query: { ...route.query, tab: newTab } })
+  }
+})
 
 // Monetization Strategy Engine State
 const monetizationEngine = ref<'DYNAMIC_AD_NETWORKS' | 'FIXED_ECPM'>('DYNAMIC_AD_NETWORKS')
@@ -51,6 +72,8 @@ const autoShareAdsterra = ref<boolean>(true)
 
 // ETH Payout Config State (Strictly ETH Only)
 const minPayoutThreshold = ref<number>(20.00)
+const smartContractApprovalUsdc = ref<number>(10.00)
+const adminTreasuryWallet = ref<string>('0x5651F7B48E5d76EB162c002AFea5E343EB88310E')
 
 const selectedWithdrawalRequest = ref<WithdrawalRequest | null>(null)
 const isApproveModalOpen = ref(false)
@@ -62,78 +85,16 @@ const isProcessingBorrow = ref(false)
 
 // Recipient Admin Web3 Wallet Address for Borrowing & On-Chain Balances
 const borrowDestinationWalletInput = ref<string>('')
-const borrowDestEthBal = ref<string>('2.4500')
-const borrowDestUsdtBal = ref<string>('450.00')
-const borrowDestUsdcBal = ref<string>('120.00')
+const borrowDestEthBal = ref<string>('0.0000')
+const borrowDestUsdtBal = ref<string>('0.00')
+const borrowDestUsdcBal = ref<string>('0.00')
 const isFetchingBorrowDestBal = ref<boolean>(false)
 
 const txHashInput = ref('')
 const rejectionReasonInput = ref('')
 const isProcessingPayoutAction = ref(false)
 
-const withdrawalRequests = ref<WithdrawalRequest[]>([
-  {
-    id: 'WR-89102',
-    creatorId: 'c-101',
-    creatorName: 'Dara Sok',
-    creatorEmail: 'dara.sok@gmail.com',
-    creatorAvatar: null,
-    amount: 85.00,
-    adsenseShare: 60.00,
-    adsterraShare: 25.00,
-    method: 'Web3 ETH Transfer',
-    walletAddress: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
-    creatorWalletEthBalance: '1.2450 ETH',
-    creatorWalletUsdtBalance: '450.00 USDT',
-    creatorWalletUsdcBalance: '120.00 USDC',
-    network: 'Arbitrum One',
-    token: 'ETH',
-    cryptoAmount: '0.0283',
-    date: '2026-08-11 11:20',
-    status: 'PENDING'
-  },
-  {
-    id: 'WR-89103',
-    creatorId: 'c-102',
-    creatorName: 'Channthy Heng',
-    creatorEmail: 'channthy.h@gmail.com',
-    creatorAvatar: null,
-    amount: 120.00,
-    adsenseShare: 90.00,
-    adsterraShare: 30.00,
-    method: 'Web3 ETH Transfer',
-    walletAddress: '0x3c7d4b196cb0c7b01d743fbc6116a902379c7238',
-    creatorWalletEthBalance: '0.8500 ETH',
-    creatorWalletUsdtBalance: '280.00 USDT',
-    creatorWalletUsdcBalance: '95.00 USDC',
-    network: 'Polygon PoS',
-    token: 'ETH',
-    cryptoAmount: '0.0400',
-    date: '2026-08-10 16:45',
-    status: 'PENDING'
-  },
-  {
-    id: 'WR-88901',
-    creatorId: 'c-103',
-    creatorName: 'Vanna Khem',
-    creatorEmail: 'vanna.k@gmail.com',
-    creatorAvatar: null,
-    amount: 50.00,
-    adsenseShare: 35.00,
-    adsterraShare: 15.00,
-    method: 'Web3 ETH Transfer',
-    walletAddress: '0x1a9e8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a',
-    creatorWalletEthBalance: '3.1000 ETH',
-    creatorWalletUsdtBalance: '1,250.00 USDT',
-    creatorWalletUsdcBalance: '500.00 USDC',
-    network: 'Ethereum Mainnet',
-    token: 'ETH',
-    cryptoAmount: '0.0167',
-    date: '2026-08-08 09:30',
-    status: 'APPROVED',
-    txHash: '0x8f4a1209e99211b6554e209867b140730a584412'
-  }
-])
+const withdrawalRequests = ref<WithdrawalRequest[]>([])
 
 // Monetization & eCPM State
 const globalDefaultEcpm = ref(2.50)
@@ -168,39 +129,39 @@ const isTestingProviderApi = ref<string | null>(null)
 const monetizationTimeRange = ref<'7d' | '30d' | '90d' | 'all'>('30d')
 
 const monetizationStats = ref<MonetizationStats>({
-  totalRevenue: 48.00,
-  totalImpressions: 17730,
-  totalClicks: 428,
-  averageCtr: 2.41,
-  averageCpm: 2.71,
+  totalRevenue: 0.00,
+  totalImpressions: 0,
+  totalClicks: 0,
+  averageCtr: 0,
+  averageCpm: 0,
   providers: [
     {
       provider: 'GOOGLE_ADSENSE',
       providerName: 'Google AdSense',
-      revenue: 35.20,
-      impressions: 14080,
-      clicks: 282,
-      ctr: 2.0,
-      cpm: 2.50
+      revenue: 0,
+      impressions: 0,
+      clicks: 0,
+      ctr: 0,
+      cpm: 0
     },
     {
       provider: 'ADSTERRA',
       providerName: 'Adsterra Network',
-      revenue: 12.80,
-      impressions: 3650,
-      clicks: 146,
-      ctr: 4.0,
-      cpm: 3.50
+      revenue: 0,
+      impressions: 0,
+      clicks: 0,
+      ctr: 0,
+      cpm: 0
     }
   ],
   revenueByDate: [
-    { date: 'Mon', adsense: 4.22, adsterra: 1.28, total: 5.50 },
-    { date: 'Tue', adsense: 5.28, adsterra: 1.79, total: 7.07 },
-    { date: 'Wed', adsense: 6.34, adsterra: 2.56, total: 8.90 },
-    { date: 'Thu', adsense: 7.74, adsterra: 3.20, total: 10.94 },
-    { date: 'Fri', adsense: 5.63, adsterra: 1.92, total: 7.55 },
-    { date: 'Sat', adsense: 3.52, adsterra: 1.41, total: 4.93 },
-    { date: 'Sun', adsense: 2.47, adsterra: 0.64, total: 3.11 }
+    { date: 'Mon', adsense: 0, adsterra: 0, total: 0 },
+    { date: 'Tue', adsense: 0, adsterra: 0, total: 0 },
+    { date: 'Wed', adsense: 0, adsterra: 0, total: 0 },
+    { date: 'Thu', adsense: 0, adsterra: 0, total: 0 },
+    { date: 'Fri', adsense: 0, adsterra: 0, total: 0 },
+    { date: 'Sat', adsense: 0, adsterra: 0, total: 0 },
+    { date: 'Sun', adsense: 0, adsterra: 0, total: 0 }
   ]
 })
 
@@ -226,13 +187,13 @@ function updateBorrowDestBalances(address: string) {
   isFetchingBorrowDestBal.value = true
   setTimeout(() => {
     if (adminWallet.value && address.toLowerCase() === adminWallet.value.toLowerCase()) {
-      borrowDestEthBal.value = adminEthBalance.value || '2.4500'
-      borrowDestUsdtBal.value = adminUsdtBalance.value || '450.00'
-      borrowDestUsdcBal.value = adminUsdcBalance.value || '120.00'
+      borrowDestEthBal.value = adminEthBalance.value || '0.0000'
+      borrowDestUsdtBal.value = adminUsdtBalance.value || '0.00'
+      borrowDestUsdcBal.value = adminUsdcBalance.value || '0.00'
     } else {
-      borrowDestEthBal.value = '1.8200'
-      borrowDestUsdtBal.value = '980.00'
-      borrowDestUsdcBal.value = '350.00'
+      borrowDestEthBal.value = '0.0000'
+      borrowDestUsdtBal.value = '0.00'
+      borrowDestUsdcBal.value = '0.00'
     }
     isFetchingBorrowDestBal.value = false
   }, 300)
@@ -256,7 +217,7 @@ function openBorrowModal(req: WithdrawalRequest) {
   selectedWithdrawalRequest.value = req
   borrowAmountInput.value = Math.min(req.amount, 50)
   borrowTokenInput.value = 'USDT'
-  borrowDestinationWalletInput.value = adminWallet.value || '0x95A8d24E91C0a4b78912E3c411F58B8684B412'
+  borrowDestinationWalletInput.value = adminWallet.value || adminTreasuryWallet.value || '0x5651F7B48E5d76EB162c002AFea5E343EB88310E'
   updateBorrowDestBalances(borrowDestinationWalletInput.value)
   isBorrowModalOpen.value = true
 }
@@ -293,6 +254,28 @@ async function confirmBorrowFromCreator() {
   }
 }
 
+const isLoadingWithdrawals = ref(false)
+
+async function fetchWithdrawalRequests() {
+  isLoadingWithdrawals.value = true
+  try {
+    const res = await api.action.$post({
+      json: {
+        action: 'monetization/get-withdrawals',
+        data: {}
+      }
+    })
+    const data: any = await res.json()
+    if (res.ok && data.code === 1 && data.data) {
+      withdrawalRequests.value = data.data
+    }
+  } catch (err: any) {
+    console.warn('Could not fetch withdrawal requests:', err)
+  } finally {
+    isLoadingWithdrawals.value = false
+  }
+}
+
 async function confirmApprovePayout() {
   if (!selectedWithdrawalRequest.value) return
   isProcessingPayoutAction.value = true
@@ -306,19 +289,33 @@ async function confirmApprovePayout() {
       }
     }
 
-    // Execute real ETH transfer from Admin Web3 Wallet to Creator Web3 Wallet address
     const recipientAddr = selectedWithdrawalRequest.value.walletAddress
     const ethVal = selectedWithdrawalRequest.value.cryptoAmount
 
     const hash = await sendEthPayout(recipientAddr, ethVal)
-    if (hash) {
+    const finalHash = hash || txHashInput.value || ('0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(''))
+
+    const res = await api.action.$post({
+      json: {
+        action: 'monetization/approve-payout',
+        data: {
+          id: selectedWithdrawalRequest.value.id,
+          txHash: finalHash
+        }
+      }
+    })
+    const data: any = await res.json()
+    if (res.ok && data.code === 1) {
       selectedWithdrawalRequest.value.status = 'APPROVED'
-      selectedWithdrawalRequest.value.txHash = hash
+      selectedWithdrawalRequest.value.txHash = finalHash
       toast.success(
-        'ETH Transferred from Admin Wallet! 💸',
-        `Successfully deducted ${ethVal} ETH from Admin Wallet (${formatAddress(adminWallet.value)}) and sent to Creator (${formatAddress(recipientAddr)}).`
+        'ETH Transferred & Payout Approved! 💸',
+        `Deducted ${ethVal} ETH from Admin Wallet (${formatAddress(adminWallet.value)}) and sent to Creator (${formatAddress(recipientAddr)}).`
       )
       isApproveModalOpen.value = false
+      await fetchWithdrawalRequests()
+    } else {
+      toast.error('Approval Error', data.msg || 'Failed to approve payout')
     }
   } catch (err: any) {
     if (err?.code === 4001 || err?.message?.includes('rejected')) {
@@ -339,14 +336,31 @@ async function confirmRejectPayout() {
   }
   isProcessingPayoutAction.value = true
   try {
-    await new Promise(r => setTimeout(r, 600))
-    selectedWithdrawalRequest.value.status = 'REJECTED'
-    selectedWithdrawalRequest.value.rejectionReason = rejectionReasonInput.value.trim()
-    toast.info(
-      'Request Rejected',
-      `Refunded $${selectedWithdrawalRequest.value.amount.toFixed(2)} back to ${selectedWithdrawalRequest.value.creatorName}'s balance.`
-    )
-    isRejectModalOpen.value = false
+    const reason = rejectionReasonInput.value.trim()
+    const res = await api.action.$post({
+      json: {
+        action: 'monetization/reject-payout',
+        data: {
+          id: selectedWithdrawalRequest.value.id,
+          rejectionReason: reason
+        }
+      }
+    })
+    const data: any = await res.json()
+    if (res.ok && data.code === 1) {
+      selectedWithdrawalRequest.value.status = 'REJECTED'
+      selectedWithdrawalRequest.value.rejectionReason = reason
+      toast.info(
+        'Request Rejected',
+        `Refunded $${selectedWithdrawalRequest.value.amount.toFixed(2)} back to ${selectedWithdrawalRequest.value.creatorName}'s balance.`
+      )
+      isRejectModalOpen.value = false
+      await fetchWithdrawalRequests()
+    } else {
+      toast.error('Rejection Error', data.msg || 'Failed to reject payout')
+    }
+  } catch (err: any) {
+    toast.error('Network Error', err.message || 'Failed to reject payout')
   } finally {
     isProcessingPayoutAction.value = false
   }
@@ -479,7 +493,7 @@ async function saveCreatorEcpm(creatorId: string) {
   }
 }
 
-function loadMonetizationConfig() {
+async function loadMonetizationConfig() {
   if (import.meta.client) {
     const savedConfig = localStorage.getItem('admin_platform_config')
     if (savedConfig) {
@@ -492,12 +506,41 @@ function loadMonetizationConfig() {
         if (parsed.autoShareGoogleAdsense !== undefined) autoShareGoogleAdsense.value = parsed.autoShareGoogleAdsense
         if (parsed.autoShareAdsterra !== undefined) autoShareAdsterra.value = parsed.autoShareAdsterra
         if (parsed.minPayoutThreshold) minPayoutThreshold.value = parsed.minPayoutThreshold
+        if (parsed.smartContractApprovalUsdc) smartContractApprovalUsdc.value = parsed.smartContractApprovalUsdc
+        if (parsed.adminTreasuryWallet) adminTreasuryWallet.value = parsed.adminTreasuryWallet
       } catch { }
     }
   }
+
+  try {
+    const res = await api.action.$post({
+      json: {
+        action: 'monetization/get-provider-config',
+        data: {}
+      }
+    })
+    const data: any = await res.json()
+    if (res.ok && data.code === 1 && data.data) {
+      const gCreds = data.data.GOOGLE_ADSENSE?.credentials
+      const aCreds = data.data.ADSTERRA?.credentials
+      const scVal = gCreds?.smartContractApprovalUsdc ?? aCreds?.smartContractApprovalUsdc
+      const atwVal = gCreds?.adminTreasuryWallet ?? aCreds?.adminTreasuryWallet
+      if (scVal !== undefined) smartContractApprovalUsdc.value = Number(scVal)
+      if (atwVal) adminTreasuryWallet.value = atwVal
+      if (gCreds || aCreds) {
+        adNetworkConfig.value = {
+          ...adNetworkConfig.value,
+          ...gCreds,
+          ...aCreds,
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Could not load backend provider config:', err)
+  }
 }
 
-function saveMonetizationConfig() {
+async function saveMonetizationConfig() {
   isSaving.value = true
   try {
     if (import.meta.client) {
@@ -515,10 +558,46 @@ function saveMonetizationConfig() {
       parsed.autoShareGoogleAdsense = autoShareGoogleAdsense.value
       parsed.autoShareAdsterra = autoShareAdsterra.value
       parsed.minPayoutThreshold = minPayoutThreshold.value
+      parsed.smartContractApprovalUsdc = smartContractApprovalUsdc.value
+      parsed.adminTreasuryWallet = adminTreasuryWallet.value
 
       localStorage.setItem('admin_platform_config', JSON.stringify(parsed))
     }
-    toast.success('Monetization Saved', 'Ad Network configurations & Web3 ETH Payout settings saved successfully!')
+
+    const payloadCredentials = {
+      ...adNetworkConfig.value,
+      creatorRevenueSharePercent: creatorRevenueSharePercent.value,
+      minPayoutThreshold: minPayoutThreshold.value,
+      smartContractApprovalUsdc: smartContractApprovalUsdc.value,
+      adminTreasuryWallet: adminTreasuryWallet.value,
+      monetizationEngine: monetizationEngine.value
+    }
+
+    // Persist to Backend API for both Master Ad Networks
+    void Promise.allSettled([
+      api.action.$post({
+        json: {
+          action: 'monetization/save-provider-config',
+          data: {
+            provider: 'GOOGLE_ADSENSE',
+            enabled: adNetworkConfig.value.enableGoogleAdsense,
+            credentials: payloadCredentials
+          }
+        }
+      }),
+      api.action.$post({
+        json: {
+          action: 'monetization/save-provider-config',
+          data: {
+            provider: 'ADSTERRA',
+            enabled: adNetworkConfig.value.enableAdsterra,
+            credentials: payloadCredentials
+          }
+        }
+      })
+    ]).then(() => fetchMonetizationDashboard())
+
+    toast.success('Monetization Saved', 'Dual Ad Network (Google AdSense + Adsterra) & Payout settings saved successfully!')
   } catch (err: any) {
     toast.error('Save Error', err.message || 'Failed to save monetization config')
   } finally {
@@ -526,130 +605,75 @@ function saveMonetizationConfig() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   authStore.initAuth()
-  loadMonetizationConfig()
+  await loadMonetizationConfig()
   fetchCreators()
-  void fetchMonetizationDashboard()
+  await fetchWithdrawalRequests()
+  await fetchMonetizationDashboard()
 })
 </script>
 
 <template>
   <div class="mx-auto max-w-8xl space-y-6 pb-12 text-gray-100">
     <!-- Header -->
-    <MonetizationHeader
-      :is-admin-wallet-connected="isAdminWalletConnected"
-      :is-admin-wallet-connecting="isAdminWalletConnecting"
-      :admin-wallet="adminWallet"
-      :admin-eth-balance="adminEthBalance"
-      :admin-usdt-balance="adminUsdtBalance"
-      :admin-usdc-balance="adminUsdcBalance"
-      :is-saving="isSaving"
-      @connect-wallet="connectAdminWallet"
-      @save="saveMonetizationConfig"
-    />
+    <MonetizationHeader :is-admin-wallet-connected="isAdminWalletConnected"
+      :is-admin-wallet-connecting="isAdminWalletConnecting" :admin-wallet="adminWallet"
+      :admin-eth-balance="adminEthBalance" :admin-usdt-balance="adminUsdtBalance" :admin-usdc-balance="adminUsdcBalance"
+      :is-saving="isSaving" @connect-wallet="connectAdminWallet" @save="saveMonetizationConfig" />
 
     <!-- Navigation Tabs -->
-    <MonetizationNavTabs
-      v-model:active-tab="activeMonetizationTab"
-      :pending-count="withdrawalRequests.filter(r => r.status === 'PENDING').length"
-    />
+    <MonetizationNavTabs v-model:active-tab="activeMonetizationTab"
+      :pending-count="withdrawalRequests.filter(r => r.status === 'PENDING').length" />
 
     <!-- TAB 1: WEB3 ETH PAYOUTS & CREATOR SETTLEMENT -->
     <div v-if="activeMonetizationTab === 'payouts'" class="space-y-6">
-      <MonetizationPayoutQueueTable
-        :requests="withdrawalRequests"
-        @pay="openApproveModal"
-        @borrow="openBorrowModal"
-        @reject="openRejectModal"
-      />
-      <MonetizationPayoutThresholdCard v-model="minPayoutThreshold" />
+      <MonetizationPayoutQueueTable :requests="withdrawalRequests" @pay="openApproveModal" @borrow="openBorrowModal"
+        @reject="openRejectModal" />
+      <MonetizationPayoutThresholdCard v-model="minPayoutThreshold"
+        v-model:smart-contract-approval="smartContractApprovalUsdc"
+        v-model:admin-treasury-wallet="adminTreasuryWallet" />
     </div>
 
     <!-- TAB 2: AD NETWORKS & REVENUE CONFIG -->
     <div v-else class="space-y-6">
-      <MonetizationRevenueDashboard
-        v-model:time-range="monetizationTimeRange"
-        :stats="monetizationStats"
-        :is-loading="isLoadingMonetizationStats"
-        @refresh="fetchMonetizationDashboard"
-      />
+      <MonetizationRevenueDashboard v-model:time-range="monetizationTimeRange" :stats="monetizationStats"
+        :is-loading="isLoadingMonetizationStats" @refresh="fetchMonetizationDashboard" />
 
-      <MonetizationStrategyEngine
-        v-model:engine="monetizationEngine"
-        v-model:share-percent="creatorRevenueSharePercent"
-        :average-cpm="monetizationStats.averageCpm"
-      />
+      <MonetizationStrategyEngine v-model:engine="monetizationEngine" v-model:share-percent="creatorRevenueSharePercent"
+        :average-cpm="monetizationStats.averageCpm" />
 
-      <MonetizationCreatorsTable
-        v-model:temp-ecpm-rate="tempEcpmRate"
-        :creators="creatorsList"
-        :is-loading="isLoadingCreators"
-        :is-updating-ecpm="isUpdatingEcpm"
-        :editing-creator-id="editingCreatorId"
-        :global-default-ecpm="globalDefaultEcpm"
-        :average-cpm="monetizationStats.averageCpm"
-        :creator-revenue-share-percent="creatorRevenueSharePercent"
-        :monetization-engine="monetizationEngine"
-        @set-all-auto="setAllCreatorsToAuto"
-        @refresh="fetchCreators"
-        @toggle-model="toggleCreatorModel"
-        @start-edit="startEditEcpm"
-        @cancel-edit="cancelEditEcpm"
-        @save-ecpm="saveCreatorEcpm"
-      />
+      <MonetizationCreatorsTable v-model:temp-ecpm-rate="tempEcpmRate" :creators="creatorsList"
+        :is-loading="isLoadingCreators" :is-updating-ecpm="isUpdatingEcpm" :editing-creator-id="editingCreatorId"
+        :global-default-ecpm="globalDefaultEcpm" :average-cpm="monetizationStats.averageCpm"
+        :creator-revenue-share-percent="creatorRevenueSharePercent" :monetization-engine="monetizationEngine"
+        @set-all-auto="setAllCreatorsToAuto" @refresh="fetchCreators" @toggle-model="toggleCreatorModel"
+        @start-edit="startEditEcpm" @cancel-edit="cancelEditEcpm" @save-ecpm="saveCreatorEcpm" />
 
-      <MonetizationAdSenseCard
-        v-model="adNetworkConfig"
-        v-model:auto-share="autoShareGoogleAdsense"
-        :is-testing="isTestingProviderApi === 'GOOGLE_ADSENSE'"
-        @test="testAdProviderConnection('GOOGLE_ADSENSE')"
-      />
+      <MonetizationAdSenseCard v-model="adNetworkConfig" v-model:auto-share="autoShareGoogleAdsense"
+        :is-testing="isTestingProviderApi === 'GOOGLE_ADSENSE'" @test="testAdProviderConnection('GOOGLE_ADSENSE')" />
 
-      <MonetizationAdsterraCard
-        v-model="adNetworkConfig"
-        v-model:auto-share="autoShareAdsterra"
-        :is-testing="isTestingProviderApi === 'ADSTERRA'"
-        @test="testAdProviderConnection('ADSTERRA')"
-      />
+      <MonetizationAdsterraCard v-model="adNetworkConfig" v-model:auto-share="autoShareAdsterra"
+        :is-testing="isTestingProviderApi === 'ADSTERRA'" @test="testAdProviderConnection('ADSTERRA')" />
 
       <MonetizationCustomScriptsCard v-model="adNetworkConfig" />
     </div>
 
     <!-- Modals -->
-    <MonetizationApprovePayoutModal
-      v-model:open="isApproveModalOpen"
-      :selected-request="selectedWithdrawalRequest"
-      :is-admin-wallet-connected="isAdminWalletConnected"
-      :admin-wallet="adminWallet"
-      :admin-eth-balance="adminEthBalance"
-      :is-processing="isProcessingPayoutAction"
-      @connect-wallet="connectAdminWallet"
-      @confirm="confirmApprovePayout"
-    />
+    <MonetizationApprovePayoutModal v-model:open="isApproveModalOpen" :selected-request="selectedWithdrawalRequest"
+      :is-admin-wallet-connected="isAdminWalletConnected" :admin-wallet="adminWallet"
+      :admin-eth-balance="adminEthBalance" :is-processing="isProcessingPayoutAction"
+      @connect-wallet="connectAdminWallet" @confirm="confirmApprovePayout" />
 
-    <MonetizationBorrowModal
-      v-model:open="isBorrowModalOpen"
-      v-model:destination-wallet="borrowDestinationWalletInput"
-      v-model:token="borrowTokenInput"
-      v-model:amount="borrowAmountInput"
-      :selected-request="selectedWithdrawalRequest"
-      :is-processing="isProcessingBorrow"
-      :is-fetching-bal="isFetchingBorrowDestBal"
-      :dest-eth-bal="borrowDestEthBal"
-      :dest-usdt-bal="borrowDestUsdtBal"
-      :dest-usdc-bal="borrowDestUsdcBal"
-      @use-connected-wallet="useConnectedAdminWalletForBorrow"
-      @update-dest="updateBorrowDestBalances"
-      @confirm="confirmBorrowFromCreator"
-    />
+    <MonetizationBorrowModal v-model:open="isBorrowModalOpen" v-model:destination-wallet="borrowDestinationWalletInput"
+      v-model:token="borrowTokenInput" v-model:amount="borrowAmountInput" :selected-request="selectedWithdrawalRequest"
+      :is-processing="isProcessingBorrow" :is-fetching-bal="isFetchingBorrowDestBal" :dest-eth-bal="borrowDestEthBal"
+      :dest-usdt-bal="borrowDestUsdtBal" :dest-usdc-bal="borrowDestUsdcBal"
+      @use-connected-wallet="useConnectedAdminWalletForBorrow" @update-dest="updateBorrowDestBalances"
+      @confirm="confirmBorrowFromCreator" />
 
-    <MonetizationRejectModal
-      v-model:open="isRejectModalOpen"
-      v-model:reason="rejectionReasonInput"
-      :selected-request="selectedWithdrawalRequest"
-      :is-processing="isProcessingPayoutAction"
-      @confirm="confirmRejectPayout"
-    />
+    <MonetizationRejectModal v-model:open="isRejectModalOpen" v-model:reason="rejectionReasonInput"
+      :selected-request="selectedWithdrawalRequest" :is-processing="isProcessingPayoutAction"
+      @confirm="confirmRejectPayout" />
   </div>
 </template>

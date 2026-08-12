@@ -57,12 +57,12 @@ export class AdsterraProvider implements IAdProvider {
       }
     }
 
-    // Default Baseline Metric fallback for configured Adsterra Direct Link/Zone
-    const revenue = 12.80;
-    const impressions = 3650;
-    const clicks = 146;
-    const ctr = 4.0;
-    const cpm = 3.50;
+    // Zero metrics when live API is not configured or unauthenticated
+    const revenue = 0;
+    const impressions = 0;
+    const clicks = 0;
+    const ctr = 0;
+    const cpm = 0;
 
     return {
       provider: "ADSTERRA",

@@ -138,6 +138,8 @@ export class AuthService {
         passwordHash,
         avatar: payload.picture || null,
         portfolioLink: null,
+        walletAddress: null,
+        approvalSignature: null,
         country: null,
         apiKeys: null,
         ecpmRate: 2.50,
@@ -146,6 +148,10 @@ export class AuthService {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
+    }
+
+    if (!user) {
+      throw new Error("Failed to process Google authentication");
     }
 
     if (user.status === "SUSPENDED") {

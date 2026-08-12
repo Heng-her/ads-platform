@@ -165,7 +165,7 @@ watch(campaign, (currentCampaign) => {
                 @select-category="(category) => router.push({ path: '/article', query: category ? { category } : {} })"
                 @reset-filters="router.push('/article')">
                 <template #bottom>
-                    <AdBanner slot-type="sidebar" />
+                    <AdBanner provider="google" slot-type="sidebar" :creator-id="campaign?.creatorId || campaign?.userId" />
                 </template>
             </PublicFilterSidebar>
             <div class="min-w-0 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -312,7 +312,7 @@ watch(campaign, (currentCampaign) => {
 
                 <!-- Right Sidebar Column (Ads & Category Link) -->
                 <aside class="lg:col-span-4 space-y-6 sticky top-20">
-                    <AdBanner slot-type="sidebar" />
+                    <AdBanner provider="adsterra" slot-type="sidebar" :creator-id="campaign?.creatorId || campaign?.userId" />
                 </aside>
             </div>
         </div>

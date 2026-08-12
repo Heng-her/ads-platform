@@ -66,12 +66,12 @@ export class GoogleAdsenseProvider implements IAdProvider {
       }
     }
 
-    // Default Baseline Metric fallback for configured AdSense Publisher ID
-    const revenue = 35.20;
-    const impressions = 14080;
-    const clicks = 282;
-    const ctr = 2.0;
-    const cpm = 2.50;
+    // Zero metrics when live API is not configured or unauthenticated
+    const revenue = 0;
+    const impressions = 0;
+    const clicks = 0;
+    const ctr = 0;
+    const cpm = 0;
 
     return {
       provider: "GOOGLE_ADSENSE",

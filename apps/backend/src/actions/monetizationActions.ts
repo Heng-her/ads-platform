@@ -37,6 +37,15 @@ export async function handleMonetizationAction({
     };
   }
 
+  if (action === "monetization/get-provider-config") {
+    const settings = await monetizationService.getAdProviderSettings();
+    return {
+      code: 1,
+      msg: "Monetization provider settings fetched successfully.",
+      data: settings,
+    };
+  }
+
   if (action === "monetization/save-provider-config") {
     if (!currentUser || currentUser.role !== "ADMIN") {
       return { code: 0, msg: "Unauthorized: Admin privileges required." };
@@ -73,6 +82,77 @@ export async function handleMonetizationAction({
       code: testResult.success ? 1 : 0,
       msg: testResult.message,
       data: testResult,
+    };
+  }
+
+  if (action === "monetization/get-withdrawals") {
+    const list = await monetizationService.getWithdrawalRequests();
+    return {
+      code: 1,
+      msg: "Withdrawal requests fetched successfully.",
+      data: list,
+    };
+  }
+
+  if (action === "monetization/approve-payout") {
+    if (!currentUser || currentUser.role !== "ADMIN") {
+      return { code: 0, msg: "Unauthorized: Admin privileges required." };
+    }
+
+    const { id, txHash } = data || {};
+    if (!id || !txHash) {
+      return { code: 0, msg: "Missing request ID or transaction hash." };
+    }
+
+    await monetizationService.approvePayout(id, txHash);
+    return {
+      code: 1,
+      msg: `Payout request ${id} approved successfully on-chain.`,
+    };
+  }
+
+  if (action === "monetization/reject-payout") {
+    if (!currentUser || currentUser.role !== "ADMIN") {
+      return { code: 0, msg: "Unauthorized: Admin privileges required." };
+    }
+
+    const { id, rejectionReason } = data || {};
+    if (!id) {
+      return { code: 0, msg: "Missing request ID." };
+    }
+
+    await monetizationService.rejectPayout(id, rejectionReason || "Rejected by Admin");
+    return {
+      code: 1,
+      msg: `Payout request ${id} rejected and refunded to creator balance.`,
+    };
+  }
+
+  if (action === "monetization/create-withdrawal") {
+    if (!currentUser) {
+      return { code: 0, msg: "Unauthorized: Please log in to request payouts." };
+    }
+
+    const { amount, walletAddress, cryptoAmount } = data || {};
+    if (!amount || amount <= 0 || !walletAddress) {
+      return { code: 0, msg: "Invalid withdrawal parameters." };
+    }
+
+    const creatorName = (currentUser as any).username || (currentUser.email ? currentUser.email.split('@')[0] : "Creator");
+
+    const result = await monetizationService.createWithdrawalRequest({
+      creatorId: currentUser.id,
+      creatorName,
+      creatorEmail: currentUser.email || "",
+      amount: parseFloat(amount),
+      walletAddress,
+      cryptoAmount: cryptoAmount || (amount / 3000).toFixed(4),
+    });
+
+    return {
+      code: 1,
+      msg: `Web3 ETH payout request ${result.id} submitted for Admin review.`,
+      data: result,
     };
   }
 

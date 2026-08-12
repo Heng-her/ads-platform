@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   slotType?: 'header' | 'in-article' | 'sidebar'
-}>()
+  creatorId?: string
+  provider?: 'all' | 'google' | 'adsterra'
+}>(), {
+  provider: 'all'
+})
 
 const adConfig = ref({
   enableGoogleAdsense: true,
@@ -12,6 +16,13 @@ const adConfig = ref({
   enableAdsterra: true,
   adsterraDirectLinkUrl: 'https://www.highperformancecpmgate.com/direct-link-hash',
   adsterraBanner728x90Key: '10928374'
+})
+
+const adsterraTrackingUrl = computed(() => {
+  if (!adConfig.value.adsterraDirectLinkUrl) return '#'
+  if (!props.creatorId) return adConfig.value.adsterraDirectLinkUrl
+  const separator = adConfig.value.adsterraDirectLinkUrl.includes('?') ? '&' : '?'
+  return `${adConfig.value.adsterraDirectLinkUrl}${separator}subid=${encodeURIComponent(props.creatorId)}`
 })
 
 onMounted(() => {
@@ -27,25 +38,35 @@ onMounted(() => {
     }
   }
 })
+
 const isSidebar = computed(() => props.slotType === 'sidebar')
+
+const headerTitle = computed(() => {
+  if (props.provider === 'google') return 'Google AdSense Monetization'
+  if (props.provider === 'adsterra') return 'Adsterra High-CPM Sponsor'
+  return isSidebar.value ? 'Sponsored Ads' : 'Dual Ad Network Monetization (Google AdSense + Adsterra Smartlink)'
+})
+
+const showGoogle = computed(() => adConfig.value.enableGoogleAdsense && (props.provider === 'all' || props.provider === 'google'))
+const showAdsterra = computed(() => adConfig.value.enableAdsterra && (props.provider === 'all' || props.provider === 'adsterra'))
 </script>
 
 <template>
-  <div :class="isSidebar ? 'space-y-3' : 'my-6 space-y-3'">
+  <div v-if="showGoogle || showAdsterra" :class="isSidebar ? 'space-y-3' : 'my-6 space-y-3'">
     <div
       class="flex items-center justify-between text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-1">
       <span class="flex items-center gap-1.5 truncate">
         <UIcon name="i-heroicons-banknotes" class="w-4 h-4 text-emerald-500 shrink-0" />
-        {{ isSidebar ? 'Sponsored Ads' : 'Dual Ad Network Monetization (Google AdSense + Adsterra Smartlink)' }}
+        {{ headerTitle }}
       </span>
       <span class="text-[10px] font-mono text-emerald-500 font-bold shrink-0">Active 💰</span>
     </div>
 
-    <!-- Dual Ad Network Grid -->
-    <div :class="isSidebar ? 'grid grid-cols-1 gap-3' : 'grid grid-cols-1 md:grid-cols-2 gap-4'">
+    <!-- Ad Network Grid (1-column if single provider or sidebar, 2-column if all on wide banner) -->
+    <div :class="(isSidebar || provider !== 'all') ? 'grid grid-cols-1 gap-3' : 'grid grid-cols-1 md:grid-cols-2 gap-4'">
 
       <!-- AD NETWORK 1: Google AdSense Display Ads -->
-      <div v-if="adConfig.enableGoogleAdsense"
+      <div v-if="showGoogle"
         class="rounded-2xl border border-blue-500/30 bg-blue-500/5 dark:bg-blue-950/20 p-4 relative overflow-hidden flex flex-col justify-between">
         <div class="flex items-center justify-between mb-3 border-b border-blue-500/20 pb-2">
           <div class="flex items-center gap-2">
@@ -64,9 +85,10 @@ const isSidebar = computed(() => props.slotType === 'sidebar')
 
         <!-- Google AdSense Banner Simulation Container -->
         <div
-          class="my-2 p-3.5 rounded-xl bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-900/50 text-center space-y-1">
+          class="my-2 p-3.5 rounded-xl bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-900/50 text-center space-y-1"
+          :data-ad-channel="creatorId">
           <div class="text-[10px] text-gray-400 font-mono">
-            [Google Ads Unit: {{ adConfig.googlePublisherId }}]
+            [Google Ads Unit: {{ adConfig.googlePublisherId }}] <span v-if="creatorId" class="text-blue-400">• Channel: {{ creatorId }}</span>
           </div>
           <p class="text-xs font-bold text-blue-600 dark:text-blue-400">
             Responsive Display Ad Banner
@@ -78,7 +100,7 @@ const isSidebar = computed(() => props.slotType === 'sidebar')
       </div>
 
       <!-- AD NETWORK 2: Adsterra High-CPM Smartlink -->
-      <a v-if="adConfig.enableAdsterra" :href="adConfig.adsterraDirectLinkUrl" target="_blank" rel="noopener noreferrer"
+      <a v-if="showAdsterra" :href="adsterraTrackingUrl" target="_blank" rel="noopener noreferrer"
         class="group rounded-2xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-950/20 p-4 relative overflow-hidden flex flex-col justify-between hover:border-amber-500/60 transition-all">
         <div class="flex items-center justify-between mb-3 border-b border-amber-500/20 pb-2">
           <div class="flex items-center gap-2">

@@ -104,7 +104,11 @@ function giveFeedback(value: boolean) {
                 :active-filter-count="activeFilterCount"
                 @select-category="(cat) => setQuery({ category: cat })"
                 @reset-filters="clearAllFilters"
-            />
+            >
+                <template #bottom>
+                    <AdBanner provider="google" slot-type="sidebar" />
+                </template>
+            </PublicFilterSidebar>
 
             <!-- ================= CENTER SECTION: SPOTLIGHT + RESULTS ================= -->
             <section class="flex-1 min-w-0 flex flex-col gap-6">
@@ -160,7 +164,7 @@ function giveFeedback(value: boolean) {
 
             <!-- ================= RIGHT RAIL: ADS & SPONSORED CAMPAIGNS (Desktop Sticky) ================= -->
             <aside class="hidden lg:flex lg:flex-col lg:w-[350px] shrink-0 gap-5 sticky top-20">
-                <AdBanner slot-type="sidebar" />
+                <AdBanner provider="adsterra" slot-type="sidebar" />
 
                 <PublicTrendingWidget :item="trendingItem" />
                 <PublicRelatedTopics :topics="relatedTopics" @select-topic="(t) => setQuery({ category: t })" />

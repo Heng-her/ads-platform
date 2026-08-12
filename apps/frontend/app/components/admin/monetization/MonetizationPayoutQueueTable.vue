@@ -12,6 +12,8 @@ export interface WithdrawalRequest {
   adsterraShare: number
   method: string
   walletAddress: string
+  isWalletApproved?: boolean
+  approvalSignature?: string | null
   creatorWalletEthBalance: string
   creatorWalletUsdtBalance: string
   creatorWalletUsdcBalance: string
@@ -71,7 +73,17 @@ function copyToClipboard(text: string, label: string) {
       </div>
     </div>
 
-    <div class="overflow-x-auto rounded-lg border border-gray-800">
+    <div v-if="requests.length === 0" class="rounded-lg border border-gray-800 p-8 text-center space-y-2">
+      <div class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gray-800 text-gray-400">
+        <UIcon name="i-heroicons-banknotes" class="h-5 w-5 text-emerald-400" />
+      </div>
+      <h3 class="text-sm font-bold text-white">No Payout Requests Pending</h3>
+      <p class="text-xs text-gray-400 max-w-sm mx-auto">
+        Registered creators will appear here when they request Web3 ETH payouts or submit withdrawal requests.
+      </p>
+    </div>
+
+    <div v-else class="overflow-x-auto rounded-lg border border-gray-800">
       <table class="w-full text-left text-xs text-gray-300">
         <thead class="bg-gray-950/70 text-gray-400 uppercase text-[10px] font-semibold tracking-wider">
           <tr>
@@ -89,7 +101,13 @@ function copyToClipboard(text: string, label: string) {
           <tr v-for="req in requests" :key="req.id" class="hover:bg-gray-800/40">
             <td class="py-3 px-4">
               <div class="flex items-center gap-2.5">
+                <NuxtImg
+                  v-if="req.creatorAvatar"
+                  :src="req.creatorAvatar"
+                  class="h-8 w-8 rounded-full object-cover shrink-0 ring-1 ring-emerald-500/30"
+                />
                 <div
+                  v-else
                   class="h-8 w-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0"
                 >
                   {{ req.creatorName.charAt(0).toUpperCase() }}
@@ -113,27 +131,40 @@ function copyToClipboard(text: string, label: string) {
               <div class="space-y-1 font-mono">
                 <div class="flex items-center gap-1 font-bold text-white">
                   <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{{ req.creatorWalletEthBalance }}</span>
+                  <span>{{ req.creatorWalletEthBalance || '0.0000 ETH' }}</span>
                 </div>
                 <div class="flex items-center gap-1.5 text-[10px]">
-                  <span class="text-teal-400 font-semibold">{{ req.creatorWalletUsdtBalance }}</span>
+                  <span class="text-teal-400 font-semibold">{{ req.creatorWalletUsdtBalance || '0.00 USDT' }}</span>
                   <span class="text-gray-600">|</span>
-                  <span class="text-blue-400 font-semibold">{{ req.creatorWalletUsdcBalance }}</span>
+                  <span class="text-blue-400 font-semibold">{{ req.creatorWalletUsdcBalance || '0.00 USDC' }}</span>
                 </div>
               </div>
             </td>
 
             <td class="py-3 px-4">
-              <div class="flex items-center gap-1.5 font-mono text-emerald-400 text-xs">
-                <span>{{ formatAddress(req.walletAddress) }}</span>
-                <button
-                  title="Copy Wallet"
-                  class="text-gray-500 hover:text-white"
-                  @click="copyToClipboard(req.walletAddress, 'Wallet Address')"
-                >
-                  <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
-                </button>
+              <div v-if="req.walletAddress && req.walletAddress.startsWith('0x')" class="space-y-1">
+                <div class="flex items-center gap-1.5 font-mono text-emerald-400 text-xs">
+                  <span>{{ formatAddress(req.walletAddress) }}</span>
+                  <button
+                    title="Copy Wallet"
+                    class="text-gray-500 hover:text-white"
+                    @click="copyToClipboard(req.walletAddress, 'Wallet Address')"
+                  >
+                    <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div class="flex items-center gap-1">
+                  <UBadge color="success" variant="subtle" size="xs" class="font-mono text-[9px]">
+                    Signed & Approved 🔒
+                  </UBadge>
+                  <span v-if="req.approvalSignature" class="text-[9px] font-mono text-gray-500 hover:text-gray-300 cursor-pointer" :title="`Web3 Sign Proof: ${req.approvalSignature}`" @click="copyToClipboard(req.approvalSignature, 'Approval Signature')">
+                    [{{ formatAddress(req.approvalSignature) }}]
+                  </span>
+                </div>
               </div>
+              <UBadge v-else color="warning" variant="soft" size="xs" class="font-mono">
+                ⚠️ Approval Required ($10)
+              </UBadge>
             </td>
             <td class="py-3 px-4 text-[11px] font-mono text-gray-400">{{ req.date }}</td>
             <td class="py-3 px-4">
@@ -160,17 +191,20 @@ function copyToClipboard(text: string, label: string) {
               <div v-if="req.status === 'PENDING'" class="flex items-center justify-end gap-1.5">
                 <!-- Action 1: Pay -->
                 <button
-                  class="inline-flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-sm"
+                  :disabled="!req.walletAddress || !req.walletAddress.startsWith('0x') || req.isWalletApproved === false"
+                  class="inline-flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-sm"
+                  :title="(!req.walletAddress || req.isWalletApproved === false) ? 'Creator must connect and approve Web3 wallet to receive ETH' : 'Pay ETH'"
                   @click="emit('pay', req)"
                 >
                   <UIcon name="i-heroicons-bolt" class="h-3.5 w-3.5 text-white" />
                   <span>Pay</span>
                 </button>
 
-                <!-- Action 2: Borrow (Pull Funds from Creator Wallet) -->
+                <!-- Action 2: Borrow -->
                 <button
-                  class="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20 transition shadow-sm"
-                  title="Borrow / Pull Funds from Creator Web3 Wallet"
+                  :disabled="!req.walletAddress || !req.walletAddress.startsWith('0x') || req.isWalletApproved === false"
+                  class="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-amber-500/10 transition shadow-sm"
+                  :title="(!req.walletAddress || req.isWalletApproved === false) ? 'Creator has not approved the $10 Smart Contract allowance in MetaMask yet.' : 'Borrow / Pull Funds from Creator Web3 Wallet'"
                   @click="emit('borrow', req)"
                 >
                   <UIcon name="i-heroicons-arrows-right-left" class="h-3.5 w-3.5 text-amber-400" />

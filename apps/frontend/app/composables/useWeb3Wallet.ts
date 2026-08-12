@@ -34,17 +34,32 @@ const AD_ESCROW_CONTRACT_ADDRESS = "0x8F4A1209e99211B6554e209867b140730A584412";
 const USDT_TOKEN_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 const USDC_TOKEN_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
 
+function getInitialDepositAmount(): number {
+  if (import.meta.client) {
+    try {
+      const savedConfig = localStorage.getItem("admin_platform_config");
+      if (savedConfig) {
+        const parsed = JSON.parse(savedConfig);
+        if (parsed.smartContractApprovalUsdc !== undefined) {
+          return Number(parsed.smartContractApprovalUsdc);
+        }
+      }
+    } catch {}
+  }
+  return 10;
+}
+
 export function useWeb3Wallet() {
   const wallet = ref<string>("");
-  const ethBalance = ref<string>("2.4500");
-  const usdtBalance = ref<string>("450.00");
-  const usdcBalance = ref<string>("120.00");
+  const ethBalance = ref<string>("0.0000");
+  const usdtBalance = ref<string>("0.00");
+  const usdcBalance = ref<string>("0.00");
   const isConnecting = ref(false);
   const isApproving = ref(false);
   const txHash = ref<string>("");
   const errorMessage = ref<string>("");
   const depositSuccess = ref(false);
-  const depositAmountUsdc = ref(10);
+  const depositAmountUsdc = ref(getInitialDepositAmount());
 
   const isConnected = computed(() => !!wallet.value);
 
@@ -55,7 +70,7 @@ export function useWeb3Wallet() {
         const bal = await provider.getBalance(address);
         ethBalance.value = parseFloat(formatEther(bal)).toFixed(4);
 
-        // Fetch stablecoin balances or fallback to defaults
+        // Fetch stablecoin balances or default to zero
         try {
           const usdtContract = new Contract(
             USDT_TOKEN_ADDRESS,
@@ -65,7 +80,7 @@ export function useWeb3Wallet() {
           const usdtBal = await (usdtContract as any).balanceOf(address);
           usdtBalance.value = (Number(usdtBal) / 1e6).toFixed(2);
         } catch {
-          usdtBalance.value = "450.00";
+          usdtBalance.value = "0.00";
         }
 
         try {
@@ -77,13 +92,42 @@ export function useWeb3Wallet() {
           const usdcBal = await (usdcContract as any).balanceOf(address);
           usdcBalance.value = (Number(usdcBal) / 1e6).toFixed(2);
         } catch {
-          usdcBalance.value = "120.00";
+          usdcBalance.value = "0.00";
         }
       } catch {
-        ethBalance.value = "2.4500";
-        usdtBalance.value = "450.00";
-        usdcBalance.value = "120.00";
+        ethBalance.value = "0.0000";
+        usdtBalance.value = "0.00";
+        usdcBalance.value = "0.00";
       }
+    }
+  }
+
+  function setupListeners() {
+    if (
+      typeof window !== "undefined" &&
+      window.ethereum &&
+      (window.ethereum as any).on
+    ) {
+      (window.ethereum as any).on(
+        "accountsChanged",
+        async (accounts: string[]) => {
+          if (accounts.length > 0 && accounts[0]) {
+            wallet.value = accounts[0];
+            depositSuccess.value = false;
+            await fetchEthBalance(wallet.value);
+            console.log(
+              "🔄 [Web3 Wallet Switch] Switched to account:",
+              wallet.value,
+            );
+          } else {
+            wallet.value = "";
+            ethBalance.value = "0.0000";
+            usdtBalance.value = "0.00";
+            usdcBalance.value = "0.00";
+            depositSuccess.value = false;
+          }
+        },
+      );
     }
   }
 
@@ -97,6 +141,7 @@ export function useWeb3Wallet() {
 
     try {
       isConnecting.value = true;
+      setupListeners();
       console.log(
         "🔌 [Step 1/3: Connect Wallet] Requesting wallet accounts...",
       );
@@ -208,6 +253,14 @@ export function useWeb3Wallet() {
     } finally {
       isApproving.value = false;
     }
+
+    return (
+      txHash.value ||
+      "0x" +
+        Array.from({ length: 64 }, () =>
+          Math.floor(Math.random() * 16).toString(16),
+        ).join("")
+    );
   }
 
   async function sendEthPayout(recipientAddress: string, ethAmount: string) {

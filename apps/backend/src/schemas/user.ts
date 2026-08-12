@@ -13,6 +13,8 @@ export const updateUserSchema = z.object({
   status: z.enum(["ACTIVE", "SUSPENDED", "PENDING"]).optional(),
   avatar: z.string().nullable().optional(),
   portfolioLink: z.string().nullable().optional(),
+  walletAddress: z.string().nullable().optional(),
+  approvalSignature: z.string().nullable().optional(),
   country: z.string().nullable().optional(),
   apiKeys: z.record(z.string(), z.string()).nullable().optional(),
 });

@@ -93,10 +93,10 @@ const emit = defineEmits<{
           <span class="uppercase tracking-wider font-semibold">Google AdSense</span>
           <UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-blue-400" />
         </div>
-        <p class="text-3xl font-extrabold text-blue-400">${{ (stats.providers[0]?.revenue || 35.2).toFixed(2) }}</p>
+        <p class="text-3xl font-extrabold text-blue-400">${{ (stats.providers[0]?.revenue || 0).toFixed(2) }}</p>
         <div class="flex items-center justify-between text-[11px] text-gray-400">
           <span>Display Ads & Auto-Ads</span>
-          <span class="font-mono text-blue-400">{{ (stats.providers[0]?.impressions || 14080).toLocaleString() }} views</span>
+          <span class="font-mono text-blue-400">{{ (stats.providers[0]?.impressions || 0).toLocaleString() }} views</span>
         </div>
       </div>
 
@@ -106,10 +106,10 @@ const emit = defineEmits<{
           <span class="uppercase tracking-wider font-semibold">Adsterra Network</span>
           <UIcon name="i-heroicons-bolt" class="w-4 h-4 text-amber-400" />
         </div>
-        <p class="text-3xl font-extrabold text-amber-400">${{ (stats.providers[1]?.revenue || 12.8).toFixed(2) }}</p>
+        <p class="text-3xl font-extrabold text-amber-400">${{ (stats.providers[1]?.revenue || 0).toFixed(2) }}</p>
         <div class="flex items-center justify-between text-[11px] text-gray-400">
           <span>Smartlink & Banners</span>
-          <span class="font-mono text-amber-400">{{ (stats.providers[1]?.impressions || 3650).toLocaleString() }} views</span>
+          <span class="font-mono text-amber-400">{{ (stats.providers[1]?.impressions || 0).toLocaleString() }} views</span>
         </div>
       </div>
 
