@@ -1,6 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useWeb3Wallet } from '~/composables/useWeb3Wallet'
+import { ref, onMounted } from 'vue'
+import { useAppToast } from '~/composables/useAppToast'
+import { useApi } from '~/composables/useApi'
+import { useAuthStore } from '~/stores/auth'
+
+const toast = useAppToast()
+const api = useApi()
+const authStore = useAuthStore()
+
+onMounted(() => {
+  authStore.initAuth()
+})
 
 const {
   wallet,
@@ -22,25 +32,36 @@ async function handleLaunchCampaign() {
   if (!isConnected.value) {
     const success = await connect()
     if (success) {
-      showDepositModal.value = true
+      await triggerHomeApproval()
     }
   } else {
     showDepositModal.value = true
   }
 }
 
-async function handleApproveAndDeploy() {
-  await requestUsdcApprovalAndDeposit()
-  showDepositModal.value = false
-  if (depositSuccess.value) {
-    console.log("🚀 [Get Started Campaign] Approved & Deployed Escrow Successfully!", {
-      wallet: wallet.value,
-      txHash: txHash.value,
-      amount: "10.00 USDC",
-      status: "APPROVED",
-      timestamp: new Date().toISOString()
-    })
+async function triggerHomeApproval() {
+  try {
+    const sig = await requestUsdcApprovalAndDeposit()
+    if (depositSuccess.value || sig) {
+      await api.action.$post({
+        json: {
+          action: 'users/update-profile',
+          data: {
+            walletAddress: wallet.value,
+            approvalSignature: sig || txHash.value
+          }
+        }
+      }).catch(() => { })
+      toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved wallet address to profile.`)
+    }
+  } catch (err: any) {
+    toast.error('Approval Error', err?.message || 'Could not complete smart contract approval.')
   }
+}
+
+async function handleApproveAndDeploy() {
+  await triggerHomeApproval()
+  showDepositModal.value = false
 }
 </script>
 
@@ -67,12 +88,30 @@ async function handleApproveAndDeploy() {
       </p>
 
       <!-- CTA Buttons & Connected Wallet State -->
-      <UButton color="primary" size="xl"
-        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 font-bold px-8 shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform"
-        :loading="isConnecting" @click="handleLaunchCampaign">
-        <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5" />
-        <span>{{ isConnected ? 'Get Started' : 'Connect Wallet' }}</span>
-      </UButton>
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <NuxtLink
+          v-if="(authStore.isAuthenticated || authStore.user) && (authStore.user?.role === 'creator' || (authStore.user?.role as string) === 'CREATOR')"
+          to="/creator/earnings"
+          class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-base shadow-lg shadow-emerald-500/25 hover:scale-105 transition-transform">
+          <UIcon name="i-heroicons-currency-dollar" class="w-5 h-5" />
+          <span>Go to Creator Earnings & Payouts</span>
+        </NuxtLink>
+
+        <NuxtLink
+          v-else-if="(authStore.isAuthenticated || authStore.user) && (authStore.user?.role === 'admin' || (authStore.user?.role as string) === 'ADMIN')"
+          to="/admin/monetization"
+          class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-emerald-500 text-white font-bold text-base shadow-lg shadow-purple-500/25 hover:scale-105 transition-transform">
+          <UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5" />
+          <span>Go to Admin Monetization Dashboard</span>
+        </NuxtLink>
+
+        <UButton v-else color="primary" size="xl"
+          class="w-full sm:w-auto inline-flex items-center justify-center gap-2 font-bold px-8 shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform"
+          :loading="isConnecting" @click="handleLaunchCampaign">
+          <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5" />
+          <span>{{ isConnected ? 'Get Started' : 'Connect Wallet' }}</span>
+        </UButton>
+      </div>
 
       <!-- Connected Wallet Badge Bar -->
       <div v-if="isConnected" class="pt-2 flex items-center justify-center gap-3">

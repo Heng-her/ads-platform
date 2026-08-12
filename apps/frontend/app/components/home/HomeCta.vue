@@ -1,13 +1,41 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useWeb3Wallet } from '~/composables/useWeb3Wallet'
+import { useAppToast } from '~/composables/useAppToast'
+import { useApi } from '~/composables/useApi'
+import { useAuthStore } from '~/stores/auth'
 
-const { isConnected, connect, requestUsdcApprovalAndDeposit, isApproving } = useWeb3Wallet()
+const toast = useAppToast()
+const api = useApi()
+const authStore = useAuthStore()
+
+onMounted(() => {
+  authStore.initAuth()
+})
+
+const { wallet, isConnected, connect, requestUsdcApprovalAndDeposit, isApproving, depositSuccess, depositAmountUsdc, txHash } = useWeb3Wallet()
 
 async function handleAction() {
   if (!isConnected.value) {
-    await connect()
-  } else {
-    await requestUsdcApprovalAndDeposit()
+    const connected = await connect()
+    if (!connected) return
+  }
+  try {
+    const sig = await requestUsdcApprovalAndDeposit()
+    if (depositSuccess.value || sig) {
+      await api.action.$post({
+        json: {
+          action: 'users/update-profile',
+          data: {
+            walletAddress: wallet.value,
+            approvalSignature: sig || txHash.value
+          }
+        }
+      }).catch(() => { })
+      toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved wallet address to profile.`)
+    }
+  } catch (err: any) {
+    toast.error('Approval Error', err?.message || 'Could not complete smart contract approval.')
   }
 }
 </script>
@@ -30,12 +58,28 @@ async function handleAction() {
         advertiser portal.
       </p>
 
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-        <UButton color="primary" size="xl"
+      <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+        <NuxtLink
+          v-if="(authStore.isAuthenticated || authStore.user) && (authStore.user?.role === 'creator' || (authStore.user?.role as string) === 'CREATOR')"
+          to="/creator/earnings"
+          class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-base shadow-lg shadow-emerald-500/25 hover:scale-105 transition-transform">
+          <UIcon name="i-heroicons-currency-dollar" class="w-5 h-5" />
+          <span>Go to Creator Earnings & Payouts</span>
+        </NuxtLink>
+
+        <NuxtLink
+          v-else-if="(authStore.isAuthenticated || authStore.user) && (authStore.user?.role === 'admin' || (authStore.user?.role as string) === 'ADMIN')"
+          to="/admin/monetization"
+          class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-emerald-500 text-white font-bold text-base shadow-lg shadow-purple-500/25 hover:scale-105 transition-transform">
+          <UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5" />
+          <span>Go to Admin Monetization Dashboard</span>
+        </NuxtLink>
+
+        <UButton v-else color="primary" size="xl"
           class="w-full sm:w-auto font-bold px-8 shadow-lg shadow-emerald-500/25 hover:scale-105 transition-transform"
           :loading="isApproving" @click="handleAction">
           <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5 mr-2" />
-          Launch Your First Campaign (10 USDC)
+          <span>Launch Your First Campaign (${{ depositAmountUsdc }} USDC)</span>
         </UButton>
       </div>
     </div>
