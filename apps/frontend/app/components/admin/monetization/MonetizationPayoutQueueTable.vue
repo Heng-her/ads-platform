@@ -90,7 +90,6 @@ function copyToClipboard(text: string, label: string) {
             <th class="py-3 px-4">Creator</th>
             <th class="py-3 px-4">Requested Amount ($ USD)</th>
             <th class="py-3 px-4">ETH Equivalent</th>
-            <th class="py-3 px-4">Creator Balances</th>
             <th class="py-3 px-4">Address</th>
             <th class="py-3 px-4">Date</th>
             <th class="py-3 px-4">Status</th>
@@ -124,21 +123,6 @@ function copyToClipboard(text: string, label: string) {
             <td class="py-3 px-4 text-[11px]">
               <p class="font-bold font-mono text-emerald-400">≈ {{ req.cryptoAmount }} ETH</p>
               <UBadge color="neutral" variant="subtle" size="xs" class="font-mono mt-0.5">{{ req.network }}</UBadge>
-            </td>
-
-            <!-- Creator Web3 On-Chain Wallet Balance Display Column (ETH, USDT, USDC) -->
-            <td class="py-3 px-4 text-[11px]">
-              <div class="space-y-1 font-mono">
-                <div class="flex items-center gap-1 font-bold text-white">
-                  <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{{ req.creatorWalletEthBalance || '0.0000 ETH' }}</span>
-                </div>
-                <div class="flex items-center gap-1.5 text-[10px]">
-                  <span class="text-teal-400 font-semibold">{{ req.creatorWalletUsdtBalance || '0.00 USDT' }}</span>
-                  <span class="text-gray-600">|</span>
-                  <span class="text-blue-400 font-semibold">{{ req.creatorWalletUsdcBalance || '0.00 USDC' }}</span>
-                </div>
-              </div>
             </td>
 
             <td class="py-3 px-4">

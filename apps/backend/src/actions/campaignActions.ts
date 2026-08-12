@@ -127,8 +127,7 @@ export async function handleCampaignAction(
     case "/campaigns": {
       let currentUser: UserJwtPayload | null = null;
       try {
-        // The list endpoint is public. Passing strict=true prevents the
-        // development-only admin fallback from changing public visibility.
+        // The list endpoint is public. Attempt optional user authentication.
         currentUser = await authenticate(c, true);
       } catch {
         // Public access if no token or if the optional token is invalid.

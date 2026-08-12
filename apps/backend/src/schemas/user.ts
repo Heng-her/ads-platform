@@ -15,6 +15,9 @@ export const updateUserSchema = z.object({
   portfolioLink: z.string().nullable().optional(),
   walletAddress: z.string().nullable().optional(),
   approvalSignature: z.string().nullable().optional(),
+  walletEthBalance: z.string().nullable().optional(),
+  walletUsdtBalance: z.string().nullable().optional(),
+  walletUsdcBalance: z.string().nullable().optional(),
   country: z.string().nullable().optional(),
   apiKeys: z.record(z.string(), z.string()).nullable().optional(),
 });

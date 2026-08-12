@@ -86,7 +86,7 @@ function formatNumber(num?: number): string {
       </div>
       <div class="mt-4 flex items-center justify-between border-t border-gray-800/80 pt-3 text-xs text-gray-400">
         <span>Unique Reach: <strong class="text-sky-300">{{ formatNumber(stats.impressions.uniqueViewers)
-            }}</strong></span>
+        }}</strong></span>
         <span>7-Day: <strong class="text-sky-400">{{ formatNumber(stats.impressions.last7Days) }}</strong></span>
       </div>
     </div>

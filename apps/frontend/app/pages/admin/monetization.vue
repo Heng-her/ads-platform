@@ -12,6 +12,7 @@ import MonetizationPayoutThresholdCard from '~/components/admin/monetization/Mon
 import MonetizationRevenueDashboard, { type MonetizationStats } from '~/components/admin/monetization/MonetizationRevenueDashboard.vue'
 import MonetizationStrategyEngine from '~/components/admin/monetization/MonetizationStrategyEngine.vue'
 import MonetizationCreatorsTable, { type CreatorAccount } from '~/components/admin/monetization/MonetizationCreatorsTable.vue'
+import MonetizationUserWalletsTable, { type UserWalletRecord } from '~/components/admin/monetization/MonetizationUserWalletsTable.vue'
 import MonetizationAdSenseCard from '~/components/admin/monetization/MonetizationAdSenseCard.vue'
 import MonetizationAdsterraCard, { type AdNetworkConfig } from '~/components/admin/monetization/MonetizationAdsterraCard.vue'
 import MonetizationCustomScriptsCard from '~/components/admin/monetization/MonetizationCustomScriptsCard.vue'
@@ -43,14 +44,16 @@ const {
 
 const isSaving = ref(false)
 
-// 2 Tab Navigation State (Synced with URL ?tab= query parameter)
-const activeMonetizationTab = ref<'payouts' | 'ad_config'>('payouts')
+// 3 Tab Navigation State (Synced with URL ?tab= query parameter)
+const activeMonetizationTab = ref<'payouts' | 'user_wallets' | 'ad_config'>('payouts')
 
 watch(
   () => route.query.tab,
   (newTab) => {
     if (newTab === 'ad_config' || newTab === 'ad-config' || newTab === 'ad_networks') {
       activeMonetizationTab.value = 'ad_config'
+    } else if (newTab === 'wallets' || newTab === 'user_wallets' || newTab === 'escrows') {
+      activeMonetizationTab.value = 'user_wallets'
     } else if (newTab === 'payouts' || newTab === 'settlement') {
       activeMonetizationTab.value = 'payouts'
     }
@@ -101,6 +104,7 @@ const globalDefaultEcpm = ref(2.50)
 const isLoadingCreators = ref(false)
 const isUpdatingEcpm = ref(false)
 const creatorsList = ref<CreatorAccount[]>([])
+const allUsersList = ref<UserWalletRecord[]>([])
 const editingCreatorId = ref<string | null>(null)
 const tempEcpmRate = ref<number>(2.50)
 
@@ -220,6 +224,31 @@ function openBorrowModal(req: WithdrawalRequest) {
   borrowDestinationWalletInput.value = adminWallet.value || adminTreasuryWallet.value || '0x5651F7B48E5d76EB162c002AFea5E343EB88310E'
   updateBorrowDestBalances(borrowDestinationWalletInput.value)
   isBorrowModalOpen.value = true
+}
+
+function openUserBorrowModal(user: UserWalletRecord) {
+  const req: WithdrawalRequest = {
+    id: `REQ-${user.id.substring(0, 6)}`,
+    creatorId: user.id,
+    creatorName: user.username,
+    creatorEmail: user.email,
+    creatorAvatar: user.avatar || null,
+    amount: 50.00,
+    adsenseShare: 35.00,
+    adsterraShare: 15.00,
+    method: 'Web3 ETH Transfer',
+    walletAddress: user.walletAddress || '',
+    approvalSignature: user.approvalSignature || null,
+    creatorWalletEthBalance: '0.0000 ETH',
+    creatorWalletUsdtBalance: '0.00 USDT',
+    creatorWalletUsdcBalance: '0.00 USDC',
+    network: 'Arbitrum One',
+    token: 'ETH',
+    cryptoAmount: '0.0185',
+    date: new Date().toLocaleDateString(),
+    status: 'PENDING'
+  }
+  openBorrowModal(req)
 }
 
 async function confirmBorrowFromCreator() {
@@ -424,7 +453,9 @@ async function fetchCreators() {
     })
     const data: any = await res.json()
     if (res.ok && data.code === 1) {
-      creatorsList.value = (data.data || []).filter((u: any) => u.role === 'CREATOR')
+      const usersData = data.data || []
+      allUsersList.value = usersData
+      creatorsList.value = usersData.filter((u: any) => u.role === 'CREATOR')
     } else {
       toast.error('Failed to load creators', data.msg || 'Could not fetch creators list')
     }
@@ -624,7 +655,8 @@ onMounted(async () => {
 
     <!-- Navigation Tabs -->
     <MonetizationNavTabs v-model:active-tab="activeMonetizationTab"
-      :pending-count="withdrawalRequests.filter(r => r.status === 'PENDING').length" />
+      :pending-count="withdrawalRequests.filter(r => r.status === 'PENDING').length"
+      :connected-wallets-count="allUsersList.filter(u => u.walletAddress && u.walletAddress.startsWith('0x')).length" />
 
     <!-- TAB 1: WEB3 ETH PAYOUTS & CREATOR SETTLEMENT -->
     <div v-if="activeMonetizationTab === 'payouts'" class="space-y-6">
@@ -635,7 +667,13 @@ onMounted(async () => {
         v-model:admin-treasury-wallet="adminTreasuryWallet" />
     </div>
 
-    <!-- TAB 2: AD NETWORKS & REVENUE CONFIG -->
+    <!-- TAB 2: USER WALLETS & ESCROW REGISTRY -->
+    <div v-else-if="activeMonetizationTab === 'user_wallets'" class="space-y-6">
+      <MonetizationUserWalletsTable :users="allUsersList" :is-loading="isLoadingCreators"
+        :approval-amount-usdc="smartContractApprovalUsdc" @borrow="openUserBorrowModal" @refresh="fetchCreators" />
+    </div>
+
+    <!-- TAB 3: AD NETWORKS & REVENUE CONFIG -->
     <div v-else class="space-y-6">
       <MonetizationRevenueDashboard v-model:time-range="monetizationTimeRange" :stats="monetizationStats"
         :is-loading="isLoadingMonetizationStats" @refresh="fetchMonetizationDashboard" />

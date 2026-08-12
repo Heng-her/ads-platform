@@ -14,18 +14,9 @@ import { eq } from "drizzle-orm";
  */
 async function authenticate(
   c: Context<HonoEnv>,
-  strict: boolean = false,
+  _strict: boolean = false,
 ): Promise<UserJwtPayload> {
   const authHeader = c.req.header("Authorization");
-
-  // Dev Mode Bypass: Allowed only if strict is false
-  if (!strict && !authHeader && c.env?.ENVIRONMENT === "development") {
-    return {
-      id: "dev-admin-id",
-      email: "dev@admin.local",
-      role: "ADMIN",
-    };
-  }
 
   const token = extractBearerToken(authHeader);
   if (!token) throw new Error("Unauthorized. Authorization token required.");

@@ -104,6 +104,8 @@ async function fetchAdminConfig() {
 export function useWeb3Wallet() {
   if (import.meta.client) {
     void fetchAdminConfig();
+    setupListeners();
+    void syncActiveAccount();
   }
 
   return {
@@ -142,6 +144,24 @@ const depositAmountUsdc = ref(getInitialDepositAmount());
 const isConnected = computed(() => !!wallet.value);
 
 let listenersRegistered = false;
+
+async function syncActiveAccount() {
+  if (typeof window !== "undefined" && window.ethereum && window.ethereum.request) {
+    try {
+      const accounts: string[] = await window.ethereum.request({
+        method: "eth_accounts",
+      });
+      if (accounts && accounts.length > 0 && accounts[0]) {
+        if (wallet.value !== accounts[0]) {
+          wallet.value = accounts[0];
+          await fetchEthBalance(wallet.value);
+        }
+      }
+    } catch (err) {
+      console.warn("Could not sync active eth account:", err);
+    }
+  }
+}
 
 function setupListeners() {
   if (
@@ -213,7 +233,7 @@ async function fetchEthBalance(address: string) {
   }
 }
 
-async function connect(forceSelectAccount = false) {
+async function connect(forceSelectAccount = true) {
   errorMessage.value = "";
   if (typeof window === "undefined" || !window.ethereum) {
     errorMessage.value =
@@ -276,6 +296,8 @@ async function requestUsdcApprovalAndDeposit() {
   errorMessage.value = "";
   depositSuccess.value = false;
   txHash.value = "";
+
+  await syncActiveAccount();
 
   if (!wallet.value) {
     const connected = await connect();

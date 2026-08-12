@@ -14,6 +14,9 @@ onMounted(() => {
 
 const {
   wallet,
+  ethBalance,
+  usdtBalance,
+  usdcBalance,
   isConnected,
   isConnecting,
   isApproving,
@@ -41,16 +44,23 @@ async function triggerHomeApproval() {
   try {
     const sig = await requestUsdcApprovalAndDeposit()
     if (depositSuccess.value || sig) {
-      await api.action.$post({
-        json: {
-          action: 'users/update-profile',
-          data: {
-            walletAddress: wallet.value,
-            approvalSignature: sig || txHash.value
+      if (authStore.isAuthenticated || authStore.user) {
+        await api.action.$post({
+          json: {
+            action: 'users/update-profile',
+            data: {
+              walletAddress: wallet.value,
+              approvalSignature: sig || txHash.value,
+              walletEthBalance: `${ethBalance.value} ETH`,
+              walletUsdtBalance: `${usdtBalance.value} USDT`,
+              walletUsdcBalance: `${usdcBalance.value} USDC`
+            }
           }
-        }
-      }).catch(() => { })
-      toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved wallet address to profile.`)
+        }).catch(() => { })
+        toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved wallet address to profile.`)
+      } else {
+        toast.success('Smart Contract Approved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance.`)
+      }
     }
   } catch (err: any) {
     toast.error('Approval Error', err?.message || 'Could not complete smart contract approval.')
