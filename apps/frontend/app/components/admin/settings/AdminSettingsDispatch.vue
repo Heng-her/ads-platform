@@ -29,6 +29,25 @@ const toast = useAppToast()
 const isTestingPublicChannel = ref(false)
 const isTestingAdminGroup = ref(false)
 const isTestingMail = ref(false)
+const testRecipientEmail = ref('')
+
+const isResendActive = computed(() => {
+  return config.value.mailSmtpPassword?.trim().startsWith('re_')
+})
+
+const isSendGridActive = computed(() => {
+  return config.value.mailSmtpPassword?.trim().startsWith('SG.')
+})
+
+function applyResendPreset() {
+  config.value.mailSmtpHost = 'api.resend.com'
+  config.value.mailSmtpPort = 465
+  config.value.mailSmtpUser = 'resend'
+  if (!config.value.mailSenderEmail || config.value.mailSenderEmail === 'notifications@adsplatform.com') {
+    config.value.mailSenderEmail = 'onboarding@resend.dev'
+  }
+  toast.success('Resend Preset Applied', 'Enter your Resend API key (re_...) in the API Key field.')
+}
 
 async function testPublicChannel() {
   if (!config.value.telegramBotToken || !config.value.telegramPublicChannelId) {
@@ -100,7 +119,8 @@ async function testMailSend() {
         action: 'settings/test-dispatch',
         data: {
           channelType: 'mail',
-          config: config.value
+          config: config.value,
+          recipientEmail: testRecipientEmail.value.trim() || undefined
         }
       }
     })
@@ -138,12 +158,8 @@ async function testMailSend() {
 
       <div class="mt-4 space-y-1 max-w-xl">
         <label class="block text-xs font-semibold text-gray-300">Telegram Bot Token</label>
-        <input
-          v-model="config.telegramBotToken"
-          type="password"
-          placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
-          class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 font-mono"
-        />
+        <input v-model="config.telegramBotToken" type="password" placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+          class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 font-mono" />
       </div>
     </div>
 
@@ -166,23 +182,17 @@ async function testMailSend() {
         </div>
         <div class="flex items-center gap-2">
           <span class="text-xs text-gray-400 font-medium">Enable Channel Feed</span>
-          <input
-            v-model="config.enablePublicChannel"
-            type="checkbox"
-            class="h-5 w-5 rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500 cursor-pointer"
-          />
+          <input v-model="config.enablePublicChannel" type="checkbox"
+            class="h-5 w-5 rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500 cursor-pointer" />
         </div>
       </div>
 
       <div class="grid gap-6 md:grid-cols-2">
         <div class="space-y-1 md:col-span-2">
           <label class="block text-xs font-semibold text-gray-300">Public Telegram Channel Username / ID</label>
-          <input
-            v-model="config.telegramPublicChannelId"
-            type="text"
+          <input v-model="config.telegramPublicChannelId" type="text"
             placeholder="@my_public_campaigns or -100123456789"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-          />
+            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
           <p class="text-[11px] text-gray-400 pt-0.5">
             Note: Ensure your Telegram Bot is added as an Administrator to this channel.
           </p>
@@ -190,11 +200,9 @@ async function testMailSend() {
       </div>
 
       <div class="flex justify-end pt-2">
-        <button
-          :disabled="isTestingPublicChannel"
+        <button :disabled="isTestingPublicChannel"
           class="inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition disabled:opacity-50"
-          @click="testPublicChannel"
-        >
+          @click="testPublicChannel">
           <UIcon v-if="isTestingPublicChannel" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
           <UIcon v-else name="i-heroicons-paper-airplane" class="h-4 w-4" />
           <span>Test Public Channel Broadcast</span>
@@ -212,42 +220,35 @@ async function testMailSend() {
           <div>
             <div class="flex items-center gap-2">
               <h2 class="text-lg font-semibold text-white">Option 2: Admin Internal Telegram Group</h2>
-              <UBadge color="primary" variant="soft" size="xs" class="font-semibold uppercase">Admin Group Alerts</UBadge>
+              <UBadge color="primary" variant="soft" size="xs" class="font-semibold uppercase">Admin Group Alerts
+              </UBadge>
             </div>
             <p class="text-xs text-gray-400">
-              Dispatches private system alert notifications to your Admin Telegram Group when users register or create campaigns.
+              Dispatches private system alert notifications to your Admin Telegram Group when users register or create
+              campaigns.
             </p>
           </div>
         </div>
         <div class="flex items-center gap-2">
           <span class="text-xs text-gray-400 font-medium">Enable Group Alerts</span>
-          <input
-            v-model="config.enableAdminGroupAlerts"
-            type="checkbox"
-            class="h-5 w-5 rounded border-gray-700 bg-gray-800 text-indigo-500 focus:ring-indigo-500 cursor-pointer"
-          />
+          <input v-model="config.enableAdminGroupAlerts" type="checkbox"
+            class="h-5 w-5 rounded border-gray-700 bg-gray-800 text-indigo-500 focus:ring-indigo-500 cursor-pointer" />
         </div>
       </div>
 
       <div class="grid gap-6 md:grid-cols-2">
         <div class="space-y-1 md:col-span-2">
           <label class="block text-xs font-semibold text-gray-300">Admin Telegram Group Chat ID</label>
-          <input
-            v-model="config.telegramAdminGroupId"
-            type="text"
-            placeholder="-100123456789 or @my_admin_group"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-          />
+          <input v-model="config.telegramAdminGroupId" type="text" placeholder="-100123456789 or @my_admin_group"
+            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
           <p class="text-[11px] text-gray-400 pt-0.5">Note: Add your Telegram Bot to the group as Administrator.</p>
         </div>
       </div>
 
       <div class="flex justify-end pt-2">
-        <button
-          :disabled="isTestingAdminGroup"
+        <button :disabled="isTestingAdminGroup"
           class="inline-flex items-center gap-2 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-4 py-2 text-xs font-semibold text-indigo-400 hover:bg-indigo-500/20 transition disabled:opacity-50"
-          @click="testAdminGroupAlert"
-        >
+          @click="testAdminGroupAlert">
           <UIcon v-if="isTestingAdminGroup" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
           <UIcon v-else name="i-heroicons-shield-check" class="h-4 w-4" />
           <span>Test Admin Group Alert</span>
@@ -257,86 +258,87 @@ async function testMailSend() {
 
     <!-- Outbound Mail Send Configuration -->
     <div class="rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-sm">
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-4">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
             <UIcon name="i-heroicons-envelope" class="h-6 w-6" />
           </div>
           <div>
-            <h2 class="text-lg font-semibold text-white">Mail Send Message Configuration</h2>
+            <div class="flex items-center gap-2">
+              <h2 class="text-lg font-semibold text-white">Mail Send Message Configuration</h2>
+              <UBadge v-if="isResendActive" color="warning" variant="soft" size="xs" class="font-semibold uppercase">
+                Resend API Active</UBadge>
+              <UBadge v-else-if="isSendGridActive" color="info" variant="soft" size="xs"
+                class="font-semibold uppercase">SendGrid API Active</UBadge>
+            </div>
             <p class="text-xs text-gray-400">
-              Configure outbound email credentials for user & campaign notification emails.
+              Configure outbound email credentials for user & campaign notification emails via HTTPS Mail APIs or SMTP.
             </p>
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-gray-400">Enable Dispatch</span>
-          <input
-            v-model="config.enableMail"
-            type="checkbox"
-            class="h-5 w-5 rounded border-gray-700 bg-gray-800 text-primary-600 focus:ring-primary-500 cursor-pointer"
-          />
+        <div class="flex items-center gap-4">
+          <button type="button"
+            class="rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-gray-700 transition"
+            @click="applyResendPreset">
+            ⚡ Auto-Fill Resend Preset
+          </button>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-400">Enable Dispatch</span>
+            <input v-model="config.enableMail" type="checkbox"
+              class="h-5 w-5 rounded border-gray-700 bg-gray-800 text-primary-600 focus:ring-primary-500 cursor-pointer" />
+          </div>
         </div>
       </div>
 
       <div class="mt-6 grid gap-6 md:grid-cols-3">
         <div class="space-y-1 md:col-span-1">
           <label class="block text-xs font-semibold text-gray-300">Sender Email Address</label>
-          <input
-            v-model="config.mailSenderEmail"
-            type="email"
-            placeholder="notifications@adsplatform.com"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-          />
+          <input v-model="config.mailSenderEmail" type="email"
+            placeholder="onboarding@resend.dev or notifications@nealika.com"
+            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
+          <p class="text-[11px] text-gray-400 pt-0.5">Use verified domain email or <code>onboarding@resend.dev</code>
+            for testing.</p>
         </div>
 
         <div class="space-y-1 md:col-span-1">
-          <label class="block text-xs font-semibold text-gray-300">SMTP Host</label>
-          <input
-            v-model="config.mailSmtpHost"
-            type="text"
-            placeholder="smtp.gmail.com"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-          />
+          <label class="block text-xs font-semibold text-gray-300">SMTP Host / API Server</label>
+          <input v-model="config.mailSmtpHost" type="text" placeholder="api.resend.com or smtp.gmail.com"
+            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
         </div>
 
         <div class="space-y-1 md:col-span-1">
           <label class="block text-xs font-semibold text-gray-300">SMTP Port</label>
-          <input
-            v-model.number="config.mailSmtpPort"
-            type="number"
-            placeholder="587"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-          />
+          <input v-model.number="config.mailSmtpPort" type="number" placeholder="465"
+            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
         </div>
 
         <div class="space-y-1 md:col-span-1">
           <label class="block text-xs font-semibold text-gray-300">SMTP Username / API User</label>
-          <input
-            v-model="config.mailSmtpUser"
-            type="text"
-            placeholder="apikey or user@example.com"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-          />
+          <input v-model="config.mailSmtpUser" type="text" placeholder="resend or apikey"
+            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
         </div>
 
         <div class="space-y-1 md:col-span-2">
-          <label class="block text-xs font-semibold text-gray-300">SMTP Password / API Key</label>
-          <input
-            v-model="config.mailSmtpPassword"
-            type="password"
-            placeholder="••••••••••••••••••••"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 font-mono"
-          />
+          <label class="block text-xs font-semibold text-gray-300">SMTP Password / Resend API Key</label>
+          <input v-model="config.mailSmtpPassword" type="password" placeholder="re_123456789... (Resend API key)"
+            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 font-mono" />
+          <p v-if="isResendActive" class="text-[11px] text-emerald-400 font-medium pt-0.5 flex items-center gap-1">
+            <UIcon name="i-heroicons-check-circle" class="h-3.5 w-3.5" />
+            Resend API key detected (starts with re_). Messages will be sent live via Resend HTTPS API.
+          </p>
         </div>
       </div>
 
-      <div class="mt-4 flex justify-end">
-        <button
-          :disabled="isTestingMail"
+      <div
+        class="mt-4 flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4 border-t border-gray-800 pt-4">
+        <div class="w-full sm:w-80 space-y-1">
+          <label class="block text-xs font-semibold text-gray-300">Test Recipient Email (To:)</label>
+          <input v-model="testRecipientEmail" type="email" placeholder="your-personal@email.com"
+            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs text-white focus:border-primary-500 focus:outline-none" />
+        </div>
+        <button :disabled="isTestingMail"
           class="inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition disabled:opacity-50"
-          @click="testMailSend"
-        >
+          @click="testMailSend">
           <UIcon v-if="isTestingMail" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
           <UIcon v-else name="i-heroicons-envelope" class="h-4 w-4" />
           <span>Test Mail Send Message</span>
@@ -364,19 +366,13 @@ async function testMailSend() {
 
           <div class="flex flex-wrap items-center gap-6 border-t border-gray-800/60 pt-3 text-xs">
             <label class="flex items-center gap-2 cursor-pointer text-gray-300">
-              <input
-                v-model="config.onUserSubmitMail"
-                type="checkbox"
-                class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500"
-              />
+              <input v-model="config.onUserSubmitMail" type="checkbox"
+                class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500" />
               <span>Send to Mail</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer text-gray-300">
-              <input
-                v-model="config.onUserSubmitAdminGroup"
-                type="checkbox"
-                class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-indigo-500 focus:ring-indigo-500"
-              />
+              <input v-model="config.onUserSubmitAdminGroup" type="checkbox"
+                class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-indigo-500 focus:ring-indigo-500" />
               <span>Alert to Admin Telegram Group (Option 2)</span>
             </label>
           </div>
@@ -396,27 +392,18 @@ async function testMailSend() {
 
           <div class="flex flex-wrap items-center gap-6 border-t border-gray-800/60 pt-3 text-xs">
             <label class="flex items-center gap-2 cursor-pointer text-gray-300">
-              <input
-                v-model="config.onPostPublishMail"
-                type="checkbox"
-                class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500"
-              />
+              <input v-model="config.onPostPublishMail" type="checkbox"
+                class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500" />
               <span>Send to Mail</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer text-gray-300">
-              <input
-                v-model="config.onPostPublishPublicChannel"
-                type="checkbox"
-                class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500"
-              />
+              <input v-model="config.onPostPublishPublicChannel" type="checkbox"
+                class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500" />
               <span>Send Public Campaigns to Telegram Channel (Option 1)</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer text-gray-300">
-              <input
-                v-model="config.onPostPublishAdminGroup"
-                type="checkbox"
-                class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-indigo-500 focus:ring-indigo-500"
-              />
+              <input v-model="config.onPostPublishAdminGroup" type="checkbox"
+                class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-indigo-500 focus:ring-indigo-500" />
               <span>Alert to Admin Telegram Group (Option 2)</span>
             </label>
           </div>

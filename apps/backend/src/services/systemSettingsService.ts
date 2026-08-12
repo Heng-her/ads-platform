@@ -195,6 +195,94 @@ export class SystemSettingsService {
     }
   }
 
+  private async sendEmailViaApi(
+    config: ChannelConfig,
+    toEmail: string,
+    subject: string,
+    htmlContent: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const apiKey = (config.mailSmtpPassword || "").trim();
+    const sender = config.mailSenderEmail;
+
+    if (apiKey.startsWith("re_")) {
+      try {
+        const res = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: sender,
+            to: [toEmail],
+            subject,
+            html: htmlContent,
+          }),
+        });
+        const data: any = await res.json();
+        if (res.ok && data.id) {
+          return {
+            success: true,
+            message: `Test email successfully sent to ${toEmail} via Resend API (ID: ${data.id})!`,
+          };
+        } else {
+          return {
+            success: false,
+            message:
+              data.message || `Resend API returned error status ${res.status}`,
+          };
+        }
+      } catch (err: any) {
+        return {
+          success: false,
+          message: `Failed to send email via Resend API: ${err.message}`,
+        };
+      }
+    }
+
+    if (apiKey.startsWith("SG.")) {
+      try {
+        const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            personalizations: [{ to: [{ email: toEmail }] }],
+            from: { email: sender },
+            subject,
+            content: [{ type: "text/html", value: htmlContent }],
+          }),
+        });
+        if (res.ok || res.status === 202) {
+          return {
+            success: true,
+            message: `Test email successfully sent to ${toEmail} via SendGrid API!`,
+          };
+        } else {
+          const data: any = await res.json().catch(() => ({}));
+          return {
+            success: false,
+            message:
+              data.errors?.[0]?.message ||
+              `SendGrid API returned status ${res.status}`,
+          };
+        }
+      } catch (err: any) {
+        return {
+          success: false,
+          message: `Failed to send email via SendGrid API: ${err.message}`,
+        };
+      }
+    }
+
+    return {
+      success: true,
+      message: `Outbound Mail configuration verified for ${sender} via ${config.mailSmtpHost}:${config.mailSmtpPort || 587}. Note: Serverless Workers require an HTTP Mail API Key (e.g. Resend 're_...' or SendGrid 'SG....') to send live emails over HTTPS.`,
+    };
+  }
+
   async testDispatchChannel(
     channelType: "public_channel" | "admin_group" | "mail",
     configData: Partial<ChannelConfig>,
@@ -253,10 +341,14 @@ export class SystemSettingsService {
           message: "Missing configuration: SMTP Host is required.",
         };
       }
-      return {
-        success: true,
-        message: `Outbound Mail configuration verified for ${config.mailSenderEmail} via SMTP server ${config.mailSmtpHost}:${config.mailSmtpPort || 587}`,
-      };
+      const targetRecipient =
+        (configData as any).recipientEmail || config.mailSenderEmail;
+      return await this.sendEmailViaApi(
+        config,
+        targetRecipient,
+        "Ads Platform Outbound Email Test",
+        `<p>This is a test notification email sent from <b>${config.mailSenderEmail}</b> to <b>${targetRecipient}</b>.</p>`,
+      );
     }
 
     return {

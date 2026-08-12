@@ -88,7 +88,11 @@ export async function handleSettingAction({
       return { code: 0, msg: "Missing channelType parameter." };
     }
 
-    const testResult = await service.testDispatchChannel(channelType, config || {});
+    const configPayload = {
+      ...(config || {}),
+      recipientEmail: data?.recipientEmail,
+    };
+    const testResult = await service.testDispatchChannel(channelType, configPayload);
     return {
       code: testResult.success ? 1 : 0,
       msg: testResult.message,
