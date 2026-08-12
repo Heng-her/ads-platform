@@ -1,0 +1,48 @@
+<script setup lang="ts">
+const activeTab = defineModel<'platform' | 'dispatch' | 'adminprofile'>('activeTab', { default: 'platform' })
+</script>
+
+<template>
+  <div class="border-b border-gray-800">
+    <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Admin Tabs">
+      <button
+        :class="[
+          activeTab === 'platform'
+            ? 'border-primary-500 text-primary-400'
+            : 'border-transparent text-gray-400 hover:border-gray-700 hover:text-gray-200',
+          'flex items-center gap-2 border-b-2 py-3 px-1 text-sm font-medium whitespace-nowrap'
+        ]"
+        @click="activeTab = 'platform'"
+      >
+        <UIcon name="i-heroicons-adjustments-horizontal" class="h-4 w-4" />
+        <span>Platform General</span>
+      </button>
+
+      <button
+        :class="[
+          activeTab === 'dispatch'
+            ? 'border-primary-500 text-primary-400'
+            : 'border-transparent text-gray-400 hover:border-gray-700 hover:text-gray-200',
+          'flex items-center gap-2 border-b-2 py-3 px-1 text-sm font-medium whitespace-nowrap'
+        ]"
+        @click="activeTab = 'dispatch'"
+      >
+        <UIcon name="i-heroicons-paper-airplane" class="h-4 w-4" />
+        <span>Telegram & Email Dispatch</span>
+      </button>
+
+      <button
+        :class="[
+          activeTab === 'adminprofile'
+            ? 'border-primary-500 text-primary-400'
+            : 'border-transparent text-gray-400 hover:border-gray-700 hover:text-gray-200',
+          'flex items-center gap-2 border-b-2 py-3 px-1 text-sm font-medium whitespace-nowrap'
+        ]"
+        @click="activeTab = 'adminprofile'"
+      >
+        <UIcon name="i-heroicons-user-shield" class="h-4 w-4" />
+        <span>Admin Profile</span>
+      </button>
+    </nav>
+  </div>
+</template>

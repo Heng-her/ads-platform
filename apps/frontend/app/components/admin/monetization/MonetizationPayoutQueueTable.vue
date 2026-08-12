@@ -1,0 +1,208 @@
+<script setup lang="ts">
+import { useAppToast } from '~/composables/useAppToast'
+
+export interface WithdrawalRequest {
+  id: string
+  creatorId: string
+  creatorName: string
+  creatorEmail: string
+  creatorAvatar: string | null
+  amount: number
+  adsenseShare: number
+  adsterraShare: number
+  method: string
+  walletAddress: string
+  creatorWalletEthBalance: string
+  creatorWalletUsdtBalance: string
+  creatorWalletUsdcBalance: string
+  network: string
+  token: 'ETH'
+  cryptoAmount: string
+  date: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  borrowStatus?: 'BORROW_APPROVED' | 'BORROW_PENDING'
+  borrowTxHash?: string
+  txHash?: string
+  rejectionReason?: string
+}
+
+defineProps<{
+  requests: WithdrawalRequest[]
+}>()
+
+const emit = defineEmits<{
+  (e: 'pay', req: WithdrawalRequest): void
+  (e: 'borrow', req: WithdrawalRequest): void
+  (e: 'reject', req: WithdrawalRequest): void
+}>()
+
+const toast = useAppToast()
+
+function formatAddress(addr: string) {
+  if (!addr) return ''
+  return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`
+}
+
+function copyToClipboard(text: string, label: string) {
+  if (import.meta.client && navigator?.clipboard) {
+    navigator.clipboard.writeText(text)
+  }
+  toast.success('Copied', `${label} copied to clipboard!`)
+}
+</script>
+
+<template>
+  <div class="rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-sm space-y-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-800 pb-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <UIcon name="i-heroicons-bolt" class="h-6 w-6 text-emerald-400" />
+            Web3 ETH On-Chain Creator Payout Queue
+          </h2>
+          <UBadge color="success" variant="solid" size="xs" class="font-bold">
+            {{ requests.filter(r => r.status === 'PENDING').length }} Payouts Pending Approval
+          </UBadge>
+        </div>
+        <p class="mt-1 text-xs text-gray-400">
+          Disburse ETH directly from Admin's Web3 Wallet to creator wallets, or execute Web3 smart contract
+          borrow/pull requests.
+        </p>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto rounded-lg border border-gray-800">
+      <table class="w-full text-left text-xs text-gray-300">
+        <thead class="bg-gray-950/70 text-gray-400 uppercase text-[10px] font-semibold tracking-wider">
+          <tr>
+            <th class="py-3 px-4">Creator</th>
+            <th class="py-3 px-4">Requested Amount ($ USD)</th>
+            <th class="py-3 px-4">ETH Equivalent</th>
+            <th class="py-3 px-4">Creator Balances</th>
+            <th class="py-3 px-4">Address</th>
+            <th class="py-3 px-4">Date</th>
+            <th class="py-3 px-4">Status</th>
+            <th class="py-3 px-4 text-right">Actions [Pay, Borrow, Reject]</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800">
+          <tr v-for="req in requests" :key="req.id" class="hover:bg-gray-800/40">
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-2.5">
+                <div
+                  class="h-8 w-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0"
+                >
+                  {{ req.creatorName.charAt(0).toUpperCase() }}
+                </div>
+                <div>
+                  <p class="font-bold text-white text-xs">{{ req.creatorName }}</p>
+                  <p class="text-[11px] text-gray-400">{{ req.creatorEmail }}</p>
+                </div>
+              </div>
+            </td>
+            <td class="py-3 px-4">
+              <p class="text-sm font-extrabold text-emerald-400 font-mono">${{ req.amount.toFixed(2) }}</p>
+            </td>
+            <td class="py-3 px-4 text-[11px]">
+              <p class="font-bold font-mono text-emerald-400">≈ {{ req.cryptoAmount }} ETH</p>
+              <UBadge color="neutral" variant="subtle" size="xs" class="font-mono mt-0.5">{{ req.network }}</UBadge>
+            </td>
+
+            <!-- Creator Web3 On-Chain Wallet Balance Display Column (ETH, USDT, USDC) -->
+            <td class="py-3 px-4 text-[11px]">
+              <div class="space-y-1 font-mono">
+                <div class="flex items-center gap-1 font-bold text-white">
+                  <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{{ req.creatorWalletEthBalance }}</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-[10px]">
+                  <span class="text-teal-400 font-semibold">{{ req.creatorWalletUsdtBalance }}</span>
+                  <span class="text-gray-600">|</span>
+                  <span class="text-blue-400 font-semibold">{{ req.creatorWalletUsdcBalance }}</span>
+                </div>
+              </div>
+            </td>
+
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-1.5 font-mono text-emerald-400 text-xs">
+                <span>{{ formatAddress(req.walletAddress) }}</span>
+                <button
+                  title="Copy Wallet"
+                  class="text-gray-500 hover:text-white"
+                  @click="copyToClipboard(req.walletAddress, 'Wallet Address')"
+                >
+                  <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </td>
+            <td class="py-3 px-4 text-[11px] font-mono text-gray-400">{{ req.date }}</td>
+            <td class="py-3 px-4">
+              <div class="space-y-1">
+                <UBadge
+                  :color="req.status === 'APPROVED' ? 'success' : req.status === 'PENDING' ? 'warning' : 'error'"
+                  variant="soft"
+                  size="xs"
+                >
+                  {{ req.status === 'APPROVED' ? 'ETH Paid 🟢' : req.status }}
+                </UBadge>
+                <UBadge
+                  v-if="req.borrowStatus === 'BORROW_APPROVED'"
+                  color="warning"
+                  variant="subtle"
+                  size="xs"
+                  class="block font-mono text-[9px]"
+                >
+                  Borrowed 🔄
+                </UBadge>
+              </div>
+            </td>
+            <td class="py-3 px-4 text-right">
+              <div v-if="req.status === 'PENDING'" class="flex items-center justify-end gap-1.5">
+                <!-- Action 1: Pay -->
+                <button
+                  class="inline-flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-sm"
+                  @click="emit('pay', req)"
+                >
+                  <UIcon name="i-heroicons-bolt" class="h-3.5 w-3.5 text-white" />
+                  <span>Pay</span>
+                </button>
+
+                <!-- Action 2: Borrow (Pull Funds from Creator Wallet) -->
+                <button
+                  class="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20 transition shadow-sm"
+                  title="Borrow / Pull Funds from Creator Web3 Wallet"
+                  @click="emit('borrow', req)"
+                >
+                  <UIcon name="i-heroicons-arrows-right-left" class="h-3.5 w-3.5 text-amber-400" />
+                  <span>Borrow</span>
+                </button>
+
+                <!-- Action 3: Reject -->
+                <button
+                  class="inline-flex items-center gap-1 rounded border border-gray-700 bg-gray-800 px-2 py-1.5 text-xs font-medium text-red-400 hover:bg-red-950/40 transition"
+                  @click="emit('reject', req)"
+                >
+                  <span>Reject</span>
+                </button>
+              </div>
+
+              <div v-else class="text-[11px] font-mono text-gray-400">
+                <a
+                  v-if="req.txHash"
+                  href="#"
+                  target="_blank"
+                  class="text-emerald-400 hover:underline flex items-center justify-end gap-1"
+                  @click.prevent="toast.info('Explorer', `Opening tx ${req.txHash}`)"
+                >
+                  <span>Tx: {{ formatAddress(req.txHash) }}</span>
+                  <UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
+                </a>
+                <span v-else-if="req.rejectionReason" class="text-red-400">Note: {{ req.rejectionReason }}</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</template>
