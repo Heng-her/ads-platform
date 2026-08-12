@@ -20,6 +20,7 @@ const router = useRouter()
 
 const activeTab = ref<'platform' | 'dispatch' | 'adminprofile'>('platform')
 const isSaving = ref(false)
+const isLoading = ref(true)
 
 // Platform Configuration State
 const platformConfig = ref<PlatformConfig>({
@@ -39,6 +40,8 @@ const channelConfig = ref<ChannelConfig>({
   mailSenderEmail: 'notifications@adsplatform.com',
   mailSmtpHost: 'smtp.gmail.com',
   mailSmtpPort: 587,
+  mailSmtpUser: '',
+  mailSmtpPassword: '',
   enableMail: true,
   onUserSubmitMail: true,
   onUserSubmitAdminGroup: true,
@@ -54,23 +57,44 @@ const adminProfile = ref<AdminProfile>({
   avatar: ''
 })
 
-function populateAdminSettings() {
+async function fetchSystemSettings() {
+  isLoading.value = true
+  try {
+    const res = await api.action.$post({
+      json: { action: 'settings/get-all' }
+    })
+    const result: any = await res.json()
+    if (res.ok && result.code === 1 && result.data) {
+      if (result.data.platform) {
+        platformConfig.value = { ...platformConfig.value, ...result.data.platform }
+      }
+      if (result.data.dispatch) {
+        channelConfig.value = { ...channelConfig.value, ...result.data.dispatch }
+      }
+    }
+  } catch {
+    // Fallback to local storage if offline or error occurs
+    if (import.meta.client) {
+      const savedConfig = localStorage.getItem('admin_platform_config')
+      if (savedConfig) {
+        try {
+          const parsed = JSON.parse(savedConfig)
+          if (parsed.platform) platformConfig.value = { ...platformConfig.value, ...parsed.platform }
+          if (parsed.channels) channelConfig.value = { ...channelConfig.value, ...parsed.channels }
+        } catch { }
+      }
+    }
+  } finally {
+    isLoading.value = false
+  }
+}
+
+function populateAdminProfile() {
   authStore.initAuth()
   if (authStore.user) {
     adminProfile.value.username = authStore.user.username || ''
     adminProfile.value.email = authStore.user.email || ''
     adminProfile.value.avatar = authStore.user.avatar || ''
-  }
-
-  if (import.meta.client) {
-    const savedConfig = localStorage.getItem('admin_platform_config')
-    if (savedConfig) {
-      try {
-        const parsed = JSON.parse(savedConfig)
-        if (parsed.platform) platformConfig.value = { ...platformConfig.value, ...parsed.platform }
-        if (parsed.channels) channelConfig.value = { ...channelConfig.value, ...parsed.channels }
-      } catch { }
-    }
   }
 }
 
@@ -89,8 +113,9 @@ onMounted(() => {
   if (route.query.tab && ['platform', 'dispatch', 'adminprofile'].includes(route.query.tab as string)) {
     activeTab.value = route.query.tab as any
   }
-  populateAdminSettings()
-  void authStore.fetchUserMe().then(() => populateAdminSettings())
+  populateAdminProfile()
+  void authStore.fetchUserMe().then(() => populateAdminProfile())
+  void fetchSystemSettings()
 })
 
 async function saveAdminSettings() {
@@ -98,7 +123,7 @@ async function saveAdminSettings() {
 
   try {
     // 1. Update Admin profile details via backend API action
-    const response = await api.action.$post({
+    const profileRes = await api.action.$post({
       json: {
         action: 'users/update-profile',
         data: {
@@ -107,10 +132,22 @@ async function saveAdminSettings() {
         }
       }
     })
+    const profileResult: any = await profileRes.json()
 
-    const result: any = await response.json()
-    if (response.ok && result.code === 1) {
-      // 2. Persist platform global parameters in local storage
+    // 2. Persist platform & dispatch configs via backend API action
+    const settingRes = await api.action.$post({
+      json: {
+        action: 'settings/save-all',
+        data: {
+          platform: platformConfig.value,
+          dispatch: channelConfig.value
+        }
+      }
+    })
+    const settingResult: any = await settingRes.json()
+
+    if (settingRes.ok && settingResult.code === 1 && profileRes.ok && profileResult.code === 1) {
+      // 3. Persist local storage copy as offline cache
       if (import.meta.client) {
         const savedConfig = localStorage.getItem('admin_platform_config')
         let parsed: any = {}
@@ -127,7 +164,7 @@ async function saveAdminSettings() {
       await authStore.fetchUserMe()
       toast.success('Admin settings saved successfully!')
     } else {
-      toast.error('Failed to save settings', result.msg || 'Please check your input.')
+      toast.error('Failed to save settings', settingResult.msg || profileResult.msg || 'Please check your input.')
     }
   } catch (err: any) {
     toast.error('Save Error', err.message || 'An unexpected error occurred.')
@@ -148,7 +185,7 @@ async function saveAdminSettings() {
         </p>
       </div>
       <button
-        :disabled="isSaving"
+        :disabled="isSaving || isLoading"
         class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-500 disabled:opacity-50"
         @click="saveAdminSettings"
       >
@@ -161,13 +198,21 @@ async function saveAdminSettings() {
     <!-- Navigation Tabs -->
     <AdminSettingsNavTabs :active-tab="activeTab" @update:active-tab="setTab" />
 
-    <!-- TAB 1: Platform General -->
-    <AdminSettingsPlatform v-if="activeTab === 'platform'" v-model="platformConfig" />
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex flex-col items-center justify-center py-16 space-y-3 rounded-xl border border-gray-800 bg-gray-900">
+      <UIcon name="i-heroicons-arrow-path" class="h-8 w-8 animate-spin text-primary-500" />
+      <p class="text-sm text-gray-400">Loading system configurations...</p>
+    </div>
 
-    <!-- TAB 2: Telegram & Email Dispatch -->
-    <AdminSettingsDispatch v-if="activeTab === 'dispatch'" v-model="channelConfig" />
+    <template v-else>
+      <!-- TAB 1: Platform General -->
+      <AdminSettingsPlatform v-if="activeTab === 'platform'" v-model="platformConfig" />
 
-    <!-- TAB 3: Admin Profile -->
-    <AdminSettingsProfile v-if="activeTab === 'adminprofile'" v-model="adminProfile" />
+      <!-- TAB 2: Telegram & Email Dispatch -->
+      <AdminSettingsDispatch v-if="activeTab === 'dispatch'" v-model="channelConfig" />
+
+      <!-- TAB 3: Admin Profile -->
+      <AdminSettingsProfile v-if="activeTab === 'adminprofile'" v-model="adminProfile" />
+    </template>
   </div>
 </template>

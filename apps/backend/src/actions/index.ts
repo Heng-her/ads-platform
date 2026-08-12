@@ -8,6 +8,7 @@ import { handleCategoryAction } from "./categoryActions";
 import { handleAuditLogAction } from "./auditLogActions";
 import { handleDashboardAction } from "./dashboardActions";
 import { handleMonetizationAction } from "./monetizationActions";
+import { handleSettingAction } from "./settingActions";
 import { sendError } from "../utils/response";
 
 export async function dispatchAction(
@@ -75,5 +76,19 @@ export async function dispatchAction(
     return c.json(result);
   }
 
+  // 8. System Setting Actions
+  if (action.startsWith("settings/")) {
+    const currentUser = await authenticate(c, false);
+    const result = await handleSettingAction({
+      c,
+      db,
+      action,
+      data: payloadData,
+      currentUser,
+    });
+    return c.json(result);
+  }
+
   return sendError(c, `Unknown action: '${action}'`, null, 400);
 }
+

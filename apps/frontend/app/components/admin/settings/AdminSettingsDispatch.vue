@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
 
 export interface ChannelConfig {
@@ -11,6 +12,8 @@ export interface ChannelConfig {
   mailSenderEmail: string
   mailSmtpHost: string
   mailSmtpPort: number
+  mailSmtpUser?: string
+  mailSmtpPassword?: string
   enableMail: boolean
   onUserSubmitMail: boolean
   onUserSubmitAdminGroup: boolean
@@ -20,6 +23,7 @@ export interface ChannelConfig {
 }
 
 const config = defineModel<ChannelConfig>({ required: true })
+const api = useApi()
 const toast = useAppToast()
 
 const isTestingPublicChannel = ref(false)
@@ -33,10 +37,23 @@ async function testPublicChannel() {
   }
   isTestingPublicChannel.value = true
   try {
-    await new Promise(r => setTimeout(r, 600))
-    toast.success('Public Channel Post Sent', `Sample public campaign post broadcasted to ${config.value.telegramPublicChannelId}`)
+    const res = await api.action.$post({
+      json: {
+        action: 'settings/test-dispatch',
+        data: {
+          channelType: 'public_channel',
+          config: config.value
+        }
+      }
+    })
+    const result: any = await res.json()
+    if (res.ok && result.code === 1) {
+      toast.success('Public Channel Test Passed', result.msg)
+    } else {
+      toast.error('Test Failed', result.msg || 'Could not send test message')
+    }
   } catch (err: any) {
-    toast.error('Test Failed', err.message || 'Could not send test message')
+    toast.error('Test Error', err.message || 'Could not send test message')
   } finally {
     isTestingPublicChannel.value = false
   }
@@ -49,10 +66,23 @@ async function testAdminGroupAlert() {
   }
   isTestingAdminGroup.value = true
   try {
-    await new Promise(r => setTimeout(r, 600))
-    toast.success('Admin Group Alert Sent', `Sample alert notification dispatched to Admin Group (${config.value.telegramAdminGroupId})`)
+    const res = await api.action.$post({
+      json: {
+        action: 'settings/test-dispatch',
+        data: {
+          channelType: 'admin_group',
+          config: config.value
+        }
+      }
+    })
+    const result: any = await res.json()
+    if (res.ok && result.code === 1) {
+      toast.success('Admin Group Test Passed', result.msg)
+    } else {
+      toast.error('Test Failed', result.msg || 'Could not send test message')
+    }
   } catch (err: any) {
-    toast.error('Test Failed', err.message || 'Could not send test message')
+    toast.error('Test Error', err.message || 'Could not send test message')
   } finally {
     isTestingAdminGroup.value = false
   }
@@ -65,10 +95,23 @@ async function testMailSend() {
   }
   isTestingMail.value = true
   try {
-    await new Promise(r => setTimeout(r, 600))
-    toast.success('Mail Test Sent', `Test email message sent from ${config.value.mailSenderEmail}`)
+    const res = await api.action.$post({
+      json: {
+        action: 'settings/test-dispatch',
+        data: {
+          channelType: 'mail',
+          config: config.value
+        }
+      }
+    })
+    const result: any = await res.json()
+    if (res.ok && result.code === 1) {
+      toast.success('Mail Test Passed', result.msg)
+    } else {
+      toast.error('Test Failed', result.msg || 'Could not send test email')
+    }
   } catch (err: any) {
-    toast.error('Mail Test Failed', err.message || 'Could not send test email')
+    toast.error('Test Error', err.message || 'Could not send test email')
   } finally {
     isTestingMail.value = false
   }
@@ -264,6 +307,26 @@ async function testMailSend() {
             type="number"
             placeholder="587"
             class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+          />
+        </div>
+
+        <div class="space-y-1 md:col-span-1">
+          <label class="block text-xs font-semibold text-gray-300">SMTP Username / API User</label>
+          <input
+            v-model="config.mailSmtpUser"
+            type="text"
+            placeholder="apikey or user@example.com"
+            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+          />
+        </div>
+
+        <div class="space-y-1 md:col-span-2">
+          <label class="block text-xs font-semibold text-gray-300">SMTP Password / API Key</label>
+          <input
+            v-model="config.mailSmtpPassword"
+            type="password"
+            placeholder="••••••••••••••••••••"
+            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 font-mono"
           />
         </div>
       </div>
