@@ -91,6 +91,8 @@ export async function handleSettingAction({
     const configPayload = {
       ...(config || {}),
       recipientEmail: data?.recipientEmail,
+      customSubject: data?.customSubject,
+      customMessage: data?.customMessage,
     };
     const testResult = await service.testDispatchChannel(channelType, configPayload);
     return {

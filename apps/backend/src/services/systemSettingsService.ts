@@ -343,11 +343,24 @@ export class SystemSettingsService {
       }
       const targetRecipient =
         (configData as any).recipientEmail || config.mailSenderEmail;
+      const subject =
+        (configData as any).customSubject || "Ads Platform Outbound Email Test";
+      const customBody = (configData as any).customMessage;
+
+      const htmlBody = customBody
+        ? `<div style="font-family: sans-serif; padding: 16px; color: #111; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <h3 style="color: #059669; margin-top: 0;">${subject}</h3>
+            <div style="font-size: 14px; line-height: 1.6;">${customBody.replace(/\n/g, "<br>")}</div>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;" />
+            <small style="color: #6b7280;">Sent from Ads Platform Admin Settings (${config.mailSenderEmail})</small>
+          </div>`
+        : `<p>This is a test notification email sent from <b>${config.mailSenderEmail}</b> to <b>${targetRecipient}</b>.</p>`;
+
       return await this.sendEmailViaApi(
         config,
         targetRecipient,
-        "Ads Platform Outbound Email Test",
-        `<p>This is a test notification email sent from <b>${config.mailSenderEmail}</b> to <b>${targetRecipient}</b>.</p>`,
+        subject,
+        htmlBody,
       );
     }
 
