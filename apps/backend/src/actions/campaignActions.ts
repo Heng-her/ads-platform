@@ -6,6 +6,11 @@ import { CategoryService } from "../services/categoryService";
 import { AuditLogService } from "../services/auditLogService";
 import { CampaignDispatchService } from "../services/campaignDispatchService";
 import {
+  SystemSettingsService,
+  DEFAULT_POST_CONFIG,
+  type PostConfig,
+} from "../services/systemSettingsService";
+import {
   createCampaignSchema,
   updateCampaignSchema,
   updateCampaignStatusSchema,
@@ -16,8 +21,12 @@ import { getClientIp } from "../utils/ip";
 import { checkRateLimit } from "../middlewares/rateLimiter";
 import { ImpressionService } from "../services/impressionService";
 
-function validateVideoLimit(videoUrls: string[] | undefined, isAdmin: boolean) {
-  return isAdmin || !videoUrls || videoUrls.length <= 2;
+function validateVideoLimit(videoUrls: string[] | undefined, isAdmin: boolean, maxVideos: number = 2) {
+  return isAdmin || !videoUrls || videoUrls.length <= maxVideos;
+}
+
+function validateImageLimit(images: any[] | undefined, isAdmin: boolean, maxImages: number = 10) {
+  return isAdmin || !images || images.length <= maxImages;
 }
 
 export async function handleCampaignAction(
@@ -28,6 +37,7 @@ export async function handleCampaignAction(
   authenticate: (c: Context<HonoEnv>, strict?: boolean) => Promise<UserJwtPayload>,
 ) {
   const auditLogService = new AuditLogService(db);
+  const settingsService = new SystemSettingsService({ db });
 
   switch (action) {
     case "campaigns/search-suggestions": {
@@ -175,12 +185,12 @@ export async function handleCampaignAction(
     }
 
     case "campaigns/create": {
+      const postConfig = await settingsService.getSetting<PostConfig>("post", DEFAULT_POST_CONFIG);
       const rateLimitErr = await checkRateLimit(c, {
-        limit: 5,
+        limit: postConfig.maxPostPerDay,
         windowSeconds: 86400,
         keyPrefix: "campaign_create",
-        message:
-          "Post limit reached. You can only publish a maximum of 5 posts per day from your IP address.",
+        message: `Post limit reached. You can only publish a maximum of ${postConfig.maxPostPerDay} posts per day from your IP address.`,
       });
       if (rateLimitErr) return sendError(c, rateLimitErr, null, 429);
 
@@ -193,8 +203,11 @@ export async function handleCampaignAction(
           parseResult.error.format(),
         );
       }
-      if (!validateVideoLimit(parseResult.data.videoUrls, currentUser.role === "ADMIN")) {
-        return sendError(c, "Maximum 2 videos allowed per campaign", null, 400);
+      if (!validateVideoLimit(parseResult.data.videoUrls, currentUser.role === "ADMIN", postConfig.maxUploadVideo)) {
+        return sendError(c, `Maximum ${postConfig.maxUploadVideo} videos allowed per campaign`, null, 400);
+      }
+      if (!validateImageLimit(parseResult.data.images, currentUser.role === "ADMIN", postConfig.maxUploadImage)) {
+        return sendError(c, `Maximum ${postConfig.maxUploadImage} images allowed per campaign`, null, 400);
       }
       const campaignService = new CampaignService(db);
       const newCampaign = await campaignService.createCampaign(
@@ -312,8 +325,12 @@ export async function handleCampaignAction(
           parseResult.error.format(),
         );
       }
-      if (!validateVideoLimit(parseResult.data.videoUrls, currentUser.role === "ADMIN")) {
-        return sendError(c, "Maximum 2 videos allowed per campaign", null, 400);
+      const postConfig = await settingsService.getSetting<PostConfig>("post", DEFAULT_POST_CONFIG);
+      if (!validateVideoLimit(parseResult.data.videoUrls, currentUser.role === "ADMIN", postConfig.maxUploadVideo)) {
+        return sendError(c, `Maximum ${postConfig.maxUploadVideo} videos allowed per campaign`, null, 400);
+      }
+      if (!validateImageLimit(parseResult.data.images, currentUser.role === "ADMIN", postConfig.maxUploadImage)) {
+        return sendError(c, `Maximum ${postConfig.maxUploadImage} images allowed per campaign`, null, 400);
       }
       const campaignService = new CampaignService(db);
       const campaign = await campaignService.getCampaignById(campaignId);

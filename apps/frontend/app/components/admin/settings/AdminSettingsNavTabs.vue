@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const activeTab = defineModel<'platform' | 'dispatch' | 'adminprofile'>('activeTab', { default: 'platform' })
+const activeTab = defineModel<'platform' | 'dispatch' | 'post' | 'adminprofile'>('activeTab', { default: 'platform' })
 </script>
 
 <template>
@@ -29,6 +29,19 @@ const activeTab = defineModel<'platform' | 'dispatch' | 'adminprofile'>('activeT
       >
         <UIcon name="i-heroicons-paper-airplane" class="h-4 w-4" />
         <span>Telegram & Email Dispatch</span>
+      </button>
+
+      <button
+        :class="[
+          activeTab === 'post'
+            ? 'border-primary-500 text-primary-400'
+            : 'border-transparent text-gray-400 hover:border-gray-700 hover:text-gray-200',
+          'flex items-center gap-2 border-b-2 py-3 px-1 text-sm font-medium whitespace-nowrap'
+        ]"
+        @click="activeTab = 'post'"
+      >
+        <UIcon name="i-heroicons-document-text" class="h-4 w-4" />
+        <span>Post & Media Limits</span>
       </button>
 
       <button

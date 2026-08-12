@@ -4,6 +4,7 @@ import type { HonoEnv } from "../types/env";
 import { getDb } from "../db/index";
 import { AuthService } from "../services/authService";
 import { AuditLogService } from "../services/auditLogService";
+import { CampaignDispatchService } from "../services/campaignDispatchService";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
 import { getJwtSecret } from "../utils/env";
@@ -66,6 +67,8 @@ export const authRoutes = new Hono<HonoEnv>()
           getClientIp(c),
           JSON.stringify({ email: data.user.email, role: data.user.role }),
         );
+        const dispatchService = new CampaignDispatchService(db);
+        await dispatchService.dispatchUserRegistrationNotifications(data.user);
         return sendSuccess(c, data, "User registered successfully");
       } catch (err: any) {
         return sendError(c, err.message);

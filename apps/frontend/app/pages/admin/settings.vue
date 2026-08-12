@@ -6,6 +6,7 @@ import { useAppToast } from '~/composables/useAppToast'
 import AdminSettingsNavTabs from '~/components/admin/settings/AdminSettingsNavTabs.vue'
 import AdminSettingsPlatform, { type PlatformConfig } from '~/components/admin/settings/AdminSettingsPlatform.vue'
 import AdminSettingsDispatch, { type ChannelConfig } from '~/components/admin/settings/AdminSettingsDispatch.vue'
+import AdminSettingsPost, { type PostConfig } from '~/components/admin/settings/AdminSettingsPost.vue'
 import AdminSettingsProfile, { type AdminProfile } from '~/components/admin/settings/AdminSettingsProfile.vue'
 
 definePageMeta({
@@ -18,7 +19,7 @@ const toast = useAppToast()
 const route = useRoute()
 const router = useRouter()
 
-const activeTab = ref<'platform' | 'dispatch' | 'adminprofile'>('platform')
+const activeTab = ref<'platform' | 'dispatch' | 'post' | 'adminprofile'>('platform')
 const isSaving = ref(false)
 const isLoading = ref(true)
 
@@ -26,6 +27,7 @@ const isLoading = ref(true)
 const platformConfig = ref<PlatformConfig>({
   siteName: 'New Platform',
   siteDescription: 'Multi-role New Platform supporting Public browsing, Creator Studio, and Admin Control.',
+  siteUrl: 'http://localhost:3000',
   defaultLanguage: 'en',
   allowRegistrations: true
 })
@@ -50,6 +52,13 @@ const channelConfig = ref<ChannelConfig>({
   onPostPublishAdminGroup: true
 })
 
+// Post & Media Attachment Limit State
+const postConfig = ref<PostConfig>({
+  maxPostPerDay: 5,
+  maxUploadImage: 10,
+  maxUploadVideo: 2
+})
+
 // Admin Profile State
 const adminProfile = ref<AdminProfile>({
   username: '',
@@ -71,6 +80,9 @@ async function fetchSystemSettings() {
       if (result.data.dispatch) {
         channelConfig.value = { ...channelConfig.value, ...result.data.dispatch }
       }
+      if (result.data.post) {
+        postConfig.value = { ...postConfig.value, ...result.data.post }
+      }
     }
   } catch {
     // Fallback to local storage if offline or error occurs
@@ -81,6 +93,7 @@ async function fetchSystemSettings() {
           const parsed = JSON.parse(savedConfig)
           if (parsed.platform) platformConfig.value = { ...platformConfig.value, ...parsed.platform }
           if (parsed.channels) channelConfig.value = { ...channelConfig.value, ...parsed.channels }
+          if (parsed.post) postConfig.value = { ...postConfig.value, ...parsed.post }
         } catch { }
       }
     }
@@ -98,7 +111,7 @@ function populateAdminProfile() {
   }
 }
 
-function setTab(tabName: 'platform' | 'dispatch' | 'adminprofile') {
+function setTab(tabName: 'platform' | 'dispatch' | 'post' | 'adminprofile') {
   activeTab.value = tabName
   if (import.meta.client) {
     router.replace({ query: { ...route.query, tab: tabName } })
@@ -110,7 +123,7 @@ onMounted(() => {
     void router.replace('/admin/monetization')
     return
   }
-  if (route.query.tab && ['platform', 'dispatch', 'adminprofile'].includes(route.query.tab as string)) {
+  if (route.query.tab && ['platform', 'dispatch', 'post', 'adminprofile'].includes(route.query.tab as string)) {
     activeTab.value = route.query.tab as any
   }
   populateAdminProfile()
@@ -134,13 +147,14 @@ async function saveAdminSettings() {
     })
     const profileResult: any = await profileRes.json()
 
-    // 2. Persist platform & dispatch configs via backend API action
+    // 2. Persist platform, dispatch & post configs via backend API action
     const settingRes = await api.action.$post({
       json: {
         action: 'settings/save-all',
         data: {
           platform: platformConfig.value,
-          dispatch: channelConfig.value
+          dispatch: channelConfig.value,
+          post: postConfig.value
         }
       }
     })
@@ -158,6 +172,7 @@ async function saveAdminSettings() {
         }
         parsed.platform = platformConfig.value
         parsed.channels = channelConfig.value
+        parsed.post = postConfig.value
         localStorage.setItem('admin_platform_config', JSON.stringify(parsed))
       }
 
@@ -181,7 +196,7 @@ async function saveAdminSettings() {
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-white">Admin Platform Settings</h1>
         <p class="text-sm text-gray-400">
-          Configure system-wide parameters, Telegram & Mail notification dispatch, and admin profile.
+          Configure system-wide parameters, Telegram & Mail notification dispatch, post campaign limits, and admin profile.
         </p>
       </div>
       <button
@@ -211,7 +226,10 @@ async function saveAdminSettings() {
       <!-- TAB 2: Telegram & Email Dispatch -->
       <AdminSettingsDispatch v-if="activeTab === 'dispatch'" v-model="channelConfig" />
 
-      <!-- TAB 3: Admin Profile -->
+      <!-- TAB 3: Post & Media Limits -->
+      <AdminSettingsPost v-if="activeTab === 'post'" v-model="postConfig" />
+
+      <!-- TAB 4: Admin Profile -->
       <AdminSettingsProfile v-if="activeTab === 'adminprofile'" v-model="adminProfile" />
     </template>
   </div>

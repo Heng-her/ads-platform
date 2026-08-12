@@ -6,6 +6,7 @@ import { useCategories } from '~/composables/useCategories'
 import { useCloudinaryUpload, type CloudinaryUploadResponse } from '~/composables/useCloudinaryUpload'
 import { useCampaignDraft, type CampaignDraftForm } from '~/composables/useCampaignDraft'
 import { useAuthStore } from '~/stores/auth'
+import { useApi } from '~/composables/useApi'
 import { getVideoEmbedUrl } from '~/lib/videoEmbed'
 
 const props = withDefaults(
@@ -20,11 +21,15 @@ const props = withDefaults(
 )
 
 const router = useRouter()
+const api = useApi()
 const { getCampaign, createCampaign, updateCampaign, isLoading } = useCampaigns()
 const { categories, fetchCategories, myCategories } = useCategories()
 const { deleteMediaByUrl } = useCloudinaryUpload()
 const authStore = useAuthStore()
 const { getDraft, saveDraft, removeDraft } = useCampaignDraft()
+
+const maxUploadVideo = ref(2)
+const maxUploadImage = ref(10)
 
 const isFetching = ref(props.isEdit && !!props.campaignId)
 const submitError = ref<string | null>(null)
@@ -33,6 +38,118 @@ const deletingMediaUrl = ref<string | null>(null)
 const isRestoringDraft = ref(false)
 const draftStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 const hasSubmitted = ref(false)
+const uploadingMediaCount = ref(0)
+const isMediaUploading = computed(() => uploadingMediaCount.value > 0)
+
+function handleUploadStart() {
+  uploadingMediaCount.value++
+}
+
+function handleUploadEnd() {
+  uploadingMediaCount.value = Math.max(0, uploadingMediaCount.value - 1)
+}
+
+async function fetchPostSettings() {
+  try {
+    const res = await api.action.$post({ json: { action: 'settings/get-all' } })
+    const result: any = await res.json()
+    if (res.ok && result.code === 1 && result.data?.post) {
+      if (typeof result.data.post.maxUploadVideo === 'number') maxUploadVideo.value = result.data.post.maxUploadVideo
+      if (typeof result.data.post.maxUploadImage === 'number') maxUploadImage.value = result.data.post.maxUploadImage
+    }
+  } catch {
+    // Keep defaults
+  }
+}
+
+async function initialiseForm() {
+  isRestoringDraft.value = true
+  authStore.initAuth()
+
+  try {
+    await Promise.all([loadData(), fetchPostSettings()])
+    const draft = await getDraft(draftKey.value)
+    if (draft) applyDraft(draft)
+  } finally {
+    await nextTick()
+    isRestoringDraft.value = false
+  }
+}
+
+function handleCoverUploaded(res: CloudinaryUploadResponse) {
+  form.value.imageUrl = res.url
+  if (!form.value.imageTitle) {
+    const filename = res.originalFilename?.replace(/\.[^/.]+$/, '').trim()
+    form.value.imageTitle = filename || form.value.title || 'Campaign Cover Image'
+  }
+}
+
+function handleGalleryUploaded(resList: CloudinaryUploadResponse[]) {
+  for (const item of resList) {
+    if (!isAdmin.value && form.value.images.length >= maxUploadImage.value) {
+      alert(`Maximum ${maxUploadImage.value} images allowed per campaign.`)
+      break
+    }
+    form.value.images.push({
+      url: item.url,
+      title: form.value.title || 'Gallery Image',
+    })
+  }
+}
+
+function handleSingleGalleryUploaded(res: CloudinaryUploadResponse) {
+  if (!isAdmin.value && form.value.images.length >= maxUploadImage.value) {
+    alert(`Maximum ${maxUploadImage.value} images allowed per campaign.`)
+    return
+  }
+  form.value.images.push({
+    url: res.url,
+    title: form.value.title || 'Gallery Image',
+  })
+}
+
+async function removeCoverImage() {
+  const url = form.value.imageUrl
+  if (!url) return
+
+  await removeMedia(url, false, () => {
+    form.value.imageUrl = ''
+    form.value.imageTitle = ''
+    form.value.imageDescription = ''
+  })
+}
+
+async function removeGalleryImage(index: number) {
+  const image = form.value.images[index]
+  if (!image) return
+
+  await removeMedia(image.url, false, () => {
+    form.value.images.splice(index, 1)
+  })
+}
+
+async function handleVideoUploaded(res: CloudinaryUploadResponse) {
+  if (!isAdmin.value && form.value.videoUrls.length >= maxUploadVideo.value) {
+    alert(`Maximum ${maxUploadVideo.value} videos allowed per campaign.`)
+    try {
+      await deleteMediaByUrl(res.url, true)
+    } catch {
+      // Keep user-facing form unchanged if cleanup fails
+    }
+    return
+  }
+  form.value.videoUrls.push(res.url)
+}
+
+function addVideoUrlDirect() {
+  if (!videoInputTemp.value.trim()) return
+  if (!isAdmin.value && form.value.videoUrls.length >= maxUploadVideo.value) {
+    alert(`Maximum ${maxUploadVideo.value} videos allowed per campaign.`)
+    return
+  }
+  form.value.videoUrls.push(videoInputTemp.value.trim())
+  videoInputTemp.value = ''
+}
 const imagePreviewOpen = ref(false)
 const imagePreviewUrl = ref('')
 const imagePreviewTitle = ref('Image preview')
@@ -174,87 +291,7 @@ async function loadData() {
   }
 }
 
-async function initialiseForm() {
-  isRestoringDraft.value = true
-  authStore.initAuth()
 
-  try {
-    await loadData()
-    const draft = await getDraft(draftKey.value)
-    if (draft) applyDraft(draft)
-  } finally {
-    await nextTick()
-    isRestoringDraft.value = false
-  }
-}
-
-function handleCoverUploaded(res: CloudinaryUploadResponse) {
-  form.value.imageUrl = res.url
-  if (!form.value.imageTitle) {
-    const filename = res.originalFilename?.replace(/\.[^/.]+$/, '').trim()
-    form.value.imageTitle = filename || form.value.title || 'Campaign Cover Image'
-  }
-}
-
-function handleGalleryUploaded(resList: CloudinaryUploadResponse[]) {
-  for (const item of resList) {
-    form.value.images.push({
-      url: item.url,
-      title: form.value.title || 'Gallery Image',
-    })
-  }
-}
-
-function handleSingleGalleryUploaded(res: CloudinaryUploadResponse) {
-  form.value.images.push({
-    url: res.url,
-    title: form.value.title || 'Gallery Image',
-  })
-}
-
-async function removeCoverImage() {
-  const url = form.value.imageUrl
-  if (!url) return
-
-  await removeMedia(url, false, () => {
-    form.value.imageUrl = ''
-    form.value.imageTitle = ''
-    form.value.imageDescription = ''
-  })
-}
-
-async function removeGalleryImage(index: number) {
-  const image = form.value.images[index]
-  if (!image) return
-
-  await removeMedia(image.url, false, () => {
-    form.value.images.splice(index, 1)
-  })
-}
-
-async function handleVideoUploaded(res: CloudinaryUploadResponse) {
-  if (!isAdmin.value && form.value.videoUrls.length >= 2) {
-    alert('Maximum 2 videos allowed per campaign.')
-    try {
-      await deleteMediaByUrl(res.url, true)
-    } catch {
-      // The upload is already over the campaign limit. Keep the user-facing
-      // form unchanged if cleanup cannot be completed.
-    }
-    return
-  }
-  form.value.videoUrls.push(res.url)
-}
-
-function addVideoUrlDirect() {
-  if (!videoInputTemp.value.trim()) return
-  if (!isAdmin.value && form.value.videoUrls.length >= 2) {
-    alert('Maximum 2 videos allowed per campaign.')
-    return
-  }
-  form.value.videoUrls.push(videoInputTemp.value.trim())
-  videoInputTemp.value = ''
-}
 
 function getEmbedUrl(videoUrl: string) {
   return getVideoEmbedUrl(videoUrl)
@@ -376,11 +413,33 @@ onBeforeUnmount(() => {
         </p>
       </div>
 
-      <div class="flex items-center gap-2">
-        <UButton color="neutral" variant="outline" size="sm" :loading="isLoading" @click="handleSubmit('DRAFT')">
+      <div class="flex items-center gap-3">
+        <span v-if="isMediaUploading" class="inline-flex items-center gap-1.5 text-xs text-amber-500 font-medium animate-pulse">
+          <UIcon name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+          Uploading media...
+        </span>
+        <span v-else-if="deletingMediaUrl" class="inline-flex items-center gap-1.5 text-xs text-red-400 font-medium">
+          <UIcon name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+          Deleting media...
+        </span>
+
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          :loading="isLoading"
+          :disabled="isLoading || isMediaUploading || !!deletingMediaUrl"
+          @click="handleSubmit('DRAFT')"
+        >
           Save Draft
         </UButton>
-        <UButton color="primary" size="sm" :loading="isLoading" @click="handleSubmit('PUBLIC')">
+        <UButton
+          color="primary"
+          size="sm"
+          :loading="isLoading"
+          :disabled="isLoading || isMediaUploading || !!deletingMediaUrl"
+          @click="handleSubmit('PUBLIC')"
+        >
           {{ isEdit ? 'Save & Update' : 'Publish Campaign' }}
         </UButton>
       </div>
@@ -477,8 +536,14 @@ onBeforeUnmount(() => {
 
         <!-- Main Cover Image -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <AppMediaUploader label="Main Cover Image" accept="image" folder="campaigns/covers"
-            @uploaded="handleCoverUploaded" />
+          <AppMediaUploader
+            label="Main Cover Image"
+            accept="image"
+            folder="campaigns/covers"
+            @uploadStart="handleUploadStart"
+            @uploadEnd="handleUploadEnd"
+            @uploaded="handleCoverUploaded"
+          />
 
           <div v-if="form.imageUrl" class="space-y-2">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Cover Preview &amp; Metadata</p>
@@ -509,8 +574,16 @@ onBeforeUnmount(() => {
 
         <!-- Gallery Images -->
         <div class="space-y-2 pt-2">
-          <AppMediaUploader label="Multi-Image Gallery" accept="image" folder="campaigns/gallery" :multiple="true"
-            @multiUploaded="handleGalleryUploaded" @uploaded="handleSingleGalleryUploaded" />
+          <AppMediaUploader
+            label="Multi-Image Gallery"
+            accept="image"
+            folder="campaigns/gallery"
+            :multiple="true"
+            @uploadStart="handleUploadStart"
+            @uploadEnd="handleUploadEnd"
+            @multiUploaded="handleGalleryUploaded"
+            @uploaded="handleSingleGalleryUploaded"
+          />
 
           <div v-if="form.images.length > 0" class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
             <div v-for="(img, idx) in form.images" :key="idx"
@@ -543,9 +616,15 @@ onBeforeUnmount(() => {
           </label>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <AppMediaUploader label="Upload Video" accept="video" folder="campaigns/videos"
+            <AppMediaUploader
+              label="Upload Video"
+              accept="video"
+              folder="campaigns/videos"
               :hint="isAdmin ? 'Admin uploads are securely proxied with no campaign video-count limit.' : 'Allowed: MP4, MOV, WEBM. (Max 50MB for creators)'"
-              @uploaded="handleVideoUploaded" />
+              @uploadStart="handleUploadStart"
+              @uploadEnd="handleUploadEnd"
+              @uploaded="handleVideoUploaded"
+            />
 
             <div class="space-y-2">
               <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Or Add YouTube, TikTok, or Direct Video
@@ -704,7 +783,8 @@ onBeforeUnmount(() => {
               </div>
 
               <!-- Link 1: Google AdSense -->
-              <div class="p-2 rounded bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 space-y-0.5">
+              <div
+                class="p-2 rounded bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 space-y-0.5">
                 <div class="flex items-center justify-between text-[10px] font-bold text-blue-600 dark:text-blue-400">
                   <span class="flex items-center gap-1">
                     <UIcon name="i-heroicons-globe-alt" class="w-3 h-3" />
@@ -718,7 +798,8 @@ onBeforeUnmount(() => {
               </div>
 
               <!-- Link 2: Adsterra Smartlink -->
-              <div class="p-2 rounded bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 space-y-0.5">
+              <div
+                class="p-2 rounded bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 space-y-0.5">
                 <div class="flex items-center justify-between text-[10px] font-bold text-amber-600 dark:text-amber-400">
                   <span class="flex items-center gap-1">
                     <UIcon name="i-heroicons-bolt" class="w-3 h-3" />

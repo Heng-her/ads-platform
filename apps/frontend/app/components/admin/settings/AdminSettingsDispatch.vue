@@ -228,8 +228,7 @@ async function testMailSend() {
               </UBadge>
             </div>
             <p class="text-xs text-gray-400">
-              Dispatches private system alert notifications to your Admin Telegram Group when users register or create
-              campaigns.
+              Dispatches private system alert notifications to your Admin Telegram Group when new users register.
             </p>
           </div>
         </div>
@@ -419,11 +418,6 @@ async function testMailSend() {
               <input v-model="config.onPostPublishPublicChannel" type="checkbox"
                 class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500" />
               <span>Send Public Campaigns to Telegram Channel (Option 1)</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer text-gray-300">
-              <input v-model="config.onPostPublishAdminGroup" type="checkbox"
-                class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-indigo-500 focus:ring-indigo-500" />
-              <span>Alert to Admin Telegram Group (Option 2)</span>
             </label>
           </div>
         </div>

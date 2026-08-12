@@ -5,6 +5,7 @@ import { systemSettings } from "../db/schema/systemSettings";
 export interface PlatformConfig {
   siteName: string;
   siteDescription: string;
+  siteUrl: string;
   defaultLanguage: string;
   allowRegistrations: boolean;
 }
@@ -28,10 +29,17 @@ export interface ChannelConfig {
   onPostPublishAdminGroup: boolean;
 }
 
+export interface PostConfig {
+  maxPostPerDay: number;
+  maxUploadImage: number;
+  maxUploadVideo: number;
+}
+
 export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
   siteName: "New Platform",
   siteDescription:
     "Multi-role New Platform supporting Public browsing, Creator Studio, and Admin Control.",
+  siteUrl: "http://localhost:3000",
   defaultLanguage: "en",
   allowRegistrations: true,
 };
@@ -52,7 +60,13 @@ export const DEFAULT_DISPATCH_CONFIG: ChannelConfig = {
   onUserSubmitAdminGroup: true,
   onPostPublishMail: true,
   onPostPublishPublicChannel: true,
-  onPostPublishAdminGroup: true,
+  onPostPublishAdminGroup: false,
+};
+
+export const DEFAULT_POST_CONFIG: PostConfig = {
+  maxPostPerDay: 5,
+  maxUploadImage: 10,
+  maxUploadVideo: 2,
 };
 
 export class SystemSettingsService {
@@ -63,7 +77,7 @@ export class SystemSettingsService {
   }
 
   async getSetting<T = any>(
-    key: "platform" | "dispatch",
+    key: "platform" | "dispatch" | "post",
     defaultValue: T,
   ): Promise<T> {
     try {
@@ -87,17 +101,19 @@ export class SystemSettingsService {
   async getAllSettings(): Promise<{
     platform: PlatformConfig;
     dispatch: ChannelConfig;
+    post: PostConfig;
   }> {
-    const [platform, dispatch] = await Promise.all([
+    const [platform, dispatch, post] = await Promise.all([
       this.getSetting<PlatformConfig>("platform", DEFAULT_PLATFORM_CONFIG),
       this.getSetting<ChannelConfig>("dispatch", DEFAULT_DISPATCH_CONFIG),
+      this.getSetting<PostConfig>("post", DEFAULT_POST_CONFIG),
     ]);
 
-    return { platform, dispatch };
+    return { platform, dispatch, post };
   }
 
   async saveSetting(
-    key: "platform" | "dispatch",
+    key: "platform" | "dispatch" | "post",
     value: Record<string, any>,
   ): Promise<boolean> {
     const valueJson = JSON.stringify(value);
@@ -126,6 +142,7 @@ export class SystemSettingsService {
   async saveAllSettings(payload: {
     platform?: Partial<PlatformConfig>;
     dispatch?: Partial<ChannelConfig>;
+    post?: Partial<PostConfig>;
   }): Promise<boolean> {
     if (payload.platform) {
       const currentPlatform = await this.getSetting<PlatformConfig>(
@@ -143,6 +160,15 @@ export class SystemSettingsService {
       );
       const mergedDispatch = { ...currentDispatch, ...payload.dispatch };
       await this.saveSetting("dispatch", mergedDispatch);
+    }
+
+    if (payload.post) {
+      const currentPost = await this.getSetting<PostConfig>(
+        "post",
+        DEFAULT_POST_CONFIG,
+      );
+      const mergedPost = { ...currentPost, ...payload.post };
+      await this.saveSetting("post", mergedPost);
     }
 
     return true;

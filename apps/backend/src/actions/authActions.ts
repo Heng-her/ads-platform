@@ -3,6 +3,7 @@ import type { HonoEnv } from "../types/env";
 import type { DbClient } from "../db/index";
 import { AuthService } from "../services/authService";
 import { AuditLogService } from "../services/auditLogService";
+import { CampaignDispatchService } from "../services/campaignDispatchService";
 import { registerSchema, loginSchema, googleSchema } from "../schemas/auth";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
@@ -52,6 +53,8 @@ export async function handleAuthAction(
         getClientIp(c),
         JSON.stringify({ email: res.user.email, role: res.user.role }),
       );
+      const dispatchService = new CampaignDispatchService(db);
+      await dispatchService.dispatchUserRegistrationNotifications(res.user);
       return sendSuccess(c, res, "User registered successfully");
     }
 

@@ -3,10 +3,11 @@ import {
   SystemSettingsService,
   DEFAULT_PLATFORM_CONFIG,
   DEFAULT_DISPATCH_CONFIG,
+  DEFAULT_POST_CONFIG,
 } from "../src/services/systemSettingsService";
 
 describe("SystemSettingsService", () => {
-  it("should return default platform and dispatch settings when DB is empty", async () => {
+  it("should return default platform, dispatch, and post settings when DB is empty", async () => {
     const mockDb: any = {
       select: () => ({
         from: () => ({
@@ -22,6 +23,7 @@ describe("SystemSettingsService", () => {
 
     expect(settings.platform).toEqual(DEFAULT_PLATFORM_CONFIG);
     expect(settings.dispatch).toEqual(DEFAULT_DISPATCH_CONFIG);
+    expect(settings.post).toEqual(DEFAULT_POST_CONFIG);
   });
 
   it("should validate and simulate public channel dispatch test", async () => {

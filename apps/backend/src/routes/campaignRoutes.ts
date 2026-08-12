@@ -7,6 +7,12 @@ import { AuditLogService } from "../services/auditLogService";
 import { ImpressionService } from "../services/impressionService";
 import { CategoryService } from "../services/categoryService";
 import { GoogleTranslateService } from "../services/googleTranslateService";
+import { CampaignDispatchService } from "../services/campaignDispatchService";
+import {
+  SystemSettingsService,
+  DEFAULT_POST_CONFIG,
+  type PostConfig,
+} from "../services/systemSettingsService";
 import { authMiddleware, requireRole } from "../middlewares/auth";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
@@ -364,10 +370,18 @@ export const campaignRoutes = new Hono<HonoEnv>()
     async (c) => {
       const userPayload = c.get("user")!;
       const body = c.req.valid("json");
-      if (userPayload.role !== "ADMIN" && body.videoUrls && body.videoUrls.length > 2) {
-        return sendError(c, "Maximum 2 videos allowed per campaign", null, 400);
-      }
       const db = getDb(c.env.DB);
+      const settingsService = new SystemSettingsService({ db });
+      const postConfig = await settingsService.getSetting<PostConfig>("post", DEFAULT_POST_CONFIG);
+
+      if (userPayload.role !== "ADMIN") {
+        if (body.videoUrls && body.videoUrls.length > postConfig.maxUploadVideo) {
+          return sendError(c, `Maximum ${postConfig.maxUploadVideo} videos allowed per campaign`, null, 400);
+        }
+        if (body.images && body.images.length > postConfig.maxUploadImage) {
+          return sendError(c, `Maximum ${postConfig.maxUploadImage} images allowed per campaign`, null, 400);
+        }
+      }
       const campaignService = new CampaignService(db);
       const auditLogService = new AuditLogService(db);
 
@@ -378,6 +392,10 @@ export const campaignRoutes = new Hono<HonoEnv>()
         getClientIp(c),
         JSON.stringify({ campaignId: campaign?.id, title: campaign?.title }),
       );
+      if (campaign && campaign.status === "PUBLIC") {
+        const dispatchService = new CampaignDispatchService(db);
+        await dispatchService.dispatchNewCampaignNotifications(campaign);
+      }
       return sendSuccess(c, campaign, "Campaign created successfully");
     },
   )
@@ -394,6 +412,9 @@ export const campaignRoutes = new Hono<HonoEnv>()
       const userPayload = c.get("user")!;
       const body = c.req.valid("json");
       const db = getDb(c.env.DB);
+      const settingsService = new SystemSettingsService({ db });
+      const postConfig = await settingsService.getSetting<PostConfig>("post", DEFAULT_POST_CONFIG);
+
       const campaignService = new CampaignService(db);
       const auditLogService = new AuditLogService(db);
 
@@ -404,8 +425,13 @@ export const campaignRoutes = new Hono<HonoEnv>()
         return sendError(c, "Forbidden", null, 403);
       }
 
-      if (userPayload.role !== "ADMIN" && body.videoUrls && body.videoUrls.length > 2) {
-        return sendError(c, "Maximum 2 videos allowed per campaign", null, 400);
+      if (userPayload.role !== "ADMIN") {
+        if (body.videoUrls && body.videoUrls.length > postConfig.maxUploadVideo) {
+          return sendError(c, `Maximum ${postConfig.maxUploadVideo} videos allowed per campaign`, null, 400);
+        }
+        if (body.images && body.images.length > postConfig.maxUploadImage) {
+          return sendError(c, `Maximum ${postConfig.maxUploadImage} images allowed per campaign`, null, 400);
+        }
       }
 
       if (Object.keys(body).length === 0) {
@@ -452,6 +478,10 @@ export const campaignRoutes = new Hono<HonoEnv>()
         getClientIp(c),
         JSON.stringify({ campaignId: id, newStatus: status }),
       );
+      if (updated && updated.status === "PUBLIC" && campaign.status !== "PUBLIC") {
+        const dispatchService = new CampaignDispatchService(db);
+        await dispatchService.dispatchNewCampaignNotifications(updated);
+      }
       return sendSuccess(c, updated);
     },
   )

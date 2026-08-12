@@ -2,6 +2,12 @@ import type { MiddlewareHandler, Context } from "hono";
 import type { HonoEnv } from "../types/env";
 import { sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
+import { getDb } from "../db/index";
+import {
+  SystemSettingsService,
+  DEFAULT_POST_CONFIG,
+  type PostConfig,
+} from "../services/systemSettingsService";
 
 export interface RateLimitOptions {
   limit?: number;
@@ -80,13 +86,33 @@ export const registerRateLimiter = (): MiddlewareHandler<HonoEnv> => {
 };
 
 /**
- * Post Creation Rate Limiter: Maximum 5 article/campaign posts per 24 hours per IP
+ * Post Creation Rate Limiter: Dynamic post limit per 24 hours per IP from system settings
  */
 export const createCampaignRateLimiter = (): MiddlewareHandler<HonoEnv> => {
-  return rateLimiter({
-    limit: 5,
-    windowSeconds: 86400, // 24 hours
-    keyPrefix: "campaign_create",
-    message: "Post limit reached. You can only publish a maximum of 5 posts per day from your IP address."
-  });
+  return async (c, next) => {
+    let limit = DEFAULT_POST_CONFIG.maxPostPerDay;
+    if (c.env?.DB) {
+      try {
+        const db = getDb(c.env.DB);
+        const settingsService = new SystemSettingsService({ db });
+        const postConfig = await settingsService.getSetting<PostConfig>("post", DEFAULT_POST_CONFIG);
+        if (postConfig?.maxPostPerDay && postConfig.maxPostPerDay > 0) {
+          limit = postConfig.maxPostPerDay;
+        }
+      } catch {
+        // Fallback to default limit if DB read fails
+      }
+    }
+
+    const errorMsg = await checkRateLimit(c, {
+      limit,
+      windowSeconds: 86400, // 24 hours
+      keyPrefix: "campaign_create",
+      message: `Post limit reached. You can only publish a maximum of ${limit} posts per day from your IP address.`,
+    });
+    if (errorMsg) {
+      return sendError(c, errorMsg, null, 429);
+    }
+    await next();
+  };
 };

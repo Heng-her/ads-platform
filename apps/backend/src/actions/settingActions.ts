@@ -62,6 +62,23 @@ export async function handleSettingAction({
     };
   }
 
+  if (action === "settings/save-post") {
+    if (!currentUser || currentUser.role !== "ADMIN") {
+      return { code: 0, msg: "Unauthorized: Admin privileges required." };
+    }
+
+    const post = data?.post || data;
+    if (!post || typeof post !== "object") {
+      return { code: 0, msg: "Invalid post configuration payload." };
+    }
+
+    await service.saveSetting("post", post);
+    return {
+      code: 1,
+      msg: "Post campaign settings saved successfully.",
+    };
+  }
+
   if (action === "settings/save-all") {
     if (!currentUser || currentUser.role !== "ADMIN") {
       return { code: 0, msg: "Unauthorized: Admin privileges required." };
@@ -70,6 +87,7 @@ export async function handleSettingAction({
     await service.saveAllSettings({
       platform: data?.platform,
       dispatch: data?.dispatch,
+      post: data?.post,
     });
 
     return {

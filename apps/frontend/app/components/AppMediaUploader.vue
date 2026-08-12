@@ -22,6 +22,8 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
+  (e: 'uploadStart'): void
+  (e: 'uploadEnd'): void
   (e: 'uploaded', payload: CloudinaryUploadResponse): void
   (e: 'multiUploaded', payload: CloudinaryUploadResponse[]): void
   (e: 'error', message: string): void
@@ -42,25 +44,29 @@ async function handleFiles(files: FileList | null) {
   const fileArray = Array.from(files).slice(0, props.multiple ? props.maxFiles : 1)
   const uploadedResults: CloudinaryUploadResponse[] = []
 
-  for (const file of fileArray) {
-    try {
-      const result = await uploadMedia(file, props.folder)
-      uploadedResults.push(result)
-      if (!props.multiple) {
-        emit('uploaded', result)
+  emit('uploadStart')
+  try {
+    for (const file of fileArray) {
+      try {
+        const result = await uploadMedia(file, props.folder)
+        uploadedResults.push(result)
+        if (!props.multiple) {
+          emit('uploaded', result)
+        }
+      } catch (err: any) {
+        emit('error', err.message || 'Upload failed')
+        break
       }
-    } catch (err: any) {
-      emit('error', err.message || 'Upload failed')
-      break
     }
-  }
 
-  if (uploadedResults.length > 0 && props.multiple) {
-    emit('multiUploaded', uploadedResults)
-  }
-
-  if (fileInputRef.value) {
-    fileInputRef.value.value = ''
+    if (uploadedResults.length > 0 && props.multiple) {
+      emit('multiUploaded', uploadedResults)
+    }
+  } finally {
+    emit('uploadEnd')
+    if (fileInputRef.value) {
+      fileInputRef.value.value = ''
+    }
   }
 }
 
