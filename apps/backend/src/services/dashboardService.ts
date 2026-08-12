@@ -120,6 +120,10 @@ export interface AdminStats {
     category: string;
     count: number;
   }[];
+  health: {
+    uptime: number;
+    criticalAlerts: number;
+  };
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -588,6 +592,10 @@ export class DashboardService {
         category: r.category,
         count: Number(r.count),
       })),
+      health: {
+        uptime: 99.98,
+        criticalAlerts: 0,
+      },
     };
   }
 

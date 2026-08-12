@@ -6,6 +6,7 @@ export interface AdminDashboardStats {
   topCampaigns: { id: string; title: string; userId: string; totalImpressions: number; uniqueViewers: number }[]
   topCreators: { id: string; username: string; avatar: string | null; campaignCount: number }[]
   campaignsByCategory: { category: string; count: number }[]
+  health?: { uptime: number; criticalAlerts: number }
 }
 
 defineProps<{
@@ -100,12 +101,18 @@ function formatNumber(num?: number): string {
         </div>
       </div>
       <div class="mt-3 flex items-baseline gap-2">
-        <span class="text-3xl font-bold tracking-tight text-emerald-400">99.98%</span>
+        <span class="text-3xl font-bold tracking-tight text-emerald-400">
+          {{ stats.health?.uptime ?? 0 }}%
+        </span>
         <span class="text-xs text-gray-400">Uptime</span>
       </div>
       <div class="mt-4 flex items-center justify-between border-t border-gray-800/80 pt-3 text-xs text-gray-400">
         <span>Pending Users: <strong class="text-amber-400">{{ formatNumber(stats.users.pending) }}</strong></span>
-        <span>Security Alerts: <strong class="text-emerald-400">0 Critical</strong></span>
+        <span>Security Alerts:
+          <strong :class="(stats.health?.criticalAlerts ?? 0) > 0 ? 'text-red-400' : 'text-emerald-400'">
+            {{ stats.health?.criticalAlerts ?? 0 }} Critical
+          </strong>
+        </span>
       </div>
     </div>
   </div>
