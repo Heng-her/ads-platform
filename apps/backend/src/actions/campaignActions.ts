@@ -4,6 +4,7 @@ import type { DbClient } from "../db/index";
 import { CampaignService } from "../services/campaignService";
 import { CategoryService } from "../services/categoryService";
 import { AuditLogService } from "../services/auditLogService";
+import { CampaignDispatchService } from "../services/campaignDispatchService";
 import {
   createCampaignSchema,
   updateCampaignSchema,
@@ -210,6 +211,10 @@ export async function handleCampaignAction(
           title: newCampaign?.title,
         }),
       );
+      if (newCampaign && newCampaign.status === "PUBLIC") {
+        const dispatchService = new CampaignDispatchService(db);
+        await dispatchService.dispatchNewCampaignNotifications(newCampaign);
+      }
       return sendSuccess(c, newCampaign, "Campaign created successfully");
     }
 
@@ -288,6 +293,10 @@ export async function handleCampaignAction(
         getClientIp(c),
         JSON.stringify({ campaignId, newStatus: parseResult.data.status }),
       );
+      if (updated && updated.status === "PUBLIC" && campaign.status !== "PUBLIC") {
+        const dispatchService = new CampaignDispatchService(db);
+        await dispatchService.dispatchNewCampaignNotifications(updated);
+      }
       return sendSuccess(c, updated);
     }
 

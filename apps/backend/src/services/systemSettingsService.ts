@@ -302,7 +302,9 @@ export class SystemSettingsService {
         };
       }
 
-      const text = `📢 <b>[Ads Platform Public Channel Test]</b>\n\nThis is a live test broadcast dispatched to your Public Channel (${config.telegramPublicChannelId}).`;
+      const text =
+        (configData as any).customMessage ||
+        `📢 <b>[Ads Platform Public Channel Test]</b>\n\nThis is a live test broadcast dispatched to your Public Channel (${config.telegramPublicChannelId}).`;
       return await this.sendTelegramMessage(
         config.telegramBotToken,
         config.telegramPublicChannelId,
@@ -319,7 +321,9 @@ export class SystemSettingsService {
         };
       }
 
-      const text = `🛡️ <b>[Ads Platform Admin Group Alert Test]</b>\n\nThis is a live test alert notification dispatched to your Admin Group (${config.telegramAdminGroupId}).`;
+      const text =
+        (configData as any).customMessage ||
+        `🛡️ <b>[Ads Platform Admin Group Alert Test]</b>\n\nThis is a live test alert notification dispatched to your Admin Group (${config.telegramAdminGroupId}).`;
       return await this.sendTelegramMessage(
         config.telegramBotToken,
         config.telegramAdminGroupId,

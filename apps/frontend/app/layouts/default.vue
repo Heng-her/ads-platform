@@ -188,7 +188,7 @@ onUnmounted(() => {
                     <div class="flex-1 min-w-0">
                       <div class="text-gray-900 dark:text-gray-100 text-xs font-semibold truncate">{{ res.label }}</div>
                       <div class="text-[10px] text-gray-400 dark:text-gray-500 font-normal truncate mt-0.5">{{ res.desc
-                        }}</div>
+                      }}</div>
                     </div>
                   </div>
                 </div>
@@ -210,7 +210,7 @@ onUnmounted(() => {
               class="hidden md:flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-semibold">
               <UIcon name="i-heroicons-banknotes" class="w-4 h-4" />
               <span>${{ authStore.user.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'
-                }}</span>
+              }}</span>
             </div>
 
             <!-- Role Badge (Desktop) -->
@@ -290,8 +290,6 @@ onUnmounted(() => {
       </div>
     </div>
 
-
-
     <!-- Main Content -->
     <main class="flex-1 container mx-auto px-4 py-8 pb-24 md:pb-8">
       <slot />
@@ -322,5 +320,8 @@ onUnmounted(() => {
     <!-- Mobile Drawer -->
     <MobileDrawer v-model:open="mobileMenuOpen" side="left" title="NewPlatform" icon="i-heroicons-globe-alt"
       icon-class="text-primary" :links="publicNavLinks" role="public" />
+
+    <!-- Newsletter Subscriber Modal -->
+    <NewsletterModal />
   </div>
 </template>

@@ -7,4 +7,6 @@ export * from "./contentTypes";
 export * from "./campaignTranslations";
 export * from "./adProviderSettings";
 export * from "./systemSettings";
+export * from "./subscribers";
+
 

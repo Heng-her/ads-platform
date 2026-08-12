@@ -9,6 +9,7 @@ import { handleAuditLogAction } from "./auditLogActions";
 import { handleDashboardAction } from "./dashboardActions";
 import { handleMonetizationAction } from "./monetizationActions";
 import { handleSettingAction } from "./settingActions";
+import { handleSubscriberAction } from "./subscriberActions";
 import { sendError } from "../utils/response";
 
 export async function dispatchAction(
@@ -80,6 +81,24 @@ export async function dispatchAction(
   if (action.startsWith("settings/")) {
     const currentUser = await authenticate(c, false);
     const result = await handleSettingAction({
+      c,
+      db,
+      action,
+      data: payloadData,
+      currentUser,
+    });
+    return c.json(result);
+  }
+
+  // 9. Subscriber Actions
+  if (action.startsWith("subscribers/")) {
+    let currentUser: UserJwtPayload | null = null;
+    try {
+      currentUser = await authenticate(c, false);
+    } catch {
+      // Optional auth for public subscribe/unsubscribe
+    }
+    const result = await handleSubscriberAction({
       c,
       db,
       action,
