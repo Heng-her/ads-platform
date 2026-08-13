@@ -2,27 +2,34 @@
 import { ref, onMounted } from 'vue'
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
+import { useGoogleIdentity } from '~/composables/useGoogleIdentity'
 
 const api = useApi()
 const toast = useAppToast()
+const { isConfigured: googleEnabled, promptOneTap } = useGoogleIdentity()
 
 const isOpen = ref(false)
 const email = ref('')
 const isSubmitting = ref(false)
 const isSuccess = ref(false)
 
-onMounted(() => {
-  if (import.meta.client) {
-    const isAlreadySubscribed = localStorage.getItem('platform_subscribed') === 'true'
-    const isDismissed = sessionStorage.getItem('newsletter_dismissed') === 'true'
-    
-    if (!isAlreadySubscribed && !isDismissed) {
-      setTimeout(() => {
-        isOpen.value = true
-      }, 3500)
-    }
+function parseEmailFromIdToken(idToken: string): string | null {
+  try {
+    const base64Url = idToken.split('.')[1]
+    if (!base64Url) return null
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    const parsed = JSON.parse(jsonPayload)
+    return parsed.email || null
+  } catch {
+    return null
   }
-})
+}
 
 function closeModal() {
   isOpen.value = false
@@ -31,8 +38,8 @@ function closeModal() {
   }
 }
 
-async function handleSubscribe() {
-  if (!email.value || !email.value.includes('@')) {
+async function subscribeWithEmail(targetEmail: string) {
+  if (!targetEmail || !targetEmail.includes('@')) {
     toast.error('Invalid Email', 'Please enter a valid email address.')
     return
   }
@@ -43,7 +50,7 @@ async function handleSubscribe() {
       json: {
         action: 'subscribers/subscribe',
         data: {
-          email: email.value.trim(),
+          email: targetEmail.trim(),
           source: 'PUBLIC_MODAL'
         }
       }
@@ -51,7 +58,7 @@ async function handleSubscribe() {
     const result: any = await res.json()
     if (res.ok && result.code === 1) {
       isSuccess.value = true
-      toast.success('Subscribed Successfully!', result.msg)
+      toast.success('Subscribed Successfully!', result.msg || 'Thank you for subscribing to updates.')
       if (import.meta.client) {
         localStorage.setItem('platform_subscribed', 'true')
       }
@@ -67,6 +74,34 @@ async function handleSubscribe() {
     isSubmitting.value = false
   }
 }
+
+async function handleGoogleCredential(idToken: string) {
+  const extractedEmail = parseEmailFromIdToken(idToken)
+  if (extractedEmail) {
+    email.value = extractedEmail
+    isOpen.value = true
+    await subscribeWithEmail(extractedEmail)
+  }
+}
+
+onMounted(() => {
+  if (import.meta.client) {
+    const isAlreadySubscribed = localStorage.getItem('platform_subscribed') === 'true'
+    const isDismissed = sessionStorage.getItem('newsletter_dismissed') === 'true'
+
+    if (!isAlreadySubscribed && !isDismissed) {
+      // 1. Prompt Google One Tap / Gmail popup for subscription
+      if (googleEnabled.value) {
+        void promptOneTap(handleGoogleCredential)
+      }
+
+      // 2. Open original bottom-right popup after short delay
+      setTimeout(() => {
+        isOpen.value = true
+      }, 3500)
+    }
+  }
+})
 </script>
 
 <template>
@@ -103,7 +138,7 @@ async function handleSubscribe() {
             </div>
           </div>
 
-          <form class="space-y-3" @submit.prevent="handleSubscribe">
+          <form class="space-y-3" @submit.prevent="subscribeWithEmail(email)">
             <div class="relative">
               <UIcon name="i-heroicons-envelope" class="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
               <input

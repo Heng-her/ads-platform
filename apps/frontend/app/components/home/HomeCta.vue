@@ -73,7 +73,7 @@ async function handleAction() {
           to="/creator/earnings"
           class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-base shadow-lg shadow-emerald-500/25 hover:scale-105 transition-transform">
           <UIcon name="i-heroicons-currency-dollar" class="w-5 h-5" />
-          <span>Go to Creator Earnings & Payouts</span>
+          <span>View Creator Earnings & Payouts</span>
         </NuxtLink>
 
         <NuxtLink
@@ -81,7 +81,7 @@ async function handleAction() {
           to="/admin/monetization"
           class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-emerald-500 text-white font-bold text-base shadow-lg shadow-purple-500/25 hover:scale-105 transition-transform">
           <UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5" />
-          <span>Go to Admin Monetization Dashboard</span>
+          <span>Admin Monetization Dashboard</span>
         </NuxtLink>
 
         <UButton v-else color="primary" size="xl"

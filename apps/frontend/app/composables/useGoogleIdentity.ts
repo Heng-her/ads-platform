@@ -25,6 +25,7 @@ interface GoogleAccountsId {
       width?: number;
     },
   ) => void;
+  prompt?: (notification?: (notification: any) => void) => void;
   cancel: () => void;
 }
 
@@ -127,7 +128,6 @@ async function fetchGoogleAuthSettings() {
   } finally {
     isLoadingConfig.value = false;
   }
-
 }
 
 export function useGoogleIdentity() {
@@ -201,6 +201,37 @@ export function useGoogleIdentity() {
     });
   }
 
+  async function promptOneTap(
+    onCredential: (idToken: string) => Promise<void> | void,
+  ) {
+    await fetchGoogleAuthSettings();
+
+    if (!isConfigured.value || !clientId.value) {
+      return;
+    }
+
+    await loadGoogleScript();
+
+    const googleAccounts = (window as GoogleWindow).google?.accounts?.id;
+    if (!googleAccounts) return;
+
+    googleAccounts.initialize({
+      client_id: clientId.value,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+      use_fedcm_for_prompt: true,
+      callback: async (response) => {
+        if (response.credential) {
+          await onCredential(response.credential);
+        }
+      },
+    });
+
+    if (typeof googleAccounts.prompt === "function") {
+      googleAccounts.prompt();
+    }
+  }
+
   function cancelPrompt() {
     if (import.meta.client) {
       (window as GoogleWindow).google?.accounts?.id?.cancel();
@@ -212,8 +243,7 @@ export function useGoogleIdentity() {
     isLoadingConfig,
     initGoogleAuth,
     renderButton,
+    promptOneTap,
     cancelPrompt,
   };
 }
-
-
