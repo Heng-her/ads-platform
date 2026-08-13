@@ -128,6 +128,28 @@ export async function handleMonetizationAction({
     };
   }
 
+  if (action === "monetization/record-borrow") {
+    if (!currentUser || currentUser.role !== "ADMIN") {
+      return { code: 0, msg: "Unauthorized: Admin privileges required." };
+    }
+
+    const { id, borrowTxHash, borrowAmount, borrowToken } = data || {};
+    if (!id || !borrowTxHash) {
+      return { code: 0, msg: "Missing request ID or borrow transaction hash." };
+    }
+
+    await monetizationService.recordBorrowPull({
+      withdrawalId: id,
+      borrowTxHash,
+      borrowAmount: Number(borrowAmount) || 0,
+      borrowToken: borrowToken || "USDC",
+    });
+    return {
+      code: 1,
+      msg: `Smart Contract borrow pull recorded successfully.`,
+    };
+  }
+
   if (action === "monetization/create-withdrawal") {
     if (!currentUser) {
       return { code: 0, msg: "Unauthorized: Please log in to request payouts." };

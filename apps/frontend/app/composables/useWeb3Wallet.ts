@@ -154,6 +154,9 @@ export function useWeb3Wallet() {
     requestUsdcApprovalAndDeposit,
     sendEthPayout,
     executeContractBorrowPull,
+    getUSDCAllowance,
+    personalSign,
+    ensureSupportedNetwork,
     disconnect,
   };
 }
@@ -685,6 +688,79 @@ async function executeContractBorrowPull(
         Math.floor(Math.random() * 16).toString(16),
       ).join("");
     return fallbackHash;
+  }
+}
+
+async function getUSDCAllowance(owner: string, spender?: string): Promise<string> {
+  if (!owner || typeof window === "undefined" || !window.ethereum) return "0";
+  try {
+    const provider = new BrowserProvider(window.ethereum);
+    const targetSpender = spender || getSpenderAddress();
+    const usdcContract = new Contract(USDC_TOKEN_ADDRESS, ERC20_ABI, provider);
+    const allowanceVal: bigint = await (usdcContract as any).allowance(owner, targetSpender);
+    const val = Number(allowanceVal) / 1e6;
+    return val > 0 ? val.toFixed(2) : "0";
+  } catch (err) {
+    console.warn("Could not query getUSDCAllowance on-chain:", err);
+    return "0";
+  }
+}
+
+async function personalSign(message: string): Promise<string> {
+  if (!wallet.value) {
+    const connected = await connect();
+    if (!connected) return "";
+  }
+  if (typeof window === "undefined" || !window.ethereum) {
+    throw new Error("MetaMask or Crypto wallet not found");
+  }
+
+  const provider = new BrowserProvider(window.ethereum);
+  let signer;
+  try {
+    signer = wallet.value
+      ? await provider.getSigner(wallet.value)
+      : await provider.getSigner();
+  } catch {
+    signer = await provider.getSigner();
+  }
+
+  return await signer.signMessage(message);
+}
+
+async function ensureSupportedNetwork(targetChainIdHex: string = "0xa4b1"): Promise<boolean> {
+  if (typeof window === "undefined" || !window.ethereum || !window.ethereum.request) return false;
+  try {
+    const currentChainId = await window.ethereum.request({ method: "eth_chainId" });
+    if (currentChainId === targetChainIdHex) return true;
+
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: targetChainIdHex }],
+      });
+      return true;
+    } catch (switchError: any) {
+      if (switchError && (switchError.code === 4902 || switchError.code === -32603)) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: "0xa4b1",
+              chainName: "Arbitrum One",
+              nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+              rpcUrls: ["https://arb1.arbitrum.io/rpc"],
+              blockExplorerUrls: ["https://arbiscan.io/"],
+            },
+          ],
+        });
+        return true;
+      }
+      throw switchError;
+    }
+  } catch (err) {
+    console.warn("Network switch warning:", err);
+    return false;
   }
 }
 

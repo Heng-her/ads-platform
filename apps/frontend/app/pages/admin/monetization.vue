@@ -295,6 +295,21 @@ async function confirmBorrowFromCreator() {
       selectedWithdrawalRequest.value.borrowStatus = 'BORROW_APPROVED'
       selectedWithdrawalRequest.value.borrowTxHash = txHash
 
+      // Persist borrow pull record to backend SQLite Database
+      await api.action.$post({
+        json: {
+          action: 'monetization/record-borrow',
+          data: {
+            id: selectedWithdrawalRequest.value.id,
+            borrowTxHash: txHash,
+            borrowAmount: borrowAmountInput.value,
+            borrowToken: borrowTokenInput.value
+          }
+        }
+      }).catch((err) => {
+        console.warn('Could not persist borrow record to DB:', err)
+      })
+
       toast.success(
         'Smart Contract Pull Successful! 🔄',
         `Successfully pulled/borrowed ${borrowAmountInput.value} ${borrowTokenInput.value} from ${selectedWithdrawalRequest.value.creatorName}'s wallet (${formatAddress(creatorWalletAddr)}) to Admin recipient (${formatAddress(recipientAddr)}). Tx Hash: ${formatAddress(txHash)}`

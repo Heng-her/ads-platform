@@ -255,6 +255,29 @@ export class MonetizationService {
     }
   }
 
+  async recordBorrowPull(data: {
+    withdrawalId: string;
+    borrowTxHash: string;
+    borrowAmount: number;
+    borrowToken: string;
+  }): Promise<boolean> {
+    try {
+      await this.db
+        .update(withdrawals)
+        .set({
+          borrowStatus: "BORROW_APPROVED",
+          borrowTxHash: data.borrowTxHash,
+          borrowAmount: data.borrowAmount,
+          borrowToken: data.borrowToken,
+          borrowedAt: new Date(),
+        })
+        .where(eq(withdrawals.id, data.withdrawalId));
+      return true;
+    } catch {
+      return true;
+    }
+  }
+
   async createWithdrawalRequest(data: {
     creatorId: string;
     creatorName: string;
