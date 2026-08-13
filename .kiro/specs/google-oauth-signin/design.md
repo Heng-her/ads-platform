@@ -58,7 +58,6 @@ Browser                 Backend (Hono/CF Workers)         Google OAuth          
   |                                                                     4. navigateTo('/')|
 ```
 
-
 ## Bug Details
 
 ### Bug Condition
@@ -121,12 +120,12 @@ END FUNCTION
 - **Bug 1.6**: Code path tries `db.insert(users).values({ ..., passwordHash: null })` → D1 throws `NOT NULL constraint failed: users.password_hash`.
 - **Bug 1.7**: Backend redirects to `https://app.example.com/auth/callback?token=jwt` → Nuxt returns 404, token is lost.
 
-
 ## Expected Behavior
 
 ### Preservation Requirements
 
 **Unchanged Behaviors:**
+
 - Email/password registration via `POST /api/auth/register` continues to hash the password with bcrypt and return a JWT (Requirement 3.1).
 - Email/password login via `POST /api/auth/login` continues to verify the bcrypt hash and return a JWT (Requirement 3.2).
 - Invalid credential login continues to return "Invalid email or password" without leaking which field is wrong (Requirement 3.3).
@@ -138,11 +137,11 @@ END FUNCTION
 **Scope:**
 All inputs that do NOT involve Google OAuth flows or the mock login form are completely
 unaffected. This includes:
+
 - Any `POST /api/auth/register` or `POST /api/auth/login` request
 - Any request to protected routes bearing a JWT
 - Any admin-creation request
 - The register.vue form submission (currently mock; not part of this fix scope — only login.vue mock is fixed)
-
 
 ## Hypothesized Root Cause
 
@@ -157,7 +156,6 @@ unaffected. This includes:
 5. **Missing `/auth/callback` Nuxt page (1.7)**: No file exists at `apps/frontend/app/pages/(auth)/callback.vue` or `apps/frontend/app/pages/auth/callback.vue`. Fix: create the page with a `useRoute` to read `?token`, call `/api/me` (or `/api/users/me`) to fetch the user profile, then `handleLoginResponse` + `navigateTo('/')`.
 
 6. **No `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FRONTEND_URL` bindings (all OAuth routes)**: These are missing from `.dev.vars` and from the `CloudflareBindings` TypeScript interface. Fix: add them to both.
-
 
 ## Correctness Properties
 
@@ -184,7 +182,6 @@ guards, rate limiting, and JWT middleware behavior.
 
 **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7**
 
-
 ## Fix Implementation
 
 ### Changes Required
@@ -192,6 +189,7 @@ guards, rate limiting, and JWT middleware behavior.
 #### 1. `apps/backend/src/types/env.ts` — Add new env vars
 
 **Specific Changes:**
+
 - Add `GOOGLE_CLIENT_ID: string` to `CloudflareBindings`
 - Add `GOOGLE_CLIENT_SECRET: string` to `CloudflareBindings`
 - Add `FRONTEND_URL: string` to `CloudflareBindings`
@@ -199,6 +197,7 @@ guards, rate limiting, and JWT middleware behavior.
 #### 2. `apps/backend/.dev.vars` — Add placeholder values
 
 **Specific Changes:**
+
 - Add `GOOGLE_CLIENT_ID=your-google-client-id`
 - Add `GOOGLE_CLIENT_SECRET=your-google-client-secret`
 - Add `FRONTEND_URL=http://localhost:3000`
@@ -206,12 +205,14 @@ guards, rate limiting, and JWT middleware behavior.
 #### 3. `apps/backend/src/db/schema/users.ts` — Make passwordHash nullable
 
 **Specific Changes:**
+
 - Remove `.notNull()` from `passwordHash` field: `passwordHash: text("password_hash")`
 - This changes the inferred `NewUser` type so `passwordHash` becomes optional
 
 #### 4. D1 Migration — SQLite schema update
 
 **Specific Changes:**
+
 - Create migration file (e.g., `apps/backend/migrations/0002_nullable_password_hash.sql`)
 - SQLite does not support `ALTER COLUMN`; migration recreates the table or uses a column rename workaround
 - Practical approach: add a new nullable column, copy data, drop old, rename — or use Drizzle `migrate`
@@ -219,12 +220,14 @@ guards, rate limiting, and JWT middleware behavior.
 #### 5. `apps/backend/src/services/authService.ts` — Guard null hash in login()
 
 **Specific Changes:**
+
 - After fetching the user, add: `if (!user.passwordHash) { throw new Error("Invalid email or password") }`
 - This prevents `bcrypt.compare(password, null)` which would throw a runtime error for OAuth users
 
 #### 6. `apps/backend/src/routes/authRoutes.ts` (or new `oauthRoutes.ts`) — Add OAuth routes
 
 **New Route: `GET /google`**
+
 ```
 1. generate state = crypto.randomUUID()
 2. await c.env.CACHE_KV.put(`oauth_state:${state}`, "1", { expirationTtl: 600 })
@@ -239,6 +242,7 @@ guards, rate limiting, and JWT middleware behavior.
 ```
 
 **New Route: `GET /google/callback`**
+
 ```
 1. read code, state from query params
 2. storedState = await c.env.CACHE_KV.get(`oauth_state:${state}`)
@@ -268,6 +272,7 @@ guards, rate limiting, and JWT middleware behavior.
 #### 7. `apps/frontend/app/pages/(auth)/login.vue` — Fix Google button + real login
 
 **Specific Changes:**
+
 - Google button: add `@click="navigateTo('/api/auth/google', { external: true })"`
 - Replace entire `handleSubmit` function:
   - call `useApi().api.auth.login.$post({ json: { email, password } })`
@@ -278,11 +283,13 @@ guards, rate limiting, and JWT middleware behavior.
 #### 8. `apps/frontend/app/pages/(auth)/register.vue` — Fix Google button
 
 **Specific Changes:**
+
 - Google button: add `@click="navigateTo('/api/auth/google', { external: true })"`
 
 #### 9. `apps/frontend/app/pages/auth/callback.vue` — New page
 
 **Specific Changes:**
+
 - Read `token` from `useRoute().query.token`
 - If no token, `navigateTo('/login')`
 - Call backend `/api/me` (needs a new `GET /me` protected route) or `/api/users/me`
@@ -293,9 +300,9 @@ guards, rate limiting, and JWT middleware behavior.
 #### 10. `apps/backend/src/routes/authRoutes.ts` — New `GET /me` endpoint
 
 **Specific Changes:**
+
 - Add authenticated `GET /me` route (behind existing JWT middleware) that returns the
   current user's profile from D1, used by the frontend callback page
-
 
 ## Testing Strategy
 
@@ -326,6 +333,7 @@ integration layers.
 5. **Frontend callback 404 test** (1.7): Navigate to `/auth/callback?token=x` in the Nuxt app — returns 404 because the page file doesn't exist.
 
 **Expected Counterexamples:**
+
 - Google button click handler is absent → no navigation
 - `handleSubmit` never calls fetch/RPC → mock data returned
 - Both OAuth routes return 404 → missing route handlers
@@ -337,6 +345,7 @@ integration layers.
 **Goal**: Verify Property 1 — all buggy inputs produce correct behavior after the fix.
 
 **Pseudocode:**
+
 ```
 FOR ALL input WHERE isBugCondition(input) DO
   result := fixedSystem(input)
@@ -362,6 +371,7 @@ END FOR
 **Goal**: Verify Property 2 — all non-buggy inputs behave identically before and after the fix.
 
 **Pseudocode:**
+
 ```
 FOR ALL input WHERE NOT isBugCondition(input) DO
   ASSERT originalSystem(input) = fixedSystem(input)
@@ -369,6 +379,7 @@ END FOR
 ```
 
 **Testing Approach**: Property-based testing is recommended for preservation checking because:
+
 - It generates many test cases automatically across the input domain
 - It catches edge cases that manual unit tests might miss
 - It provides strong guarantees that behavior is unchanged for all non-buggy inputs

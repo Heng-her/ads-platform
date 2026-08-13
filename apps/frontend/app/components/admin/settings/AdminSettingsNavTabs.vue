@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const activeTab = defineModel<'platform' | 'dispatch' | 'post' | 'adminprofile'>('activeTab', { default: 'platform' })
+const activeTab = defineModel<'platform' | 'dispatch' | 'post' | 'googleauth' | 'adminprofile'>('activeTab', { default: 'platform' })
 </script>
 
 <template>
@@ -46,6 +46,19 @@ const activeTab = defineModel<'platform' | 'dispatch' | 'post' | 'adminprofile'>
 
       <button
         :class="[
+          activeTab === 'googleauth'
+            ? 'border-primary-500 text-primary-400'
+            : 'border-transparent text-gray-400 hover:border-gray-700 hover:text-gray-200',
+          'flex items-center gap-2 border-b-2 py-3 px-1 text-sm font-medium whitespace-nowrap'
+        ]"
+        @click="activeTab = 'googleauth'"
+      >
+        <UIcon name="i-heroicons-key" class="h-4 w-4 text-red-400" />
+        <span>Google OAuth Config</span>
+      </button>
+
+      <button
+        :class="[
           activeTab === 'adminprofile'
             ? 'border-primary-500 text-primary-400'
             : 'border-transparent text-gray-400 hover:border-gray-700 hover:text-gray-200',
@@ -59,3 +72,4 @@ const activeTab = defineModel<'platform' | 'dispatch' | 'post' | 'adminprofile'>
     </nav>
   </div>
 </template>
+

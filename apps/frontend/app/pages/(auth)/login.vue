@@ -29,7 +29,7 @@ const errorMessage = ref('')
 const googleError = ref('')
 
 const api = useApi()
-const { isConfigured: googleEnabled, renderButton, cancelPrompt } = useGoogleIdentity()
+const { isConfigured: googleEnabled, isLoadingConfig, initGoogleAuth, renderButton, cancelPrompt } = useGoogleIdentity()
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback
@@ -104,8 +104,10 @@ async function handleGoogleCredential(idToken: string) {
   }
 }
 
-onMounted(async () => {
-  if (!googleEnabled.value || !googleButton.value) return
+async function setupGoogleButton() {
+  if (!googleEnabled.value) return
+  await nextTick()
+  if (!googleButton.value) return
 
   try {
     await renderButton(googleButton.value, handleGoogleCredential, {
@@ -114,6 +116,17 @@ onMounted(async () => {
     })
   } catch (error) {
     googleError.value = getErrorMessage(error, 'Google sign-in is unavailable.')
+  }
+}
+
+onMounted(async () => {
+  await initGoogleAuth()
+  await setupGoogleButton()
+})
+
+watch(googleEnabled, async (val) => {
+  if (val) {
+    await setupGoogleButton()
   }
 })
 
@@ -205,7 +218,10 @@ onUnmounted(() => {
         <form class="space-y-4" @submit.prevent="handleSubmit">
           <!-- Google Sign In -->
           <div class="space-y-4 mb-4">
-            <div v-if="googleEnabled" class="flex justify-center rounded-xl px-4 py-3">
+            <div v-if="isLoadingConfig" class="flex justify-center items-center py-3 min-h-[44px]">
+              <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-slate-400" />
+            </div>
+            <div v-else-if="googleEnabled" class="flex justify-center rounded-xl px-4 py-3">
               <div ref="googleButton" class="min-h-[44px]" />
             </div>
             <div v-else
@@ -213,6 +229,7 @@ onUnmounted(() => {
               Google sign-in is not configured. Set `NUXT_PUBLIC_GOOGLE_CLIENT_ID` for the frontend and
               `GOOGLE_CLIENT_ID` for the backend.
             </div>
+
             <p v-if="googleLoading" class="text-sm text-slate-500 dark:text-slate-400">
               Waiting for Google sign-in...
             </p>

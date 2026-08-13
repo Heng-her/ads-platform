@@ -72,13 +72,76 @@ function loadGoogleScript() {
   return googleScriptPromise;
 }
 
+const adminClientId = ref("");
+const adminEnabled = ref(true);
+const isLoadingConfig = ref(true);
+let isInitialized = false;
+
+async function fetchGoogleAuthSettings() {
+  if (!import.meta.client) {
+    isLoadingConfig.value = false;
+    return;
+  }
+
+  // 1. Read from localStorage cache if available
+  try {
+    const savedConfig = localStorage.getItem("admin_platform_config");
+    if (savedConfig) {
+      const parsed = JSON.parse(savedConfig);
+      if (parsed.googleauth) {
+        if (parsed.googleauth.googleClientId) {
+          adminClientId.value = parsed.googleauth.googleClientId.trim();
+        }
+        if (parsed.googleauth.enableGoogleAuth !== undefined) {
+          adminEnabled.value = Boolean(parsed.googleauth.enableGoogleAuth);
+        }
+      }
+    }
+  } catch {}
+
+  // 2. Fetch live settings from backend API
+  try {
+    const api = useApi();
+    const res = await api.action.$post({
+      json: { action: "settings/get-all", data: {} },
+    });
+    const data: any = await res.json();
+    if (res.ok && data.code === 1 && data.data?.googleauth) {
+      const gAuth = data.data.googleauth;
+      if (gAuth.googleClientId !== undefined) {
+        adminClientId.value = (gAuth.googleClientId || "").trim();
+      }
+      if (gAuth.enableGoogleAuth !== undefined) {
+        adminEnabled.value = Boolean(gAuth.enableGoogleAuth);
+      }
+    }
+  } catch (err) {
+    console.warn("Could not fetch backend googleauth settings:", err);
+  } finally {
+    isLoadingConfig.value = false;
+  }
+}
+
 export function useGoogleIdentity() {
   const config = useRuntimeConfig();
-  const clientId = computed(() =>
-    String((config.public as any)?.googleClientId || ""),
+
+  if (import.meta.client && !isInitialized) {
+    isInitialized = true;
+    void fetchGoogleAuthSettings();
+  }
+
+  const clientId = computed(
+    () =>
+      adminClientId.value ||
+      String((config.public as any)?.googleClientId || ""),
   );
-  const isConfigured = computed(() => Boolean(clientId.value));
-  //   console.log("googleClientId:", clientId.value);
+  const isConfigured = computed(
+    () => adminEnabled.value && Boolean(clientId.value),
+  );
+
+  async function initGoogleAuth() {
+    await fetchGoogleAuthSettings();
+  }
 
   async function renderButton(
     element: HTMLElement,
@@ -88,9 +151,11 @@ export function useGoogleIdentity() {
       width?: number;
     } = {},
   ) {
-    if (!clientId.value) {
+    await fetchGoogleAuthSettings();
+
+    if (!isConfigured.value || !clientId.value) {
       throw new Error(
-        "Google sign-in is not configured. Set NUXT_PUBLIC_GOOGLE_CLIENT_ID.",
+        "Google sign-in is disabled or not configured in Admin Settings.",
       );
     }
 
@@ -136,7 +201,11 @@ export function useGoogleIdentity() {
 
   return {
     isConfigured,
+    isLoadingConfig,
+    initGoogleAuth,
     renderButton,
     cancelPrompt,
   };
 }
+
+

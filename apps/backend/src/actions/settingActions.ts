@@ -79,6 +79,23 @@ export async function handleSettingAction({
     };
   }
 
+  if (action === "settings/save-googleauth") {
+    if (!currentUser || currentUser.role !== "ADMIN") {
+      return { code: 0, msg: "Unauthorized: Admin privileges required." };
+    }
+
+    const googleauth = data?.googleauth || data;
+    if (!googleauth || typeof googleauth !== "object") {
+      return { code: 0, msg: "Invalid Google auth configuration payload." };
+    }
+
+    await service.saveSetting("googleauth", googleauth);
+    return {
+      code: 1,
+      msg: "Google auth settings saved successfully.",
+    };
+  }
+
   if (action === "settings/save-all") {
     if (!currentUser || currentUser.role !== "ADMIN") {
       return { code: 0, msg: "Unauthorized: Admin privileges required." };
@@ -89,6 +106,7 @@ export async function handleSettingAction({
       dispatch: data?.dispatch,
       post: data?.post,
       security: data?.security,
+      googleauth: data?.googleauth,
     });
 
     return {
@@ -96,6 +114,7 @@ export async function handleSettingAction({
       msg: "All system settings saved successfully.",
     };
   }
+
 
   if (action === "settings/test-dispatch") {
     if (!currentUser || currentUser.role !== "ADMIN") {

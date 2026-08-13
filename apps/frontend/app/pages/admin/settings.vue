@@ -7,6 +7,7 @@ import AdminSettingsNavTabs from '~/components/admin/settings/AdminSettingsNavTa
 import AdminSettingsPlatform, { type PlatformConfig, type SecurityConfig } from '~/components/admin/settings/AdminSettingsPlatform.vue'
 import AdminSettingsDispatch, { type ChannelConfig } from '~/components/admin/settings/AdminSettingsDispatch.vue'
 import AdminSettingsPost, { type PostConfig } from '~/components/admin/settings/AdminSettingsPost.vue'
+import AdminSettingsGoogleAuth, { type GoogleAuthConfig } from '~/components/admin/settings/AdminSettingsGoogleAuth.vue'
 import AdminSettingsProfile, { type AdminProfile } from '~/components/admin/settings/AdminSettingsProfile.vue'
 
 definePageMeta({
@@ -19,7 +20,7 @@ const toast = useAppToast()
 const route = useRoute()
 const router = useRouter()
 
-const activeTab = ref<'platform' | 'dispatch' | 'post' | 'adminprofile'>('platform')
+const activeTab = ref<'platform' | 'dispatch' | 'post' | 'googleauth' | 'adminprofile'>('platform')
 const isSaving = ref(false)
 const isLoading = ref(true)
 
@@ -65,6 +66,13 @@ const postConfig = ref<PostConfig>({
   maxRegisterPerDay: 5
 })
 
+// Google Auth OAuth Credentials State
+const googleAuthConfig = ref<GoogleAuthConfig>({
+  googleClientId: '',
+  googleClientSecret: '',
+  enableGoogleAuth: true
+})
+
 // Admin Profile State
 const adminProfile = ref<AdminProfile>({
   username: '',
@@ -92,6 +100,9 @@ async function fetchSystemSettings() {
       if (result.data.post) {
         postConfig.value = { ...postConfig.value, ...result.data.post }
       }
+      if (result.data.googleauth) {
+        googleAuthConfig.value = { ...googleAuthConfig.value, ...result.data.googleauth }
+      }
     }
   } catch {
     // Fallback to local storage if offline or error occurs
@@ -104,6 +115,7 @@ async function fetchSystemSettings() {
           if (parsed.security) securityConfig.value = { ...securityConfig.value, ...parsed.security }
           if (parsed.channels) channelConfig.value = { ...channelConfig.value, ...parsed.channels }
           if (parsed.post) postConfig.value = { ...postConfig.value, ...parsed.post }
+          if (parsed.googleauth) googleAuthConfig.value = { ...googleAuthConfig.value, ...parsed.googleauth }
         } catch { }
       }
     }
@@ -121,7 +133,7 @@ function populateAdminProfile() {
   }
 }
 
-function setTab(tabName: 'platform' | 'dispatch' | 'post' | 'adminprofile') {
+function setTab(tabName: 'platform' | 'dispatch' | 'post' | 'googleauth' | 'adminprofile') {
   activeTab.value = tabName
   if (import.meta.client) {
     router.replace({ query: { ...route.query, tab: tabName } })
@@ -133,7 +145,7 @@ onMounted(() => {
     void router.replace('/admin/monetization')
     return
   }
-  if (route.query.tab && ['platform', 'dispatch', 'post', 'adminprofile'].includes(route.query.tab as string)) {
+  if (route.query.tab && ['platform', 'dispatch', 'post', 'googleauth', 'adminprofile'].includes(route.query.tab as string)) {
     activeTab.value = route.query.tab as any
   }
   populateAdminProfile()
@@ -157,7 +169,7 @@ async function saveAdminSettings() {
     })
     const profileResult: any = await profileRes.json()
 
-    // 2. Persist platform, dispatch & post configs via backend API action
+    // 2. Persist platform, dispatch, post & googleauth configs via backend API action
     const settingRes = await api.action.$post({
       json: {
         action: 'settings/save-all',
@@ -165,7 +177,8 @@ async function saveAdminSettings() {
           platform: platformConfig.value,
           security: securityConfig.value,
           dispatch: channelConfig.value,
-          post: postConfig.value
+          post: postConfig.value,
+          googleauth: googleAuthConfig.value
         }
       }
     })
@@ -185,6 +198,7 @@ async function saveAdminSettings() {
         parsed.security = securityConfig.value
         parsed.channels = channelConfig.value
         parsed.post = postConfig.value
+        parsed.googleauth = googleAuthConfig.value
         localStorage.setItem('admin_platform_config', JSON.stringify(parsed))
       }
 
@@ -208,7 +222,7 @@ async function saveAdminSettings() {
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-white">Admin Platform Settings</h1>
         <p class="text-sm text-gray-400">
-          Configure system-wide parameters, Telegram & Mail notification dispatch, post campaign limits, and admin profile.
+          Configure system-wide parameters, Telegram & Mail notification dispatch, post campaign limits, Google OAuth, and admin profile.
         </p>
       </div>
       <button
@@ -241,8 +255,12 @@ async function saveAdminSettings() {
       <!-- TAB 3: Post & Media Limits -->
       <AdminSettingsPost v-if="activeTab === 'post'" v-model="postConfig" />
 
-      <!-- TAB 4: Admin Profile -->
+      <!-- TAB 4: Google OAuth Config -->
+      <AdminSettingsGoogleAuth v-if="activeTab === 'googleauth'" v-model="googleAuthConfig" />
+
+      <!-- TAB 5: Admin Profile -->
       <AdminSettingsProfile v-if="activeTab === 'adminprofile'" v-model="adminProfile" />
     </template>
   </div>
 </template>
+

@@ -40,6 +40,12 @@ export interface SecurityConfig {
   creatorDeletionPassword: string;
 }
 
+export interface GoogleAuthConfig {
+  googleClientId: string;
+  googleClientSecret: string;
+  enableGoogleAuth: boolean;
+}
+
 export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
   siteName: "New Platform",
   siteDescription:
@@ -79,6 +85,12 @@ export const DEFAULT_SECURITY_CONFIG: SecurityConfig = {
   creatorDeletionPassword: "admin",
 };
 
+export const DEFAULT_GOOGLE_AUTH_CONFIG: GoogleAuthConfig = {
+  googleClientId: "",
+  googleClientSecret: "",
+  enableGoogleAuth: true,
+};
+
 export class SystemSettingsService {
   private db: DbClient;
 
@@ -87,7 +99,7 @@ export class SystemSettingsService {
   }
 
   async getSetting<T = any>(
-    key: "platform" | "dispatch" | "post" | "security",
+    key: "platform" | "dispatch" | "post" | "security" | "googleauth",
     defaultValue: T,
   ): Promise<T> {
     try {
@@ -113,19 +125,21 @@ export class SystemSettingsService {
     dispatch: ChannelConfig;
     post: PostConfig;
     security: SecurityConfig;
+    googleauth: GoogleAuthConfig;
   }> {
-    const [platform, dispatch, post, security] = await Promise.all([
+    const [platform, dispatch, post, security, googleauth] = await Promise.all([
       this.getSetting<PlatformConfig>("platform", DEFAULT_PLATFORM_CONFIG),
       this.getSetting<ChannelConfig>("dispatch", DEFAULT_DISPATCH_CONFIG),
       this.getSetting<PostConfig>("post", DEFAULT_POST_CONFIG),
       this.getSetting<SecurityConfig>("security", DEFAULT_SECURITY_CONFIG),
+      this.getSetting<GoogleAuthConfig>("googleauth", DEFAULT_GOOGLE_AUTH_CONFIG),
     ]);
 
-    return { platform, dispatch, post, security };
+    return { platform, dispatch, post, security, googleauth };
   }
 
   async saveSetting(
-    key: "platform" | "dispatch" | "post" | "security",
+    key: "platform" | "dispatch" | "post" | "security" | "googleauth",
     value: Record<string, any>,
   ): Promise<boolean> {
     const valueJson = JSON.stringify(value);
@@ -156,6 +170,7 @@ export class SystemSettingsService {
     dispatch?: Partial<ChannelConfig>;
     post?: Partial<PostConfig>;
     security?: Partial<SecurityConfig>;
+    googleauth?: Partial<GoogleAuthConfig>;
   }): Promise<boolean> {
     if (payload.platform) {
       const currentPlatform = await this.getSetting<PlatformConfig>(
@@ -193,8 +208,18 @@ export class SystemSettingsService {
       await this.saveSetting("security", mergedSecurity);
     }
 
+    if (payload.googleauth) {
+      const currentGoogleAuth = await this.getSetting<GoogleAuthConfig>(
+        "googleauth",
+        DEFAULT_GOOGLE_AUTH_CONFIG,
+      );
+      const mergedGoogleAuth = { ...currentGoogleAuth, ...payload.googleauth };
+      await this.saveSetting("googleauth", mergedGoogleAuth);
+    }
+
     return true;
   }
+
 
   private async sendTelegramMessage(
     botToken: string,

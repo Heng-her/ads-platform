@@ -79,7 +79,12 @@ export async function dispatchAction(
 
   // 8. System Setting Actions
   if (action.startsWith("settings/")) {
-    const currentUser = await authenticate(c, false);
+    let currentUser: UserJwtPayload | null = null;
+    try {
+      currentUser = await authenticate(c, false);
+    } catch {
+      // Optional auth: public users can fetch settings/get-all
+    }
     const result = await handleSettingAction({
       c,
       db,
@@ -89,6 +94,7 @@ export async function dispatchAction(
     });
     return c.json(result);
   }
+
 
   // 9. Subscriber Actions
   if (action.startsWith("subscribers/")) {

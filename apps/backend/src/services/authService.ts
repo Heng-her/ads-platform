@@ -3,6 +3,12 @@ import { eq, or } from "drizzle-orm";
 import type { DbClient } from "../db/index";
 import { users } from "../db/schema/index";
 import { generateToken } from "../utils/jwt";
+import {
+  SystemSettingsService,
+  type GoogleAuthConfig,
+  DEFAULT_GOOGLE_AUTH_CONFIG,
+} from "./systemSettingsService";
+
 
 export class AuthService {
   constructor(private db: DbClient) {}
@@ -90,6 +96,16 @@ export class AuthService {
   }
 
   async googleLogin(idToken: string, jwtSecret: string) {
+    const settingsService = new SystemSettingsService({ db: this.db });
+    const googleAuthConfig = await settingsService.getSetting<GoogleAuthConfig>(
+      "googleauth",
+      DEFAULT_GOOGLE_AUTH_CONFIG,
+    );
+
+    if (googleAuthConfig.enableGoogleAuth === false) {
+      throw new Error("Google Sign-In is currently disabled by system administrator.");
+    }
+
     const res = await fetch(
       `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
     );
@@ -101,10 +117,21 @@ export class AuthService {
       name?: string;
       picture?: string;
       sub?: string;
+      aud?: string;
     };
+
+    if (googleAuthConfig.googleClientId && googleAuthConfig.googleClientId.trim()) {
+      if (payload.aud !== googleAuthConfig.googleClientId.trim()) {
+        throw new Error(
+          "Google Client ID mismatch. Token was not issued for this application.",
+        );
+      }
+    }
+
     if (!payload.email) {
       throw new Error("Google account email not found");
     }
+
 
     const email = payload.email;
     let user = await this.db

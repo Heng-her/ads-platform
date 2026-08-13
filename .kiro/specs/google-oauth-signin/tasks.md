@@ -47,7 +47,6 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
 - [ ] 3. Backend infrastructure — env, schema, and null-hash guard
-
   - [ ] 3.1 Add new environment variable types to `CloudflareBindings`
     - Open `apps/backend/src/types/env.ts`
     - Add `GOOGLE_CLIENT_ID: string` to the `CloudflareBindings` interface
@@ -99,7 +98,6 @@
     - _Requirements: 2.6, 3.2, 3.3_
 
 - [ ] 4. Backend — new OAuth routes and `/api/me` endpoint
-
   - [ ] 4.1 Add `GET /google` OAuth initiation route
     - Open `apps/backend/src/routes/authRoutes.ts` (or create `apps/backend/src/routes/oauthRoutes.ts` and mount it at the same prefix)
     - Implement the handler:
@@ -139,7 +137,6 @@
     - _Requirements: 2.7_
 
 - [ ] 5. Frontend — fix Google buttons, login form, and callback page
-
   - [ ] 5.1 Wire the Google button in `login.vue`
     - Open `apps/frontend/app/pages/(auth)/login.vue`
     - Find the "Sign in with Google" button element
@@ -189,7 +186,6 @@
     - _Requirements: 2.7_
 
 - [ ] 6. Fix verification — run all tests after implementation
-
   - [ ] 6.1 Verify bug condition exploration test now passes
     - **Property 1: Expected Behavior** - Google OAuth & Mock Login Defects
     - **IMPORTANT**: Re-run the SAME tests from task 1 — do NOT write new tests

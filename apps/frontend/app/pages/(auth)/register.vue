@@ -31,7 +31,7 @@ const focusedField = ref<string | null>(null)
 const errorMessage = ref('')
 const googleError = ref('')
 
-const { isConfigured: googleEnabled, renderButton, cancelPrompt } = useGoogleIdentity()
+const { isConfigured: googleEnabled, isLoadingConfig, initGoogleAuth, renderButton, cancelPrompt } = useGoogleIdentity()
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback
@@ -78,8 +78,10 @@ async function handleGoogleCredential(idToken: string) {
   }
 }
 
-onMounted(async () => {
-  if (!googleEnabled.value || !googleButton.value) return
+async function setupGoogleButton() {
+  if (!googleEnabled.value) return
+  await nextTick()
+  if (!googleButton.value) return
 
   try {
     await renderButton(googleButton.value, handleGoogleCredential, {
@@ -87,6 +89,17 @@ onMounted(async () => {
     })
   } catch (error) {
     googleError.value = getErrorMessage(error, 'Failed to load Google sign-up.')
+  }
+}
+
+onMounted(async () => {
+  await initGoogleAuth()
+  await setupGoogleButton()
+})
+
+watch(googleEnabled, async (val) => {
+  if (val) {
+    await setupGoogleButton()
   }
 })
 
@@ -128,10 +141,10 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="flex-grow flex flex-col md:flex-row min-h-screen md:h-screen overflow-hidden">
+  <div class="flex-grow flex flex-col md:flex-row min-h-screen h-screen overflow-hidden">
     <!-- Left Side: Brand Imagery & Testimonial -->
     <section
-      class="hidden md:flex md:w-1/2 lg:w-3/5 relative overflow-hidden bg-slate-950 p-6 lg:p-10 flex-col justify-between h-full">
+      class="hidden md:flex md:w-1/2 lg:w-3/5 relative overflow-hidden bg-slate-950 p-8 lg:p-12 flex-col justify-between h-full">
       <!-- Animated Background Glows -->
       <div
         class="absolute top-[-10%] right-[-10%] w-96 h-96 bg-blue-700 opacity-20 blur-[120px] rounded-full pointer-events-none" />
@@ -147,32 +160,32 @@ const handleSubmit = async () => {
         </div>
       </div>
 
-      <div class="relative z-10 max-w-xl my-auto py-4">
-        <!-- High Quality AI Image -->
-        <div class="relative rounded-2xl overflow-hidden shadow-2xl mb-4 border border-white/10 aspect-video group">
+      <div class="relative z-10 max-w-xl my-auto">
+        <!-- High Quality Image -->
+        <div class="relative rounded-2xl overflow-hidden shadow-2xl mb-6 border border-white/10 aspect-video group">
           <img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            alt="Neural network visualization representing synthetic intelligence"
+            alt="Real-time analytics and targeting visualization"
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuClupUv4GIyzVG2hZnmF02LLfgGUBJS7uf0geW9dnb6xR_85uRKWI68_DYsNx7lB8bh5Yxl4-IiqV90t5EL9ly317b8yLv10SVhhfcJLwbBlkOqjt9vDS7OaHtjQV9Yc3G6hDxfZ8vAD7p5q-fCgCYYhbLZ-MPU-IuxniWXliaxeJTeg9EpsAiPzxmYpOY92HHSVSd0cVgZA6czmLClIEFTnyy290_aTPK7tJy-irw8SOZw9hx8XX1O">
           <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
         </div>
 
-        <!-- Testimonial Section -->
-        <div class="space-y-3">
-          <p class="text-xl lg:text-2xl text-slate-100 italic font-medium leading-tight">
-            &ldquo;Joining New Platform was the catalyst for our campaign growth. The community of advertisers and
-            publishers here is unmatched in the digital space.&rdquo;
+        <!-- Quote -->
+        <div class="space-y-4">
+          <p class="text-2xl text-slate-100 italic font-medium leading-tight">
+            &ldquo;Managing multi-channel advertising campaigns has never been easier. The real-time insights are
+            game-changing.&rdquo;
           </p>
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-blue-400">
-              <img class="w-full h-full object-cover" alt="Dr. Elena Vance"
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-blue-400">
+              <img class="w-full h-full object-cover" alt="Marcus Vance"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuDo5jxlNDrb0fz7m2cDvDCMMfNHFLcernHtFn3kblYJEMeCBWIpMQu4sYcThVLbYyCQcb2kzqnj6pD210Ae82hDNgr2OnDtQStTCWGNCmsOqGOxiuGcd8fbD7bgKbw_CJfYVWnYPoyPJg7LNYMABKkQmd8-MLMALcBVsD7qxoM9vwjutaBSX9ywktahNefso_w2WWbaLIwajxIlCabUAUQqwWKSzXceFv9u0juw2FuUdiU3H_8PA3B8">
             </div>
             <div>
-              <p class="font-semibold text-white text-sm">
-                Dr. Elena Vance
+              <p class="font-semibold text-white">
+                Marcus Vance
               </p>
-              <p class="text-xs text-slate-400">
-                Lead Advertising Strategist &amp; Publisher
+              <p class="text-sm text-slate-400">
+                Head of Global Growth
               </p>
             </div>
           </div>
@@ -186,12 +199,12 @@ const handleSubmit = async () => {
       </div>
     </section>
 
-    <!-- Right Side: Registration Form -->
+    <!-- Right Side: Login Form -->
     <section
       class="w-full md:w-1/2 lg:w-2/5 flex items-center justify-center p-6 md:p-8 lg:p-10 bg-slate-50 dark:bg-slate-900 h-full overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       <div class="w-full max-w-md my-auto py-4">
         <!-- Mobile Branding -->
-        <div class="md:hidden flex items-center gap-2 mb-4">
+        <div class="md:hidden flex items-center gap-2 mb-6">
           <UIcon name="i-lucide-sparkles" class="text-blue-600 h-6 w-6 fill-blue-600 shrink-0" />
           <h1 class="text-xl font-bold tracking-tighter text-slate-900 dark:text-white">
             NEW PLATFORM
@@ -199,7 +212,7 @@ const handleSubmit = async () => {
         </div>
 
         <header class="mb-4">
-          <h2 class="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white mb-1">
+          <h2 class="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white mb-1.5">
             Create your account
           </h2>
           <p class="text-xs lg:text-sm text-slate-600 dark:text-slate-400">
@@ -210,7 +223,10 @@ const handleSubmit = async () => {
         <form class="space-y-3" @submit.prevent="handleSubmit">
           <!-- Google Sign In -->
           <div class="space-y-3 mb-3">
-            <div v-if="googleEnabled" class="flex justify-center rounded-xl px-4 py-3">
+            <div v-if="isLoadingConfig" class="flex justify-center items-center py-3 min-h-[44px]">
+              <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-slate-400" />
+            </div>
+            <div v-else-if="googleEnabled" class="flex justify-center rounded-xl px-4 py-3">
               <div ref="googleButton" class="min-h-[44px]" />
             </div>
             <div v-else
