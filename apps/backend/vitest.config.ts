@@ -10,8 +10,8 @@ export default defineConfig({
         kvNamespaces: ["CACHE_KV"],
         d1Databases: ["DB"],
         bindings: {
-          JWT_SECRET: "test-jwt-secret-for-exploration",
-          ADMIN_SECRET: "test-admin-secret",
+          JWT_SECRET: "ads-platform-jwt-secret-key",
+          ADMIN_SECRET: "ads-platform-admin-secret-key",
           ENVIRONMENT: "test",
         },
       },

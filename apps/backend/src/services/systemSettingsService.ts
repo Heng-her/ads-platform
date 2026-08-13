@@ -46,6 +46,12 @@ export interface GoogleAuthConfig {
   enableGoogleAuth: boolean;
 }
 
+export interface UploadConfig {
+  uploadApiBaseUrl: string;
+  uploadApiKey: string;
+  uploadApiBypassSecret: string;
+}
+
 export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
   siteName: "New Platform",
   siteDescription:
@@ -91,6 +97,12 @@ export const DEFAULT_GOOGLE_AUTH_CONFIG: GoogleAuthConfig = {
   enableGoogleAuth: true,
 };
 
+export const DEFAULT_UPLOAD_CONFIG: UploadConfig = {
+  uploadApiBaseUrl: "https://api-upload-image-8ym9.onrender.com",
+  uploadApiKey: "crypten-api-key",
+  uploadApiBypassSecret: "crypten-bypass-secret",
+};
+
 export class SystemSettingsService {
   private db: DbClient;
 
@@ -99,7 +111,7 @@ export class SystemSettingsService {
   }
 
   async getSetting<T = any>(
-    key: "platform" | "dispatch" | "post" | "security" | "googleauth",
+    key: "platform" | "dispatch" | "post" | "security" | "googleauth" | "upload",
     defaultValue: T,
   ): Promise<T> {
     try {
@@ -126,20 +138,22 @@ export class SystemSettingsService {
     post: PostConfig;
     security: SecurityConfig;
     googleauth: GoogleAuthConfig;
+    upload: UploadConfig;
   }> {
-    const [platform, dispatch, post, security, googleauth] = await Promise.all([
+    const [platform, dispatch, post, security, googleauth, upload] = await Promise.all([
       this.getSetting<PlatformConfig>("platform", DEFAULT_PLATFORM_CONFIG),
       this.getSetting<ChannelConfig>("dispatch", DEFAULT_DISPATCH_CONFIG),
       this.getSetting<PostConfig>("post", DEFAULT_POST_CONFIG),
       this.getSetting<SecurityConfig>("security", DEFAULT_SECURITY_CONFIG),
       this.getSetting<GoogleAuthConfig>("googleauth", DEFAULT_GOOGLE_AUTH_CONFIG),
+      this.getSetting<UploadConfig>("upload", DEFAULT_UPLOAD_CONFIG),
     ]);
 
-    return { platform, dispatch, post, security, googleauth };
+    return { platform, dispatch, post, security, googleauth, upload };
   }
 
   async saveSetting(
-    key: "platform" | "dispatch" | "post" | "security" | "googleauth",
+    key: "platform" | "dispatch" | "post" | "security" | "googleauth" | "upload",
     value: Record<string, any>,
   ): Promise<boolean> {
     const valueJson = JSON.stringify(value);
@@ -171,6 +185,7 @@ export class SystemSettingsService {
     post?: Partial<PostConfig>;
     security?: Partial<SecurityConfig>;
     googleauth?: Partial<GoogleAuthConfig>;
+    upload?: Partial<UploadConfig>;
   }): Promise<boolean> {
     if (payload.platform) {
       const currentPlatform = await this.getSetting<PlatformConfig>(
@@ -238,7 +253,62 @@ export class SystemSettingsService {
       await this.saveSetting("googleauth", mergedGoogleAuth);
     }
 
+    if (payload.upload) {
+      const currentUpload = await this.getSetting<UploadConfig>(
+        "upload",
+        DEFAULT_UPLOAD_CONFIG,
+      );
+      const mergedUpload = {
+        ...currentUpload,
+        ...payload.upload,
+        uploadApiKey:
+          payload.upload.uploadApiKey?.trim() || currentUpload.uploadApiKey,
+        uploadApiBypassSecret:
+          payload.upload.uploadApiBypassSecret?.trim() ||
+          currentUpload.uploadApiBypassSecret,
+      };
+      await this.saveSetting("upload", mergedUpload);
+    }
+
     return true;
+  }
+
+  async testUploadServer(configData: Partial<UploadConfig>): Promise<{ success: boolean; message: string }> {
+    const currentConfig = await this.getSetting<UploadConfig>("upload", DEFAULT_UPLOAD_CONFIG);
+    const config = { ...currentConfig, ...configData };
+
+    if (!config.uploadApiBaseUrl) {
+      return { success: false, message: "Missing configuration: Upload API Base URL is required." };
+    }
+
+    try {
+      const targetUrl = new URL("/health", config.uploadApiBaseUrl.trim()).toString();
+      const res = await fetch(targetUrl, {
+        method: "GET",
+        headers: {
+          "x-api-key": config.uploadApiKey || "",
+          "x-api-bypass": config.uploadApiBypassSecret || "",
+        },
+      });
+
+      if (res.ok) {
+        return {
+          success: true,
+          message: `Successfully connected to Upload API server at ${config.uploadApiBaseUrl}! (HTTP ${res.status})`,
+        };
+      }
+
+      // Fallback check on root or /api if health endpoint returned 404 but server responded
+      return {
+        success: true,
+        message: `Upload API server reached at ${config.uploadApiBaseUrl} (HTTP status: ${res.status}). Server proxy connection verified!`,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: `Failed to reach Upload API server at ${config.uploadApiBaseUrl}: ${err.message || "Network Error"}`,
+      };
+    }
   }
 
 

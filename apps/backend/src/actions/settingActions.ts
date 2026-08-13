@@ -33,6 +33,11 @@ export async function handleSettingAction({
               enableGoogleAuth: settings.googleauth.enableGoogleAuth,
               googleClientSecret: "", // Omit secret key for non-admins
             },
+            upload: {
+              uploadApiBaseUrl: settings.upload.uploadApiBaseUrl,
+              uploadApiKey: "", // Omit API key for non-admins
+              uploadApiBypassSecret: "", // Omit bypass secret for non-admins
+            },
             dispatch: {
               enablePublicChannel: settings.dispatch.enablePublicChannel,
               enableAdminGroupAlerts: settings.dispatch.enableAdminGroupAlerts,
@@ -67,8 +72,6 @@ export async function handleSettingAction({
       data: encryptedString,
     };
   }
-
-
 
   if (action === "settings/save-platform") {
     if (!currentUser || currentUser.role !== "ADMIN") {
@@ -138,6 +141,23 @@ export async function handleSettingAction({
     };
   }
 
+  if (action === "settings/save-upload") {
+    if (!currentUser || currentUser.role !== "ADMIN") {
+      return { code: 0, msg: "Unauthorized: Admin privileges required." };
+    }
+
+    const upload = data?.upload || data;
+    if (!upload || typeof upload !== "object") {
+      return { code: 0, msg: "Invalid Upload API configuration payload." };
+    }
+
+    await service.saveSetting("upload", upload);
+    return {
+      code: 1,
+      msg: "Upload API settings saved successfully.",
+    };
+  }
+
   if (action === "settings/save-all") {
     if (!currentUser || currentUser.role !== "ADMIN") {
       return { code: 0, msg: "Unauthorized: Admin privileges required." };
@@ -149,11 +169,26 @@ export async function handleSettingAction({
       post: data?.post,
       security: data?.security,
       googleauth: data?.googleauth,
+      upload: data?.upload,
     });
 
     return {
       code: 1,
       msg: "All system settings saved successfully.",
+    };
+  }
+
+  if (action === "settings/test-upload") {
+    if (!currentUser || currentUser.role !== "ADMIN") {
+      return { code: 0, msg: "Unauthorized: Admin privileges required." };
+    }
+
+    const configPayload = data?.upload || data || {};
+    const testResult = await service.testUploadServer(configPayload);
+    return {
+      code: testResult.success ? 1 : 0,
+      msg: testResult.message,
+      data: testResult,
     };
   }
 

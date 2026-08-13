@@ -8,6 +8,7 @@ import AdminSettingsPlatform, { type PlatformConfig, type SecurityConfig } from 
 import AdminSettingsDispatch, { type ChannelConfig } from '~/components/admin/settings/AdminSettingsDispatch.vue'
 import AdminSettingsPost, { type PostConfig } from '~/components/admin/settings/AdminSettingsPost.vue'
 import AdminSettingsGoogleAuth, { type GoogleAuthConfig } from '~/components/admin/settings/AdminSettingsGoogleAuth.vue'
+import AdminSettingsUploadApi, { type UploadConfig } from '~/components/admin/settings/AdminSettingsUploadApi.vue'
 import AdminSettingsProfile, { type AdminProfile } from '~/components/admin/settings/AdminSettingsProfile.vue'
 import { decryptData } from '~/lib/crypto'
 
@@ -21,7 +22,7 @@ const toast = useAppToast()
 const route = useRoute()
 const router = useRouter()
 
-const activeTab = ref<'platform' | 'dispatch' | 'post' | 'googleauth' | 'adminprofile'>('platform')
+const activeTab = ref<'platform' | 'dispatch' | 'post' | 'googleauth' | 'uploadapi' | 'adminprofile'>('platform')
 const isSaving = ref(false)
 const isLoading = ref(true)
 
@@ -74,6 +75,13 @@ const googleAuthConfig = ref<GoogleAuthConfig>({
   enableGoogleAuth: true
 })
 
+// Image Upload API Microservice Config State
+const uploadConfig = ref<UploadConfig>({
+  uploadApiBaseUrl: 'https://api-upload-image-8ym9.onrender.com',
+  uploadApiKey: 'crypten-api-key',
+  uploadApiBypassSecret: 'crypten-bypass-secret'
+})
+
 // Admin Profile State
 const adminProfile = ref<AdminProfile>({
   username: '',
@@ -109,6 +117,9 @@ async function fetchSystemSettings() {
       if (dataPayload.googleauth) {
         googleAuthConfig.value = { ...googleAuthConfig.value, ...dataPayload.googleauth }
       }
+      if (dataPayload.upload) {
+        uploadConfig.value = { ...uploadConfig.value, ...dataPayload.upload }
+      }
     }
   } catch {
 
@@ -123,6 +134,7 @@ async function fetchSystemSettings() {
           if (parsed.channels) channelConfig.value = { ...channelConfig.value, ...parsed.channels }
           if (parsed.post) postConfig.value = { ...postConfig.value, ...parsed.post }
           if (parsed.googleauth) googleAuthConfig.value = { ...googleAuthConfig.value, ...parsed.googleauth }
+          if (parsed.upload) uploadConfig.value = { ...uploadConfig.value, ...parsed.upload }
         } catch { }
       }
     }
@@ -140,7 +152,7 @@ function populateAdminProfile() {
   }
 }
 
-function setTab(tabName: 'platform' | 'dispatch' | 'post' | 'googleauth' | 'adminprofile') {
+function setTab(tabName: 'platform' | 'dispatch' | 'post' | 'googleauth' | 'uploadapi' | 'adminprofile') {
   activeTab.value = tabName
   if (import.meta.client) {
     router.replace({ query: { ...route.query, tab: tabName } })
@@ -152,7 +164,7 @@ onMounted(() => {
     void router.replace('/admin/monetization')
     return
   }
-  if (route.query.tab && ['platform', 'dispatch', 'post', 'googleauth', 'adminprofile'].includes(route.query.tab as string)) {
+  if (route.query.tab && ['platform', 'dispatch', 'post', 'googleauth', 'uploadapi', 'adminprofile'].includes(route.query.tab as string)) {
     activeTab.value = route.query.tab as any
   }
   populateAdminProfile()
@@ -176,7 +188,7 @@ async function saveAdminSettings() {
     })
     const profileResult: any = await profileRes.json()
 
-    // 2. Persist platform, dispatch, post & googleauth configs via backend API action
+    // 2. Persist platform, dispatch, post, googleauth & upload configs via backend API action
     const settingRes = await api.action.$post({
       json: {
         action: 'settings/save-all',
@@ -185,7 +197,8 @@ async function saveAdminSettings() {
           security: securityConfig.value,
           dispatch: channelConfig.value,
           post: postConfig.value,
-          googleauth: googleAuthConfig.value
+          googleauth: googleAuthConfig.value,
+          upload: uploadConfig.value
         }
       }
     })
@@ -206,6 +219,7 @@ async function saveAdminSettings() {
         parsed.channels = channelConfig.value
         parsed.post = postConfig.value
         parsed.googleauth = googleAuthConfig.value
+        parsed.upload = uploadConfig.value
         localStorage.setItem('admin_platform_config', JSON.stringify(parsed))
       }
 
@@ -229,7 +243,7 @@ async function saveAdminSettings() {
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-white">Admin Platform Settings</h1>
         <p class="text-sm text-gray-400">
-          Configure system-wide parameters, Telegram & Mail notification dispatch, post campaign limits, Google OAuth, and admin profile.
+          Configure system-wide parameters, Telegram & Mail notification dispatch, post campaign limits, Google OAuth, Image Upload API, and admin profile.
         </p>
       </div>
       <button
@@ -265,7 +279,10 @@ async function saveAdminSettings() {
       <!-- TAB 4: Google OAuth Config -->
       <AdminSettingsGoogleAuth v-if="activeTab === 'googleauth'" v-model="googleAuthConfig" />
 
-      <!-- TAB 5: Admin Profile -->
+      <!-- TAB 5: Image Upload API Config -->
+      <AdminSettingsUploadApi v-if="activeTab === 'uploadapi'" v-model="uploadConfig" />
+
+      <!-- TAB 6: Admin Profile -->
       <AdminSettingsProfile v-if="activeTab === 'adminprofile'" v-model="adminProfile" />
     </template>
   </div>

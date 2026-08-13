@@ -16,8 +16,8 @@ import type { CloudflareBindings } from "../src/types/env";
 // Minimal mock env to satisfy the Hono app's middleware checks.
 // CACHE_KV and DB are absent by design so rate-limit + DB middleware bypass gracefully.
 const mockEnv: Partial<CloudflareBindings> = {
-  JWT_SECRET: "test-jwt-secret",
-  ADMIN_SECRET: "test-admin-secret",
+  JWT_SECRET: "ads-platform-jwt-secret-key",
+  ADMIN_SECRET: "ads-platform-admin-secret-key",
   ENVIRONMENT: "test",
 };
 

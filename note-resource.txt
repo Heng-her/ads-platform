@@ -32,3 +32,15 @@ npx wrangler d1 migrations apply DB --local
 
 
 npx wrangler secret put JWT_SECRET
+
+
+
+
+១. គណនី ADMIN
+📧 Email: admin@adsplatform.com
+🔑 Password: Admin@123456
+🛡️ Role: ADMIN
+២. គណនី CREATOR
+📧 Email: creator@adsplatform.com
+🔑 Password: Creator@123456
+🎨 Role: CREATOR
