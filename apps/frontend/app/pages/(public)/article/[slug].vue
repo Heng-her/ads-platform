@@ -165,7 +165,8 @@ watch(campaign, (currentCampaign) => {
                 @select-category="(category) => router.push({ path: '/article', query: category ? { category } : {} })"
                 @reset-filters="router.push('/article')">
                 <template #bottom>
-                    <AdBanner provider="google" slot-type="sidebar" :creator-id="campaign?.creatorId || campaign?.userId" />
+                    <AdBanner provider="google" slot-type="sidebar"
+                        :creator-id="campaign?.creatorId || campaign?.userId" />
                 </template>
             </PublicFilterSidebar>
             <div class="min-w-0 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -272,6 +273,7 @@ watch(campaign, (currentCampaign) => {
                     <!-- Interactive Feedback Widget -->
                     <PublicFeedbackWidget :feedback-given="feedbackGiven" @give-feedback="giveFeedback" />
 
+
                     <section v-if="campaign.category"
                         class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
                         <div class="mb-4 flex items-center justify-between gap-3">
@@ -312,7 +314,8 @@ watch(campaign, (currentCampaign) => {
 
                 <!-- Right Sidebar Column (Ads & Category Link) -->
                 <aside class="lg:col-span-4 space-y-6 sticky top-20">
-                    <AdBanner provider="adsterra" slot-type="sidebar" :creator-id="campaign?.creatorId || campaign?.userId" />
+                    <AdBanner provider="adsterra" slot-type="sidebar"
+                        :creator-id="campaign?.creatorId || campaign?.userId" />
                 </aside>
             </div>
         </div>

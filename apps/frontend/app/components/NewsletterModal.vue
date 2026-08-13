@@ -91,9 +91,7 @@ onMounted(() => {
 
     if (!isAlreadySubscribed && !isDismissed) {
       // 1. Prompt Google One Tap / Gmail popup for subscription
-      if (googleEnabled.value) {
-        void promptOneTap(handleGoogleCredential)
-      }
+      void promptOneTap(handleGoogleCredential)
 
       // 2. Open original bottom-right popup after short delay
       setTimeout(() => {
@@ -106,72 +104,65 @@ onMounted(() => {
 
 <template>
   <Teleport to="body">
-    <Transition
-      enter-active-class="transition duration-300 ease-out"
-      enter-from-class="opacity-0 translate-y-4 scale-95"
-      enter-to-class="opacity-100 translate-y-0 scale-100"
-      leave-active-class="transition duration-200 ease-in"
-      leave-from-class="opacity-100 translate-y-0 scale-100"
-      leave-to-class="opacity-0 translate-y-4 scale-95"
-    >
-      <div
-        v-if="isOpen"
-        class="fixed bottom-6 right-6 z-50 w-full max-w-md p-4 sm:p-6 rounded-2xl border border-gray-800 bg-gray-900/95 backdrop-blur-xl shadow-2xl text-gray-100"
-      >
+    <Transition enter-active-class="transition duration-300 ease-out"
+      enter-from-class="opacity-0 translate-y-4 scale-95" enter-to-class="opacity-100 translate-y-0 scale-100"
+      leave-active-class="transition duration-200 ease-in" leave-from-class="opacity-100 translate-y-0 scale-100"
+      leave-to-class="opacity-0 translate-y-4 scale-95">
+      <div v-if="isOpen"
+        class="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 w-auto sm:w-full sm:max-w-md p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-gray-900/98 via-gray-900/95 to-slate-900/98 backdrop-blur-2xl shadow-2xl shadow-black/80 text-gray-100 overflow-hidden">
+        <!-- Background Ambient Glow -->
+        <div class="absolute -top-12 -left-12 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+
+        <!-- Close Button -->
         <button
-          class="absolute top-3.5 right-3.5 flex h-7 w-7 items-center justify-center rounded-full text-gray-400 hover:bg-gray-800 hover:text-white transition"
+          type="button"
+          class="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-gray-800/90 text-gray-300 hover:bg-gray-700 hover:text-white transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+          aria-label="Close subscription modal"
           @click="closeModal"
         >
           <UIcon name="i-heroicons-x-mark" class="h-5 w-5" />
         </button>
 
-        <div v-if="!isSuccess" class="space-y-4">
-          <div class="flex items-center gap-3">
-            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-500/10 text-primary-400">
+        <div v-if="!isSuccess" class="space-y-4 relative z-10">
+          <div class="flex items-start gap-3.5 pr-6">
+            <div
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-md shadow-emerald-500/10">
               <UIcon name="i-heroicons-envelope-open" class="h-6 w-6" />
             </div>
-            <div>
-              <h3 class="text-base font-bold text-white">Subscribe to Campaign Updates</h3>
-              <p class="text-xs text-gray-400">
+            <div class="space-y-0.5">
+              <h3 class="text-sm sm:text-base font-bold text-white tracking-tight">
+                Subscribe to Campaign Updates
+              </h3>
+              <p class="text-xs text-gray-300 leading-relaxed">
                 Get live notifications whenever new campaigns or creator posts are published.
               </p>
             </div>
           </div>
 
-          <form class="space-y-3" @submit.prevent="subscribeWithEmail(email)">
+          <form class="space-y-3 pt-1" @submit.prevent="subscribeWithEmail(email)">
             <div class="relative">
-              <UIcon name="i-heroicons-envelope" class="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
-              <input
-                v-model="email"
-                type="email"
-                required
-                placeholder="Enter your email (e.g. name@domain.com)"
-                class="w-full rounded-xl border border-gray-700 bg-gray-800/90 pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-              />
+              <UIcon name="i-heroicons-envelope"
+                class="absolute left-3.5 top-3.5 h-4 w-4 text-gray-400 pointer-events-none" />
+              <input v-model="email" type="email" required placeholder="Enter your email address (e.g. name@gmail.com)"
+                class="w-full rounded-xl border border-gray-700 bg-gray-800/90 pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition" />
             </div>
 
-            <button
-              type="submit"
-              :disabled="isSubmitting"
-              class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-600/25 transition hover:bg-primary-500 disabled:opacity-50"
-            >
+            <button type="submit" :disabled="isSubmitting"
+              class="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 sm:py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:scale-[1.01] active:scale-95 disabled:opacity-50 cursor-pointer">
               <UIcon v-if="isSubmitting" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
               <UIcon v-else name="i-heroicons-paper-airplane" class="h-4 w-4" />
               <span>{{ isSubmitting ? 'Subscribing...' : 'Subscribe Now' }}</span>
             </button>
           </form>
-
-          <p class="text-[11px] text-gray-500 text-center">
-            No spam. You can unsubscribe anytime at a single click.
-          </p>
         </div>
 
-        <div v-else class="flex flex-col items-center justify-center py-4 space-y-2 text-center">
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+        <div v-else class="flex flex-col items-center justify-center py-4 space-y-2 text-center relative z-10">
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10">
             <UIcon name="i-heroicons-check" class="h-7 w-7" />
           </div>
           <h3 class="text-base font-bold text-white">You're Subscribed!</h3>
-          <p class="text-xs text-gray-400">
+          <p class="text-xs text-gray-300">
             Thank you for subscribing. You'll be the first to receive new campaign updates!
           </p>
         </div>

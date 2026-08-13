@@ -228,7 +228,24 @@ export function useGoogleIdentity() {
     });
 
     if (typeof googleAccounts.prompt === "function") {
-      googleAccounts.prompt();
+      googleAccounts.prompt((notification: any) => {
+        if (notification?.isNotDisplayed?.()) {
+          console.warn(
+            "[Google One Tap] Prompt not displayed reason:",
+            notification.getNotDisplayedReason?.(),
+          );
+        } else if (notification?.isSkippedMoment?.()) {
+          console.warn(
+            "[Google One Tap] Prompt skipped reason:",
+            notification.getSkippedReason?.(),
+          );
+        } else if (notification?.isDismissedMoment?.()) {
+          console.warn(
+            "[Google One Tap] Prompt dismissed reason:",
+            notification.getDismissedReason?.(),
+          );
+        }
+      });
     }
   }
 

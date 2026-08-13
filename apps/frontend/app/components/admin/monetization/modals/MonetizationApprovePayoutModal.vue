@@ -73,28 +73,19 @@ function formatAddress(addr: string) {
         </div>
 
         <!-- Admin Wallet Warning if not connected -->
-        <div
-          v-if="!isAdminWalletConnected"
-          class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs flex items-center justify-between"
-        >
+        <div v-if="!isAdminWalletConnected"
+          class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs flex items-center justify-between">
           <span class="font-medium">Admin wallet must be connected to deduct & execute transfer.</span>
-          <button
-            class="px-2.5 py-1 bg-amber-500 text-gray-950 font-bold rounded text-xs hover:bg-amber-400 transition"
-            @click="emit('connect-wallet')"
-          >
+          <button class="px-2.5 py-1 bg-amber-500 text-gray-950 font-bold rounded text-xs hover:bg-amber-400 transition"
+            @click="emit('connect-wallet')">
             Connect Wallet
           </button>
         </div>
 
         <div class="flex justify-end gap-3 pt-2">
           <UButton color="neutral" variant="ghost" @click="isOpen = false">Cancel</UButton>
-          <UButton
-            color="success"
-            variant="solid"
-            class="font-bold gap-2"
-            :loading="isProcessing"
-            @click="emit('confirm')"
-          >
+          <UButton color="success" variant="solid" class="font-bold gap-2" :loading="isProcessing"
+            @click="emit('confirm')">
             <UIcon name="i-heroicons-bolt" class="w-4 h-4" />
             <span>Pay {{ selectedRequest.cryptoAmount }} ETH from Admin Wallet</span>
           </UButton>

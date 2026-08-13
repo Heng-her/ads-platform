@@ -84,27 +84,16 @@ function giveFeedback(value: boolean) {
 <template>
     <div class="pb-12 pt-2 font-body text-foreground">
         <!-- Mobile Filter Chips & Active Filters Bar -->
-        <ArticleActiveFilters
-            :categories="categories"
-            :selected-category="selectedCategory"
-            :search-query="searchQuery"
-            :selected-content-type="selectedContentType"
-            :active-filter-count="activeFilterCount"
-            @set-query="setQuery"
-            @clear-all="clearAllFilters"
-        />
+        <ArticleActiveFilters :categories="categories" :selected-category="selectedCategory" :search-query="searchQuery"
+            :selected-content-type="selectedContentType" :active-filter-count="activeFilterCount" @set-query="setQuery"
+            @clear-all="clearAllFilters" />
 
         <div class="flex gap-6 items-start mt-3">
 
             <!-- ================= LEFT RAIL: FILTERS & NAVIGATION (Desktop Sticky) ================= -->
-            <PublicFilterSidebar
-                width-class="w-86"
-                :categories="categories"
-                :selected-category="selectedCategory"
-                :active-filter-count="activeFilterCount"
-                @select-category="(cat) => setQuery({ category: cat })"
-                @reset-filters="clearAllFilters"
-            >
+            <PublicFilterSidebar width-class="w-86" :categories="categories" :selected-category="selectedCategory"
+                :active-filter-count="activeFilterCount" @select-category="(cat) => setQuery({ category: cat })"
+                @reset-filters="clearAllFilters">
                 <template #bottom>
                     <AdBanner provider="google" slot-type="sidebar" />
                 </template>
@@ -117,10 +106,8 @@ function giveFeedback(value: boolean) {
                 <ArticleRefreshBanner :count="newCampaignCount" @refresh="startNewFeed" />
 
                 <!-- Error State -->
-                <div
-                    v-if="errorMessage && !campaigns.length"
-                    class="rounded-2xl p-8 flex flex-col items-center text-center gap-3 border shadow-xl bg-white dark:bg-gray-900 border-red-200 dark:border-red-900/50"
-                >
+                <div v-if="errorMessage && !campaigns.length"
+                    class="rounded-2xl p-8 flex flex-col items-center text-center gap-3 border shadow-xl bg-white dark:bg-gray-900 border-red-200 dark:border-red-900/50">
                     <p class="text-sm text-red-500 font-medium">{{ errorMessage }}</p>
                     <UButton @click="retry" color="primary" size="xs" font-semibold>
                         Try again

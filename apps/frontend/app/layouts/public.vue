@@ -447,6 +447,9 @@ onUnmounted(() => {
                 © {{ new Date().getFullYear() }} Signal Ads Platform. All rights reserved.
             </div>
         </footer>
+
+        <!-- Newsletter Subscriber Modal -->
+        <NewsletterModal />
     </div>
 </template>
 
