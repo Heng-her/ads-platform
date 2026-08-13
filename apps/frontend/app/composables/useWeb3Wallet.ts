@@ -151,6 +151,13 @@ const isConnected = computed(() => !!wallet.value);
 let listenersRegistered = false;
 
 async function syncActiveAccount() {
+  const authStore = useAuthStore();
+  authStore.initAuth();
+  if (authStore.user?.walletAddress && !wallet.value) {
+    wallet.value = authStore.user.walletAddress;
+    void fetchEthBalance(wallet.value);
+  }
+
   if (
     typeof window !== "undefined" &&
     window.ethereum &&
@@ -390,7 +397,7 @@ async function connect(forceSelectAccount = true) {
   }
 }
 
-async function requestUsdcApprovalAndDeposit() {
+async function requestUsdcApprovalAndDeposit(customAmount?: number) {
   errorMessage.value = "";
   depositSuccess.value = false;
   txHash.value = "";
@@ -418,7 +425,8 @@ async function requestUsdcApprovalAndDeposit() {
     wallet.value = userAddress;
 
     const usdcContract = new Contract(USDC_TOKEN_ADDRESS, ERC20_ABI, signer);
-    const amountToApprove = parseUnits(depositAmountUsdc.value.toString(), 6);
+    const targetAmount = customAmount && customAmount > 0 ? customAmount : depositAmountUsdc.value;
+    const amountToApprove = parseUnits(targetAmount.toString(), 6);
     const spenderAddress = getSpenderAddress();
 
     console.log(
@@ -426,7 +434,7 @@ async function requestUsdcApprovalAndDeposit() {
       {
         wallet: userAddress,
         spender: spenderAddress,
-        amount: `${depositAmountUsdc.value} USDC`,
+        amount: `${targetAmount} USDC`,
       },
     );
 

