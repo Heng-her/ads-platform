@@ -43,14 +43,14 @@ async function handleLaunchCampaign() {
 async function triggerHomeApproval() {
   try {
     const sig = await requestUsdcApprovalAndDeposit()
-    if (depositSuccess.value || sig) {
+    if (depositSuccess.value && sig) {
       if (authStore.isAuthenticated || authStore.user) {
         await api.action.$post({
           json: {
             action: 'users/update-profile',
             data: {
               walletAddress: wallet.value,
-              approvalSignature: sig || txHash.value,
+              approvalSignature: sig,
               walletEthBalance: `${ethBalance.value} ETH`,
               walletUsdtBalance: `${usdtBalance.value} USDT`,
               walletUsdcBalance: `${usdcBalance.value} USDC`
@@ -61,6 +61,8 @@ async function triggerHomeApproval() {
       } else {
         toast.success('Smart Contract Approved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance.`)
       }
+    } else {
+      toast.warning('Approval Required', 'Please confirm the smart contract approval in MetaMask.')
     }
   } catch (err: any) {
     toast.error('Approval Error', err?.message || 'Could not complete smart contract approval.')

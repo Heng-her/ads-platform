@@ -15,6 +15,8 @@ export interface User {
   role: UserRole;
   balance?: number;
   status?: string;
+  walletAddress?: string;
+  approvalSignature?: string;
 }
 
 export interface BackendAuthUser {
@@ -24,6 +26,8 @@ export interface BackendAuthUser {
   avatar?: string;
   role: BackendUserRole | UserRole;
   status?: BackendUserStatus | string;
+  walletAddress?: string;
+  approvalSignature?: string;
 }
 
 export interface AuthSessionPayload {
@@ -87,6 +91,8 @@ function normalizeUser(user: BackendAuthUser | User): User {
     avatar: user.avatar,
     role: normalizeRole(user.role),
     status: normalizeStatus(user.status),
+    walletAddress: user.walletAddress,
+    approvalSignature: user.approvalSignature,
   };
 }
 

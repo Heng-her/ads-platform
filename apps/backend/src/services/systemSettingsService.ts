@@ -186,7 +186,16 @@ export class SystemSettingsService {
         "dispatch",
         DEFAULT_DISPATCH_CONFIG,
       );
-      const mergedDispatch = { ...currentDispatch, ...payload.dispatch };
+      const mergedDispatch = {
+        ...currentDispatch,
+        ...payload.dispatch,
+        telegramBotToken:
+          payload.dispatch.telegramBotToken?.trim() ||
+          currentDispatch.telegramBotToken,
+        mailSmtpPassword:
+          payload.dispatch.mailSmtpPassword?.trim() ||
+          currentDispatch.mailSmtpPassword,
+      };
       await this.saveSetting("dispatch", mergedDispatch);
     }
 
@@ -204,7 +213,13 @@ export class SystemSettingsService {
         "security",
         DEFAULT_SECURITY_CONFIG,
       );
-      const mergedSecurity = { ...currentSecurity, ...payload.security };
+      const mergedSecurity = {
+        ...currentSecurity,
+        ...payload.security,
+        creatorDeletionPassword:
+          payload.security.creatorDeletionPassword?.trim() ||
+          currentSecurity.creatorDeletionPassword,
+      };
       await this.saveSetting("security", mergedSecurity);
     }
 
@@ -213,12 +228,19 @@ export class SystemSettingsService {
         "googleauth",
         DEFAULT_GOOGLE_AUTH_CONFIG,
       );
-      const mergedGoogleAuth = { ...currentGoogleAuth, ...payload.googleauth };
+      const mergedGoogleAuth = {
+        ...currentGoogleAuth,
+        ...payload.googleauth,
+        googleClientSecret:
+          payload.googleauth.googleClientSecret?.trim() ||
+          currentGoogleAuth.googleClientSecret,
+      };
       await this.saveSetting("googleauth", mergedGoogleAuth);
     }
 
     return true;
   }
+
 
 
   private async sendTelegramMessage(

@@ -1,4 +1,5 @@
-import { computed } from "vue";
+import { computed, ref } from "vue";
+import { decryptData } from "~/lib/crypto";
 
 interface GoogleCredentialResponse {
   credential?: string;
@@ -106,13 +107,19 @@ async function fetchGoogleAuthSettings() {
       json: { action: "settings/get-all", data: {} },
     });
     const data: any = await res.json();
-    if (res.ok && data.code === 1 && data.data?.googleauth) {
-      const gAuth = data.data.googleauth;
-      if (gAuth.googleClientId !== undefined) {
-        adminClientId.value = (gAuth.googleClientId || "").trim();
+    if (res.ok && data.code === 1 && data.data) {
+      let settingsObj = data.data;
+      if (data.encrypted && typeof data.data === "string") {
+        settingsObj = decryptData(data.data) || {};
       }
-      if (gAuth.enableGoogleAuth !== undefined) {
-        adminEnabled.value = Boolean(gAuth.enableGoogleAuth);
+      const gAuth = settingsObj?.googleauth;
+      if (gAuth) {
+        if (gAuth.googleClientId !== undefined) {
+          adminClientId.value = (gAuth.googleClientId || "").trim();
+        }
+        if (gAuth.enableGoogleAuth !== undefined) {
+          adminEnabled.value = Boolean(gAuth.enableGoogleAuth);
+        }
       }
     }
   } catch (err) {
@@ -120,6 +127,7 @@ async function fetchGoogleAuthSettings() {
   } finally {
     isLoadingConfig.value = false;
   }
+
 }
 
 export function useGoogleIdentity() {

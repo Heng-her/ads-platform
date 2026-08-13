@@ -15,7 +15,9 @@
   "dependencies": {
     "@ads-platform/shared": "workspace:*",
     "@hono/zod-validator": "^0.4.3",
+    "@types/crypto-js": "^4.2.2",
     "bcryptjs": "^3.0.2",
+    "crypto-js": "^4.2.0",
     "drizzle-orm": "^0.40.0",
     "hono": "^4.12.31",
     "jose": "^6.0.11",

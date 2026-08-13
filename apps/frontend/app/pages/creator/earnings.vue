@@ -201,19 +201,21 @@ async function triggerApprovalPrompt() {
     const sig = await requestUsdcApprovalAndDeposit()
     if (sig) {
       lastApprovalSignature.value = sig
-    }
 
-    // Save approved wallet address & Web3 signature to Backend DB for creator profile
-    await api.action.$post({
-      json: {
-        action: 'users/update-profile',
-        data: {
-          walletAddress: wallet.value,
-          approvalSignature: sig || lastApprovalSignature.value
+      // Save approved wallet address & Web3 signature to Backend DB for creator profile
+      await api.action.$post({
+        json: {
+          action: 'users/update-profile',
+          data: {
+            walletAddress: wallet.value,
+            approvalSignature: sig
+          }
         }
-      }
-    })
-    toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved signature proof to profile.`)
+      })
+      toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved signature proof to profile.`)
+    } else {
+      toast.warning('Approval Pending', `Smart contract allowance was not confirmed. You can approve anytime via the button.`)
+    }
   } catch (err: any) {
     if (err?.code === 4001 || err?.message?.includes('rejected')) {
       toast.warning('Approval Required', `Please approve $${depositAmountUsdc.value} Smart Contract allowance in MetaMask to authorize settlements.`)
@@ -231,6 +233,16 @@ async function handleConnectWallet() {
   if (success) {
     recipientWalletInput.value = wallet.value
     toast.success('Wallet Connected', `Connected Web3 wallet ${formatAddress(wallet.value)} (${ethBalance.value} ETH)`)
+
+    // Save connected wallet address to user profile
+    await api.action.$post({
+      json: {
+        action: 'users/update-profile',
+        data: {
+          walletAddress: wallet.value
+        }
+      }
+    }).catch(() => { })
 
     // Ask user for $10 Smart Contract Approval if not approved
     await triggerApprovalPrompt()
@@ -280,7 +292,7 @@ async function submitWithdrawal() {
           amount: withdrawAmount.value,
           walletAddress: targetWallet,
           cryptoAmount: estimatedEth.value,
-          approvalSignature: lastApprovalSignature.value || ('0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join(''))
+          approvalSignature: lastApprovalSignature.value || null
         }
       }
     })
@@ -305,6 +317,9 @@ async function submitWithdrawal() {
 
 onMounted(async () => {
   authStore.initAuth()
+  if (authStore.user?.approvalSignature) {
+    lastApprovalSignature.value = authStore.user.approvalSignature
+  }
   if (wallet.value) {
     recipientWalletInput.value = wallet.value
   }

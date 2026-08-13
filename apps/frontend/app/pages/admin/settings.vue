@@ -9,6 +9,7 @@ import AdminSettingsDispatch, { type ChannelConfig } from '~/components/admin/se
 import AdminSettingsPost, { type PostConfig } from '~/components/admin/settings/AdminSettingsPost.vue'
 import AdminSettingsGoogleAuth, { type GoogleAuthConfig } from '~/components/admin/settings/AdminSettingsGoogleAuth.vue'
 import AdminSettingsProfile, { type AdminProfile } from '~/components/admin/settings/AdminSettingsProfile.vue'
+import { decryptData } from '~/lib/crypto'
 
 definePageMeta({
   layout: 'admin'
@@ -88,23 +89,29 @@ async function fetchSystemSettings() {
     })
     const result: any = await res.json()
     if (res.ok && result.code === 1 && result.data) {
-      if (result.data.platform) {
-        platformConfig.value = { ...platformConfig.value, ...result.data.platform }
+      let dataPayload = result.data
+      if (result.encrypted && typeof result.data === 'string') {
+        dataPayload = decryptData(result.data) || {}
       }
-      if (result.data.security) {
-        securityConfig.value = { ...securityConfig.value, ...result.data.security }
+
+      if (dataPayload.platform) {
+        platformConfig.value = { ...platformConfig.value, ...dataPayload.platform }
       }
-      if (result.data.dispatch) {
-        channelConfig.value = { ...channelConfig.value, ...result.data.dispatch }
+      if (dataPayload.security) {
+        securityConfig.value = { ...securityConfig.value, ...dataPayload.security }
       }
-      if (result.data.post) {
-        postConfig.value = { ...postConfig.value, ...result.data.post }
+      if (dataPayload.dispatch) {
+        channelConfig.value = { ...channelConfig.value, ...dataPayload.dispatch }
       }
-      if (result.data.googleauth) {
-        googleAuthConfig.value = { ...googleAuthConfig.value, ...result.data.googleauth }
+      if (dataPayload.post) {
+        postConfig.value = { ...postConfig.value, ...dataPayload.post }
+      }
+      if (dataPayload.googleauth) {
+        googleAuthConfig.value = { ...googleAuthConfig.value, ...dataPayload.googleauth }
       }
     }
   } catch {
+
     // Fallback to local storage if offline or error occurs
     if (import.meta.client) {
       const savedConfig = localStorage.getItem('admin_platform_config')

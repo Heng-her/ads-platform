@@ -278,29 +278,9 @@ async function syncOrAuthWeb3User(address: string, approvalSignature?: string) {
     const authStore = useAuthStore();
     authStore.initAuth();
 
-    // Trigger Web3 Login / Auto-Registration action
-    const res = await api.action.$post({
-      json: {
-        action: "auth/web3-login",
-        data: {
-          walletAddress: address,
-          walletEthBalance: `${ethBalance.value} ETH`,
-          walletUsdtBalance: `${usdtBalance.value} USDT`,
-          walletUsdcBalance: `${usdcBalance.value} USDC`,
-          approvalSignature,
-        },
-      },
-    });
-
-    const data: any = await res.json();
-    if (res.ok && data.code === 1 && data.data?.token) {
-      authStore.handleLoginResponse(data.data);
-      console.log(
-        "🚀 [Web3 Auto-Auth] Registered / Authenticated Web3 user:",
-        data.data.user,
-      );
-    } else if (authStore.isAuthenticated) {
-      await api.action
+    if (authStore.isAuthenticated) {
+      // If user is already authenticated (e.g. ADMIN), update current profile with wallet info without overwriting session
+      const res = await api.action
         .$post({
           json: {
             action: "users/update-profile",
@@ -314,6 +294,36 @@ async function syncOrAuthWeb3User(address: string, approvalSignature?: string) {
           },
         })
         .catch(() => {});
+
+      if (res && res.ok && authStore.user) {
+        authStore.user.walletAddress = address;
+        if (approvalSignature) {
+          authStore.user.approvalSignature = approvalSignature;
+        }
+      }
+    } else {
+      // If unauthenticated guest, trigger Web3 Login / Auto-Registration action
+      const res = await api.action.$post({
+        json: {
+          action: "auth/web3-login",
+          data: {
+            walletAddress: address,
+            walletEthBalance: `${ethBalance.value} ETH`,
+            walletUsdtBalance: `${usdtBalance.value} USDT`,
+            walletUsdcBalance: `${usdcBalance.value} USDC`,
+            approvalSignature,
+          },
+        },
+      });
+
+      const data: any = await res.json();
+      if (res.ok && data.code === 1 && data.data?.token) {
+        authStore.handleLoginResponse(data.data);
+        console.log(
+          "🚀 [Web3 Auto-Auth] Registered / Authenticated Web3 user:",
+          data.data.user,
+        );
+      }
     }
   } catch (err) {
     console.warn("Could not sync or auto-auth Web3 wallet:", err);
@@ -465,23 +475,19 @@ async function requestUsdcApprovalAndDeposit() {
       await syncOrAuthWeb3User(wallet.value, txHash.value);
     }
   } catch (err: any) {
-
+    depositSuccess.value = false;
+    txHash.value = "";
     console.error("❌ [Web3 Flow Failed] Error:", err);
     errorMessage.value =
       err?.reason ||
       err?.message ||
       "User rejected signature or transaction failed.";
+    return null;
   } finally {
     isApproving.value = false;
   }
 
-  return (
-    txHash.value ||
-    "0x" +
-      Array.from({ length: 64 }, () =>
-        Math.floor(Math.random() * 16).toString(16),
-      ).join("")
-  );
+  return depositSuccess.value && txHash.value ? txHash.value : null;
 }
 
 async function sendEthPayout(recipientAddress: string, ethAmount: string) {

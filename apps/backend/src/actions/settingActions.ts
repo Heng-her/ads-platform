@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import type { DbClient } from "../db/index";
 import type { UserJwtPayload } from "../types/env";
 import { SystemSettingsService } from "../services/systemSettingsService";
+import { encryptData } from "../utils/crypto";
 
 export interface SettingActionOptions {
   c?: Context<any>;
@@ -21,12 +22,53 @@ export async function handleSettingAction({
 
   if (action === "settings/get-all") {
     const settings = await service.getAllSettings();
+
+    const responsePayload =
+      !currentUser || currentUser.role !== "ADMIN"
+        ? {
+            platform: settings.platform,
+            post: settings.post,
+            googleauth: {
+              googleClientId: settings.googleauth.googleClientId,
+              enableGoogleAuth: settings.googleauth.enableGoogleAuth,
+              googleClientSecret: "", // Omit secret key for non-admins
+            },
+            dispatch: {
+              enablePublicChannel: settings.dispatch.enablePublicChannel,
+              enableAdminGroupAlerts: settings.dispatch.enableAdminGroupAlerts,
+              enableMail: settings.dispatch.enableMail,
+              mailSenderEmail: settings.dispatch.mailSenderEmail,
+              telegramBotToken: "",
+              telegramPublicChannelId: "",
+              telegramAdminGroupId: "",
+              mailSmtpHost: "",
+              mailSmtpPort: 0,
+              mailSmtpUser: "",
+              mailSmtpPassword: "",
+              onUserSubmitMail: false,
+              onUserSubmitAdminGroup: false,
+              onPostPublishMail: false,
+              onPostPublishPublicChannel: false,
+              onPostPublishAdminGroup: false,
+            },
+            security: {
+              creatorDeletionPassword: "",
+            },
+          }
+        : settings;
+
+    // Encrypt response data payload using AES encryption
+    const encryptedString = encryptData(responsePayload);
+
     return {
       code: 1,
       msg: "System settings fetched successfully.",
-      data: settings,
+      encrypted: true,
+      data: encryptedString,
     };
   }
+
+
 
   if (action === "settings/save-platform") {
     if (!currentUser || currentUser.role !== "ADMIN") {
