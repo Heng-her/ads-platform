@@ -45,14 +45,16 @@ const {
 
 const isSaving = ref(false)
 
-// 3 Tab Navigation State (Synced with URL ?tab= query parameter)
-const activeMonetizationTab = ref<'payouts' | 'user_wallets' | 'ad_config'>('payouts')
+// 4 Tab Navigation State (Synced with URL ?tab= query parameter)
+const activeMonetizationTab = ref<'payouts' | 'user_wallets' | 'ad_networks' | 'revenue_strategy'>('payouts')
 
 watch(
   () => route.query.tab,
   (newTab) => {
-    if (newTab === 'ad_config' || newTab === 'ad-config' || newTab === 'ad_networks') {
-      activeMonetizationTab.value = 'ad_config'
+    if (newTab === 'ad_networks' || newTab === 'ad_config' || newTab === 'ad-config' || newTab === 'networks') {
+      activeMonetizationTab.value = 'ad_networks'
+    } else if (newTab === 'revenue_strategy' || newTab === 'revenue' || newTab === 'creators' || newTab === 'strategy') {
+      activeMonetizationTab.value = 'revenue_strategy'
     } else if (newTab === 'wallets' || newTab === 'user_wallets' || newTab === 'escrows') {
       activeMonetizationTab.value = 'user_wallets'
     } else if (newTab === 'payouts' || newTab === 'settlement') {
@@ -691,8 +693,19 @@ onMounted(async () => {
         @sync-live-onchain="handleSyncLiveOnChain" @refresh="fetchCreators" />
     </div>
 
-    <!-- TAB 3: AD NETWORKS & REVENUE CONFIG -->
-    <div v-else class="space-y-6">
+    <!-- TAB 3: AD NETWORKS & SCRIPTS CONFIG -->
+    <div v-else-if="activeMonetizationTab === 'ad_networks'" class="space-y-6">
+      <MonetizationAdSenseCard v-model="adNetworkConfig" v-model:auto-share="autoShareGoogleAdsense"
+        :is-testing="isTestingProviderApi === 'GOOGLE_ADSENSE'" @test="testAdProviderConnection('GOOGLE_ADSENSE')" />
+
+      <MonetizationAdsterraCard v-model="adNetworkConfig" v-model:auto-share="autoShareAdsterra"
+        :is-testing="isTestingProviderApi === 'ADSTERRA'" @test="testAdProviderConnection('ADSTERRA')" />
+
+      <MonetizationCustomScriptsCard v-model="adNetworkConfig" />
+    </div>
+
+    <!-- TAB 4: CREATOR REVENUE & STRATEGY -->
+    <div v-else-if="activeMonetizationTab === 'revenue_strategy'" class="space-y-6">
       <MonetizationRevenueDashboard v-model:time-range="monetizationTimeRange" :stats="monetizationStats"
         :is-loading="isLoadingMonetizationStats" @refresh="fetchMonetizationDashboard" />
 
@@ -705,14 +718,6 @@ onMounted(async () => {
         :creator-revenue-share-percent="creatorRevenueSharePercent" :monetization-engine="monetizationEngine"
         @set-all-auto="setAllCreatorsToAuto" @refresh="fetchCreators" @toggle-model="toggleCreatorModel"
         @start-edit="startEditEcpm" @cancel-edit="cancelEditEcpm" @save-ecpm="saveCreatorEcpm" />
-
-      <MonetizationAdSenseCard v-model="adNetworkConfig" v-model:auto-share="autoShareGoogleAdsense"
-        :is-testing="isTestingProviderApi === 'GOOGLE_ADSENSE'" @test="testAdProviderConnection('GOOGLE_ADSENSE')" />
-
-      <MonetizationAdsterraCard v-model="adNetworkConfig" v-model:auto-share="autoShareAdsterra"
-        :is-testing="isTestingProviderApi === 'ADSTERRA'" @test="testAdProviderConnection('ADSTERRA')" />
-
-      <MonetizationCustomScriptsCard v-model="adNetworkConfig" />
     </div>
 
     <!-- Modals -->

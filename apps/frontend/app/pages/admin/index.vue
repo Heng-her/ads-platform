@@ -6,7 +6,7 @@ import AdminDashboardHeader from '~/components/admin/dashboard/AdminDashboardHea
 import AdminDashboardMetrics, { type AdminDashboardStats } from '~/components/admin/dashboard/AdminDashboardMetrics.vue'
 import AdminTopCampaignsCard from '~/components/admin/dashboard/AdminTopCampaignsCard.vue'
 import AdminCategoryDistributionCard from '~/components/admin/dashboard/AdminCategoryDistributionCard.vue'
-import AdminTopCreatorsCard from '~/components/admin/dashboard/AdminTopCreatorsCard.vue'
+import AdminMonetizationCard from '~/components/admin/dashboard/AdminMonetizationCard.vue'
 import AdminShortcutsCard from '~/components/admin/dashboard/AdminShortcutsCard.vue'
 
 definePageMeta({
@@ -60,9 +60,9 @@ onMounted(() => {
         />
       </div>
 
-      <!-- Right Column (1 Col): Top Creators & Quick Command Center -->
+      <!-- Right Column (1 Col): Monetization Overview & Quick Command Center -->
       <div class="space-y-8 lg:col-span-1">
-        <AdminTopCreatorsCard :top-creators="stats.topCreators" />
+        <AdminMonetizationCard />
         <AdminShortcutsCard />
       </div>
     </div>
