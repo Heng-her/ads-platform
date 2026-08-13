@@ -78,20 +78,59 @@ const comparisonData = computed(() => {
   }
 })
 
+const router = useRouter()
+
+const DEFAULT_EMPTY_STATS = {
+  period: '7d',
+  campaigns: { total: 0, public: 0, draft: 0 },
+  impressions: { total: 0, uniqueViewers: 0, previousTotal: 0, periodGrowthPct: 0 },
+  monetization: { ecpmRate: 2.50, estimatedRevenue: 0 },
+  topCampaign: null,
+  recentCampaigns: [],
+  periodComparison: {
+    items: [],
+    peakItem: null,
+    totalCurrentImp: 0,
+    totalPrevImp: 0,
+    totalCurrentRev: 0,
+    totalPrevRev: 0,
+    growthPct: 0
+  },
+  campaignBreakdown: [],
+  audienceLocations: [],
+  deviceDistribution: []
+}
+
 async function fetchAnalyticsData() {
   isLoading.value = true
+  authStore.initAuth()
+
+  if (!authStore.token) {
+    isLoading.value = false
+    toast.error('Authentication Required', 'Please log in to view creator analytics.')
+    void router.push('/login')
+    return
+  }
+
   try {
     const res = await (api.dashboard.me.stats.$get as any)({
       query: { period: timeRange.value }
     })
     const data = await res.json()
-    if (res.ok && data.code === 1) {
+    if (res.ok && data.code === 1 && data.data) {
       stats.value = data.data
     } else {
+      if (res.status === 401) {
+        toast.error('Session Expired', 'Please log in to view analytics.')
+        void router.push('/login')
+        return
+      }
       toast.error('Failed to load analytics', data.msg || 'Could not retrieve analytics data')
+      stats.value = stats.value || (DEFAULT_EMPTY_STATS as any)
     }
   } catch (err: any) {
     toast.error('Network Error', err.message || 'Error connecting to analytics backend')
+    stats.value = stats.value || (DEFAULT_EMPTY_STATS as any)
   } finally {
     isLoading.value = false
   }
@@ -102,7 +141,8 @@ watch(timeRange, () => {
 })
 
 onMounted(() => {
-  fetchAnalyticsData()
+  authStore.initAuth()
+  void fetchAnalyticsData()
 })
 
 function formatNumber(num?: number): string {

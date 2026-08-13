@@ -21,25 +21,52 @@ const stats = ref<{
   recentCampaigns: { id: string; title: string; status: string; createdAt: string }[]
 } | null>(null)
 
+const router = useRouter()
+
+const DEFAULT_EMPTY_CREATOR_STATS = {
+  campaigns: { total: 0, public: 0, draft: 0 },
+  impressions: { total: 0, uniqueViewers: 0 },
+  monetization: { ecpmRate: 2.50, estimatedRevenue: 0 },
+  topCampaign: null,
+  recentCampaigns: []
+}
+
 async function fetchCreatorStats() {
   isLoading.value = true
+  authStore.initAuth()
+
+  if (!authStore.token) {
+    isLoading.value = false
+    toast.error('Authentication Required', 'Please log in to access the Creator Studio.')
+    void router.push('/login')
+    return
+  }
+
   try {
     const res = await api.dashboard.me.stats.$get()
     const data = await res.json()
-    if (res.ok && data.code === 1) {
+    if (res.ok && data.code === 1 && data.data) {
       stats.value = data.data
     } else {
+      if (res.status === 401) {
+        toast.error('Session Expired', 'Please log in again.')
+        void router.push('/login')
+        return
+      }
       toast.error('Failed to load stats', data.msg || 'Error fetching creator dashboard stats')
+      stats.value = stats.value || DEFAULT_EMPTY_CREATOR_STATS
     }
   } catch (err: any) {
     toast.error('Network Error', err.message || 'Could not connect to API server')
+    stats.value = stats.value || DEFAULT_EMPTY_CREATOR_STATS
   } finally {
     isLoading.value = false
   }
 }
 
 onMounted(() => {
-  fetchCreatorStats()
+  authStore.initAuth()
+  void fetchCreatorStats()
 })
 
 const creatorName = computed(() => {

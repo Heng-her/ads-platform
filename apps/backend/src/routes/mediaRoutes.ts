@@ -10,6 +10,11 @@ import {
 import { sendError } from "../utils/response";
 
 const allowedFolders = new Set([
+  "avatars",
+  "profiles",
+  "users",
+  "logos",
+  "system",
   "campaigns",
   "campaigns/covers",
   "campaigns/gallery",
@@ -19,7 +24,7 @@ const allowedFolders = new Set([
 export const mediaRoutes = new Hono<HonoEnv>().post(
   "/upload",
   authMiddleware({ strict: true }),
-  requireRole(["ADMIN"]),
+  requireRole(["ADMIN", "CREATOR"]),
   async (c) => {
     const folder = c.req.query("folder");
     if (!folder || !allowedFolders.has(folder)) {
