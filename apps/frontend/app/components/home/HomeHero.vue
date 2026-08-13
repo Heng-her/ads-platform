@@ -112,7 +112,8 @@ async function triggerHomeApproval() {
           class="w-full sm:w-auto inline-flex items-center justify-center gap-2 font-bold px-8 shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform"
           :loading="isConnecting || isApproving" @click="handleLaunchCampaign">
           <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5" />
-          <span>{{ isConnected ? 'Approve & Launch' : 'Connect Wallet' }}</span>
+          <span>{{ isConnected ? `Approve & Launch ($${depositAmountUsdc} USDC)` : 'Connect Wallet' }}</span>
+
         </UButton>
       </div>
 
