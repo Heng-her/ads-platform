@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useNewsletterModal } from '~/composables/useNewsletterModal'
+import { useGoogleIdentity } from '~/composables/useGoogleIdentity'
+
 defineProps<{
   feedbackGiven: boolean | null
 }>()
@@ -6,6 +9,15 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'give-feedback', val: boolean): void
 }>()
+
+const { openModal } = useNewsletterModal()
+const { promptOneTap } = useGoogleIdentity()
+
+function handleYesClick() {
+  emit('give-feedback', true)
+  openModal()
+  void promptOneTap(async () => {})
+}
 </script>
 
 <template>
@@ -21,7 +33,7 @@ const emit = defineEmits<{
     <!-- Interactive Buttons -->
     <div v-if="feedbackGiven === null" class="flex gap-2">
       <button 
-        @click="emit('give-feedback', true)"
+        @click="handleYesClick"
         class="flex-1 text-xs font-medium py-2 px-3 rounded-lg text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-[0.98]"
       >
         <UIcon name="i-heroicons-hand-thumb-up" class="w-4 h-4 text-emerald-500" />

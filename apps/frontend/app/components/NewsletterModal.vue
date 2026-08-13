@@ -3,12 +3,13 @@ import { ref, onMounted } from 'vue'
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
 import { useGoogleIdentity } from '~/composables/useGoogleIdentity'
+import { useNewsletterModal } from '~/composables/useNewsletterModal'
 
 const api = useApi()
 const toast = useAppToast()
+const { isOpen, openModal, closeModal } = useNewsletterModal()
 const { isConfigured: googleEnabled, promptOneTap } = useGoogleIdentity()
 
-const isOpen = ref(false)
 const email = ref('')
 const isSubmitting = ref(false)
 const isSuccess = ref(false)
@@ -28,13 +29,6 @@ function parseEmailFromIdToken(idToken: string): string | null {
     return parsed.email || null
   } catch {
     return null
-  }
-}
-
-function closeModal() {
-  isOpen.value = false
-  if (import.meta.client) {
-    sessionStorage.setItem('newsletter_dismissed', 'true')
   }
 }
 
@@ -95,7 +89,7 @@ onMounted(() => {
 
       // 2. Open original bottom-right popup after short delay
       setTimeout(() => {
-        isOpen.value = true
+        openModal()
       }, 3500)
     }
   }
@@ -114,12 +108,9 @@ onMounted(() => {
         <div class="absolute -top-12 -left-12 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
         <!-- Close Button -->
-        <button
-          type="button"
+        <button type="button"
           class="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-gray-800/90 text-gray-300 hover:bg-gray-700 hover:text-white transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-          aria-label="Close subscription modal"
-          @click="closeModal"
-        >
+          aria-label="Close subscription modal" @click="closeModal">
           <UIcon name="i-heroicons-x-mark" class="h-5 w-5" />
         </button>
 
