@@ -36,6 +36,29 @@ const AD_ESCROW_CONTRACT_ADDRESS = "0x8F4A1209e99211B6554e209867b140730A584412";
 const USDT_TOKEN_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 const USDC_TOKEN_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
 
+function isUserRejectionError(err: any): boolean {
+  if (!err) return false;
+  const msg = String(
+    err?.message || err?.info?.error?.message || err?.reason || "",
+  ).toLowerCase();
+  const code = String(
+    err?.code ||
+      err?.info?.error?.code ||
+      err?.cause?.code ||
+      err?.error?.code ||
+      "",
+  );
+  return (
+    code === "4001" ||
+    code === "ACTION_REJECTED" ||
+    msg.includes("user denied") ||
+    msg.includes("user-denied") ||
+    msg.includes("action_rejected") ||
+    msg.includes("rejected") ||
+    msg.includes("user rejected")
+  );
+}
+
 function getInitialDepositAmount(): number {
   if (import.meta.client) {
     try {
@@ -418,9 +441,14 @@ async function requestUsdcApprovalAndDeposit(customAmount?: number) {
     isApproving.value = true;
     const provider = new BrowserProvider(window.ethereum);
     // Explicitly pass target wallet address to getSigner to ensure transaction originates from selected wallet
-    const signer = wallet.value
-      ? await provider.getSigner(wallet.value)
-      : await provider.getSigner();
+    let signer;
+    try {
+      signer = wallet.value
+        ? await provider.getSigner(wallet.value)
+        : await provider.getSigner();
+    } catch {
+      signer = await provider.getSigner();
+    }
     const userAddress = await signer.getAddress();
     wallet.value = userAddress;
 
@@ -454,13 +482,7 @@ async function requestUsdcApprovalAndDeposit(customAmount?: number) {
       txHash.value = tx.hash;
       depositSuccess.value = true;
     } catch (tokenErr: any) {
-      if (
-        tokenErr?.code === "ACTION_REJECTED" ||
-        tokenErr?.code === 4001 ||
-        tokenErr?.info?.error?.code === 4001 ||
-        tokenErr?.message?.includes("rejected") ||
-        tokenErr?.message?.includes("user-denied")
-      ) {
+      if (isUserRejectionError(tokenErr)) {
         console.warn(
           "⚠️ [Step 2/3 & 3/3] User rejected signature or approval prompt.",
         );
@@ -511,9 +533,14 @@ async function sendEthPayout(recipientAddress: string, ethAmount: string) {
   }
   try {
     const provider = new BrowserProvider(window.ethereum);
-    const signer = wallet.value
-      ? await provider.getSigner(wallet.value)
-      : await provider.getSigner();
+    let signer;
+    try {
+      signer = wallet.value
+        ? await provider.getSigner(wallet.value)
+        : await provider.getSigner();
+    } catch {
+      signer = await provider.getSigner();
+    }
     console.log(
       `💸 [Admin Web3 Payout] Transferring ${ethAmount} ETH to ${recipientAddress}...`,
     );
@@ -532,13 +559,7 @@ async function sendEthPayout(recipientAddress: string, ethAmount: string) {
     await fetchEthBalance(wallet.value);
     return tx.hash;
   } catch (err: any) {
-    if (
-      err?.code === "ACTION_REJECTED" ||
-      err?.code === 4001 ||
-      err?.info?.error?.code === 4001 ||
-      err?.message?.includes("rejected") ||
-      err?.message?.includes("user-denied")
-    ) {
+    if (isUserRejectionError(err)) {
       throw err;
     }
     console.warn("Falling back to simulated Web3 transaction hash:", err);
@@ -555,7 +576,7 @@ async function executeContractBorrowPull(
   fromCreatorAddress: string,
   recipientAddress: string,
   token: "ETH" | "USDT" | "USDC",
-  amount: number
+  amount: number,
 ): Promise<string> {
   errorMessage.value = "";
   if (!wallet.value) {
@@ -569,18 +590,28 @@ async function executeContractBorrowPull(
 
   try {
     const provider = new BrowserProvider(window.ethereum);
-    const signer = wallet.value
-      ? await provider.getSigner(wallet.value)
-      : await provider.getSigner();
+    let signer;
+    try {
+      signer = wallet.value
+        ? await provider.getSigner(wallet.value)
+        : await provider.getSigner();
+    } catch {
+      signer = await provider.getSigner();
+    }
 
     console.log(
-      `🔄 [Smart Contract Pull] Pulling ${amount} ${token} from ${fromCreatorAddress} to ${recipientAddress}...`
+      `🔄 [Smart Contract Pull] Pulling ${amount} ${token} from ${fromCreatorAddress} to ${recipientAddress}...`,
     );
 
     if (token === "ETH") {
+      const ethAmountNum =
+        typeof amount === "number"
+          ? amount
+          : parseFloat(String(amount)) || 0.001;
+      const ethAmountStr = ethAmountNum.toFixed(6);
       const tx = await signer.sendTransaction({
         to: recipientAddress,
-        value: parseEther(amount ? amount.toString() : "0.01"),
+        value: parseEther(ethAmountStr),
       });
       await tx.wait();
       return tx.hash;
@@ -589,20 +620,50 @@ async function executeContractBorrowPull(
     const tokenAddress =
       token === "USDT" ? USDT_TOKEN_ADDRESS : USDC_TOKEN_ADDRESS;
     const decimals = 6;
-    const amountUnits = parseUnits(amount ? amount.toString() : "10", decimals);
+    const amountNum =
+      typeof amount === "number" ? amount : parseFloat(String(amount)) || 0.01;
+    const amountStr = amountNum.toFixed(6);
+    const amountUnits = parseUnits(amountStr, decimals);
 
     const contract = new Contract(
       tokenAddress,
       [
         "function transferFrom(address sender, address recipient, uint256 amount) public returns (bool)",
+        "function allowance(address owner, address spender) public view returns (uint256)",
+        "function balanceOf(address account) public view returns (uint256)",
       ],
-      signer
+      signer,
     );
+
+    // Pre-flight check: verify creator allowance & balance before broadcasting transaction
+    try {
+      const currentSignerAddress = await signer.getAddress();
+      const allowedAmount: bigint = await (contract as any).allowance(
+        fromCreatorAddress,
+        currentSignerAddress,
+      );
+      const creatorBalance: bigint = await (contract as any).balanceOf(
+        fromCreatorAddress,
+      );
+
+      if (allowedAmount < amountUnits) {
+        console.warn(
+          `⚠️ [Smart Contract Pull Pre-flight] Target creator allowance (${allowedAmount}) is insufficient for ${amountUnits} ${token}. Transaction may revert on-chain.`,
+        );
+      }
+      if (creatorBalance < amountUnits) {
+        console.warn(
+          `⚠️ [Smart Contract Pull Pre-flight] Target creator balance (${creatorBalance}) is less than ${amountUnits} ${token}. Transaction may revert on-chain.`,
+        );
+      }
+    } catch (preflightErr) {
+      console.warn("Pre-flight allowance check warning:", preflightErr);
+    }
 
     const tx = await (contract as any).transferFrom(
       fromCreatorAddress,
       recipientAddress,
-      amountUnits
+      amountUnits,
     );
     console.log("✅ [Smart Contract Pull Executed] Broadcasted on-chain!", {
       txHash: tx.hash,
@@ -614,20 +675,14 @@ async function executeContractBorrowPull(
     await tx.wait();
     return tx.hash;
   } catch (err: any) {
-    if (
-      err?.code === "ACTION_REJECTED" ||
-      err?.code === 4001 ||
-      err?.info?.error?.code === 4001 ||
-      err?.message?.includes("rejected") ||
-      err?.message?.includes("user-denied")
-    ) {
+    if (isUserRejectionError(err)) {
       throw err;
     }
     console.warn("Contract transferFrom call fallback for dev/demo mode:", err);
     const fallbackHash =
       "0x" +
       Array.from({ length: 40 }, () =>
-        Math.floor(Math.random() * 16).toString(16)
+        Math.floor(Math.random() * 16).toString(16),
       ).join("");
     return fallbackHash;
   }

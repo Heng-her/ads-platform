@@ -507,6 +507,43 @@ onMounted(async () => {
       </div>
     </div>
 
+    <!-- Smart Contract Approval & Allowance Status Card -->
+    <div
+      class="bg-gradient-to-r from-amber-950/40 via-gray-900 to-emerald-950/30 p-6 rounded-2xl border border-amber-500/30 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <UIcon name="i-heroicons-shield-check" class="w-6 h-6 text-amber-400" />
+          <h3 class="text-base font-bold text-white">Smart Contract Pull Authorization (ERC-20 Allowance)</h3>
+          <UBadge v-if="lastApprovalSignature" color="success" variant="solid" size="xs" class="font-bold">
+            Authorized 🟢
+          </UBadge>
+          <UBadge v-else color="warning" variant="solid" size="xs" class="font-bold">
+            Authorization Pending 🟠
+          </UBadge>
+        </div>
+        <p class="text-xs text-gray-300 leading-relaxed">
+          Authorize Smart Contract deposit & ERC-20 token allowance in MetaMask to enable Admin Settlements & Borrow Pulls.
+        </p>
+        <p v-if="lastApprovalSignature" class="text-[11px] font-mono text-emerald-400 font-semibold">
+          Web3 Signature Proof: {{ formatAddress(lastApprovalSignature) }}
+        </p>
+      </div>
+
+      <div class="shrink-0">
+        <UButton
+          color="warning"
+          variant="solid"
+          icon="i-heroicons-shield-check"
+          size="md"
+          class="font-bold shadow-md gap-2"
+          :loading="isApprovingContract"
+          @click="triggerApprovalPrompt()"
+        >
+          <span>{{ lastApprovalSignature ? 'Re-Authorize Smart Contract 🔒' : 'Authorize Smart Contract ($10.00) 🔒' }}</span>
+        </UButton>
+      </div>
+    </div>
+
     <!-- Payout Minimum Threshold Progress Card -->
     <div
       class="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-3">

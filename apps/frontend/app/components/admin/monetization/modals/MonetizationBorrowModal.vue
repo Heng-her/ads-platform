@@ -142,15 +142,34 @@ function formatAddress(addr: string) {
         </div>
 
         <!-- Borrow Amount Input -->
-        <div class="space-y-1">
-          <label class="block text-xs font-semibold text-gray-300">Borrow / Pull Amount ($ USD / Token)</label>
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-semibold text-gray-300">Borrow / Pull Amount ($ USD / Token)</label>
+            <div class="flex items-center gap-1">
+              <button
+                v-for="amt in [0.01, 0.10, 0.50, 1, 10, 50]"
+                :key="amt"
+                type="button"
+                class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold transition"
+                :class="
+                  borrowAmountInput === amt
+                    ? 'bg-amber-500 text-black font-bold'
+                    : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+                "
+                @click="borrowAmountInput = amt"
+              >
+                ${{ amt < 1 ? amt.toFixed(2) : amt }}
+              </button>
+            </div>
+          </div>
           <div class="relative flex items-center">
             <span class="absolute left-3 text-sm font-bold text-gray-400">$</span>
             <input
               v-model.number="borrowAmountInput"
               type="number"
-              step="10"
-              min="10"
+              step="0.000001"
+              min="0.000001"
+              placeholder="0.01"
               class="w-full rounded-lg border border-gray-700 bg-gray-800 pl-7 pr-3.5 py-2 text-sm text-amber-400 font-bold font-mono focus:border-amber-500 focus:outline-none"
             />
           </div>
