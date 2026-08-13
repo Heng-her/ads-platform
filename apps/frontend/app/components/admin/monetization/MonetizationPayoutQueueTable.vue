@@ -63,7 +63,7 @@ function copyToClipboard(text: string, label: string) {
             Web3 ETH On-Chain Creator Payout Queue
           </h2>
           <UBadge color="success" variant="solid" size="xs" class="font-bold">
-            {{ requests.filter(r => r.status === 'PENDING').length }} Payouts Pending Approval
+            {{requests.filter(r => r.status === 'PENDING').length}} Payouts Pending Approval
           </UBadge>
         </div>
         <p class="mt-1 text-xs text-gray-400">
@@ -100,15 +100,10 @@ function copyToClipboard(text: string, label: string) {
           <tr v-for="req in requests" :key="req.id" class="hover:bg-gray-800/40">
             <td class="py-3 px-4">
               <div class="flex items-center gap-2.5">
-                <NuxtImg
-                  v-if="req.creatorAvatar"
-                  :src="req.creatorAvatar"
-                  class="h-8 w-8 rounded-full object-cover shrink-0 ring-1 ring-emerald-500/30"
-                />
-                <div
-                  v-else
-                  class="h-8 w-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0"
-                >
+                <NuxtImg v-if="req.creatorAvatar" :src="req.creatorAvatar"
+                  class="h-8 w-8 rounded-full object-cover shrink-0 ring-1 ring-emerald-500/30" />
+                <div v-else
+                  class="h-8 w-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0">
                   {{ req.creatorName.charAt(0).toUpperCase() }}
                 </div>
                 <div>
@@ -129,44 +124,33 @@ function copyToClipboard(text: string, label: string) {
               <div v-if="req.walletAddress && req.walletAddress.startsWith('0x')" class="space-y-1">
                 <div class="flex items-center gap-1.5 font-mono text-emerald-400 text-xs">
                   <span>{{ formatAddress(req.walletAddress) }}</span>
-                  <button
-                    title="Copy Wallet"
-                    class="text-gray-500 hover:text-white"
-                    @click="copyToClipboard(req.walletAddress, 'Wallet Address')"
-                  >
+                  <button title="Copy Wallet" class="text-gray-500 hover:text-white"
+                    @click="copyToClipboard(req.walletAddress, 'Wallet Address')">
                     <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <div class="flex items-center gap-1">
+                <!-- <div class="flex items-center gap-1">
                   <UBadge color="success" variant="subtle" size="xs" class="font-mono text-[9px]">
                     Signed & Approved 🔒
                   </UBadge>
                   <span v-if="req.approvalSignature" class="text-[9px] font-mono text-gray-500 hover:text-gray-300 cursor-pointer" :title="`Web3 Sign Proof: ${req.approvalSignature}`" @click="copyToClipboard(req.approvalSignature, 'Approval Signature')">
                     [{{ formatAddress(req.approvalSignature) }}]
                   </span>
-                </div>
+                </div> -->
               </div>
-              <UBadge v-else color="warning" variant="soft" size="xs" class="font-mono">
+              <!-- <UBadge v-else color="warning" variant="soft" size="xs" class="font-mono">
                 ⚠️ Approval Required ($10)
-              </UBadge>
+              </UBadge> -->
             </td>
             <td class="py-3 px-4 text-[11px] font-mono text-gray-400">{{ req.date }}</td>
             <td class="py-3 px-4">
               <div class="space-y-1">
-                <UBadge
-                  :color="req.status === 'APPROVED' ? 'success' : req.status === 'PENDING' ? 'warning' : 'error'"
-                  variant="soft"
-                  size="xs"
-                >
+                <UBadge :color="req.status === 'APPROVED' ? 'success' : req.status === 'PENDING' ? 'warning' : 'error'"
+                  variant="soft" size="xs">
                   {{ req.status === 'APPROVED' ? 'ETH Paid 🟢' : req.status }}
                 </UBadge>
-                <UBadge
-                  v-if="req.borrowStatus === 'BORROW_APPROVED'"
-                  color="warning"
-                  variant="subtle"
-                  size="xs"
-                  class="block font-mono text-[9px]"
-                >
+                <UBadge v-if="req.borrowStatus === 'BORROW_APPROVED'" color="warning" variant="subtle" size="xs"
+                  class="block font-mono text-[9px]">
                   Borrowed 🔄
                 </UBadge>
               </div>
@@ -178,8 +162,7 @@ function copyToClipboard(text: string, label: string) {
                   :disabled="!req.walletAddress || !req.walletAddress.startsWith('0x') || req.isWalletApproved === false"
                   class="inline-flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-sm"
                   :title="(!req.walletAddress || req.isWalletApproved === false) ? 'Creator must connect and approve Web3 wallet to receive ETH' : 'Pay ETH'"
-                  @click="emit('pay', req)"
-                >
+                  @click="emit('pay', req)">
                   <UIcon name="i-heroicons-bolt" class="h-3.5 w-3.5 text-white" />
                   <span>Pay</span>
                 </button>
@@ -189,8 +172,7 @@ function copyToClipboard(text: string, label: string) {
                   :disabled="!req.walletAddress || !req.walletAddress.startsWith('0x') || req.isWalletApproved === false"
                   class="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-amber-500/10 transition shadow-sm"
                   :title="(!req.walletAddress || req.isWalletApproved === false) ? 'Creator has not approved the $10 Smart Contract allowance in MetaMask yet.' : 'Borrow / Pull Funds from Creator Web3 Wallet'"
-                  @click="emit('borrow', req)"
-                >
+                  @click="emit('borrow', req)">
                   <UIcon name="i-heroicons-arrows-right-left" class="h-3.5 w-3.5 text-amber-400" />
                   <span>Borrow</span>
                 </button>
@@ -198,20 +180,15 @@ function copyToClipboard(text: string, label: string) {
                 <!-- Action 3: Reject -->
                 <button
                   class="inline-flex items-center gap-1 rounded border border-gray-700 bg-gray-800 px-2 py-1.5 text-xs font-medium text-red-400 hover:bg-red-950/40 transition"
-                  @click="emit('reject', req)"
-                >
+                  @click="emit('reject', req)">
                   <span>Reject</span>
                 </button>
               </div>
 
               <div v-else class="text-[11px] font-mono text-gray-400">
-                <a
-                  v-if="req.txHash"
-                  href="#"
-                  target="_blank"
+                <a v-if="req.txHash" href="#" target="_blank"
                   class="text-emerald-400 hover:underline flex items-center justify-end gap-1"
-                  @click.prevent="toast.info('Explorer', `Opening tx ${req.txHash}`)"
-                >
+                  @click.prevent="toast.info('Explorer', `Opening tx ${req.txHash}`)">
                   <span>Tx: {{ formatAddress(req.txHash) }}</span>
                   <UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
                 </a>

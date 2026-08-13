@@ -23,6 +23,15 @@ export const googleSchema = z.object({
   idToken: z.string().min(1, "ID token is required"),
 });
 
+export const web3AuthSchema = z.object({
+  walletAddress: z.string().min(10, "Invalid wallet address"),
+  walletEthBalance: z.string().optional(),
+  walletUsdtBalance: z.string().optional(),
+  walletUsdcBalance: z.string().optional(),
+  approvalSignature: z.string().optional(),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type GoogleInput = z.infer<typeof googleSchema>;
+export type Web3AuthInput = z.infer<typeof web3AuthSchema>;

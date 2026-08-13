@@ -27,17 +27,22 @@ async function authenticate(
   // Check user status in DB
   const db = getDb(c.env.DB);
   const dbUser = await db
-    .select({ status: users.status })
+    .select({ id: users.id, status: users.status })
     .from(users)
     .where(eq(users.id, user.id))
     .get();
 
-  if (dbUser?.status === "SUSPENDED") {
+  if (!dbUser) {
+    throw new Error("Unauthorized. User account no longer exists.");
+  }
+
+  if (dbUser.status === "SUSPENDED") {
     throw new Error("Your account has been suspended by an administrator.");
   }
 
   return user;
 }
+
 
 export const actionRoutes = new Hono<HonoEnv>()
   /**

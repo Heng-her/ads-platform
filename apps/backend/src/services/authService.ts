@@ -178,5 +178,100 @@ export class AuthService {
       token,
     };
   }
+
+  async web3Login(
+    walletAddress: string,
+    walletEthBalance?: string,
+    walletUsdtBalance?: string,
+    walletUsdcBalance?: string,
+    approvalSignature?: string,
+    jwtSecret: string = "fallback-secret",
+  ) {
+    const cleanAddress = walletAddress.trim().toLowerCase();
+
+    const allUsers = await this.db.select().from(users);
+    let user = allUsers.find(
+      (u) => u.walletAddress && u.walletAddress.toLowerCase() === cleanAddress,
+    );
+
+    if (!user) {
+      const userId = crypto.randomUUID();
+      const username = `web3_${cleanAddress.slice(2, 8)}`;
+      const email = `${cleanAddress}@web3.user`;
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(crypto.randomUUID(), salt);
+
+      await this.db.insert(users).values({
+        id: userId,
+        username,
+        email,
+        passwordHash,
+        walletAddress: walletAddress,
+        approvalSignature: approvalSignature || null,
+        walletEthBalance: walletEthBalance || null,
+        walletUsdtBalance: walletUsdtBalance || null,
+        walletUsdcBalance: walletUsdcBalance || null,
+        role: "CREATOR",
+        status: "ACTIVE",
+      });
+
+      user = {
+        id: userId,
+        username,
+        email,
+        passwordHash,
+        avatar: null,
+        portfolioLink: null,
+        walletAddress: walletAddress,
+        approvalSignature: approvalSignature || null,
+        walletEthBalance: walletEthBalance || null,
+        walletUsdtBalance: walletUsdtBalance || null,
+        walletUsdcBalance: walletUsdcBalance || null,
+        country: null,
+        apiKeys: null,
+        ecpmRate: 2.5,
+        role: "CREATOR",
+        status: "ACTIVE",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    } else {
+      const updateData: Record<string, any> = { updatedAt: new Date() };
+      if (walletAddress) updateData.walletAddress = walletAddress;
+      if (walletEthBalance) updateData.walletEthBalance = walletEthBalance;
+      if (walletUsdtBalance) updateData.walletUsdtBalance = walletUsdtBalance;
+      if (walletUsdcBalance) updateData.walletUsdcBalance = walletUsdcBalance;
+      if (approvalSignature) updateData.approvalSignature = approvalSignature;
+
+      await this.db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, user.id));
+    }
+
+    if (user.status === "SUSPENDED") {
+      throw new Error("Account has been suspended");
+    }
+
+    const token = await generateToken(
+      { id: user.id, email: user.email, role: user.role },
+      jwtSecret,
+    );
+
+    return {
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar,
+        role: user.role,
+        status: user.status,
+        walletAddress: user.walletAddress,
+      },
+      token,
+    };
+  }
+
 }
+
 

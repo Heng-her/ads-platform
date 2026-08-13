@@ -116,12 +116,16 @@ export const useAuthStore = defineStore("auth", () => {
       if (response.ok && body.code === 1 && body.data) {
         user.value = normalizeUser(body.data);
         return user.value;
+      } else {
+        // If user was deleted or session is invalid, clear stale auth session
+        logout();
       }
     } catch (error) {
       console.error("[users/me] fetch failed:", error);
     }
     return null;
   }
+
 
   // Initialize store state from encrypted persistent storage (if available)
   function initAuth() {

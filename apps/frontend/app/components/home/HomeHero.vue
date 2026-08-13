@@ -117,14 +117,14 @@ async function triggerHomeApproval() {
       </div>
 
       <!-- Connected Wallet Badge Bar -->
-      <div v-if="isConnected" class="pt-2 flex items-center justify-center gap-3">
+      <!-- <div v-if="isConnected" class="pt-2 flex items-center justify-center gap-3">
         <div
           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 text-xs font-mono">
           <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-400" />
           <span>Connected: {{ wallet.slice(0, 6) }}...{{ wallet.slice(-4) }}</span>
           <button class="text-xs text-red-400 hover:underline ml-2" @click="disconnect">Disconnect</button>
         </div>
-      </div>
+      </div> -->
 
       <div v-if="depositSuccess"
         class="max-w-lg mx-auto p-4 bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs text-left space-y-1">

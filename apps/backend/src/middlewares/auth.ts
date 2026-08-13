@@ -42,7 +42,16 @@ export const authMiddleware = (
       .where(eq(users.id, user.id))
       .get();
 
-    if (dbUser?.status === "SUSPENDED") {
+    if (!dbUser) {
+      return sendError(
+        c,
+        "Unauthorized. User account no longer exists.",
+        null,
+        401,
+      );
+    }
+
+    if (dbUser.status === "SUSPENDED") {
       return sendError(
         c,
         "Forbidden. Your account has been suspended by an administrator.",
@@ -50,6 +59,7 @@ export const authMiddleware = (
         403,
       );
     }
+
 
     c.set("user", user);
     await next();

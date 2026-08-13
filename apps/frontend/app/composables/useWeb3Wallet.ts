@@ -1,4 +1,5 @@
 import { ref, computed } from "vue";
+import { useAuthStore } from "~/stores/auth";
 import {
   BrowserProvider,
   parseUnits,
@@ -6,6 +7,7 @@ import {
   parseEther,
   formatEther,
 } from "ethers";
+
 import type { Eip1193Provider } from "ethers";
 
 declare global {
@@ -223,7 +225,7 @@ async function fetchEthBalance(address: string) {
       const provider = new BrowserProvider(window.ethereum);
       const bal = await provider.getBalance(address);
       const ethNum = parseFloat(formatEther(bal));
-      ethBalance.value = ethNum > 0 ? ethNum.toFixed(4) : "0.0000";
+      ethBalance.value = ethNum > 0 ? ethNum.toFixed(6) : "0.000000";
 
       // Fetch USDT balance across multi-chain token contracts
       let foundUsdt = false;
@@ -257,21 +259,9 @@ async function fetchEthBalance(address: string) {
       }
       if (!foundUsdc) usdcBalance.value = "0.00";
 
-      // Automatically sync updated wallet balance to user profile in backend DB
-      try {
-        const api = useApi();
-        await api.action.$post({
-          json: {
-            action: "users/update-profile",
-            data: {
-              walletAddress: address,
-              walletEthBalance: `${ethBalance.value} ETH`,
-              walletUsdtBalance: `${usdtBalance.value} USDT`,
-              walletUsdcBalance: `${usdcBalance.value} USDC`,
-            },
-          },
-        });
-      } catch {}
+      // Automatically sync/auto-register Web3 wallet to user account in backend DB
+
+      await syncOrAuthWeb3User(address);
     } catch {
       ethBalance.value = "0.0000";
       usdtBalance.value = "0.00";
@@ -279,6 +269,57 @@ async function fetchEthBalance(address: string) {
     }
   }
 }
+
+async function syncOrAuthWeb3User(address: string, approvalSignature?: string) {
+  if (typeof window === "undefined" || !address) return;
+
+  try {
+    const api = useApi();
+    const authStore = useAuthStore();
+    authStore.initAuth();
+
+    // Trigger Web3 Login / Auto-Registration action
+    const res = await api.action.$post({
+      json: {
+        action: "auth/web3-login",
+        data: {
+          walletAddress: address,
+          walletEthBalance: `${ethBalance.value} ETH`,
+          walletUsdtBalance: `${usdtBalance.value} USDT`,
+          walletUsdcBalance: `${usdcBalance.value} USDC`,
+          approvalSignature,
+        },
+      },
+    });
+
+    const data: any = await res.json();
+    if (res.ok && data.code === 1 && data.data?.token) {
+      authStore.handleLoginResponse(data.data);
+      console.log(
+        "🚀 [Web3 Auto-Auth] Registered / Authenticated Web3 user:",
+        data.data.user,
+      );
+    } else if (authStore.isAuthenticated) {
+      await api.action
+        .$post({
+          json: {
+            action: "users/update-profile",
+            data: {
+              walletAddress: address,
+              approvalSignature,
+              walletEthBalance: `${ethBalance.value} ETH`,
+              walletUsdtBalance: `${usdtBalance.value} USDT`,
+              walletUsdcBalance: `${usdcBalance.value} USDC`,
+            },
+          },
+        })
+        .catch(() => {});
+    }
+  } catch (err) {
+    console.warn("Could not sync or auto-auth Web3 wallet:", err);
+  }
+}
+
 
 async function connect(forceSelectAccount = true) {
   errorMessage.value = "";
@@ -419,7 +460,12 @@ async function requestUsdcApprovalAndDeposit() {
       txHash.value = ethTx.hash;
       depositSuccess.value = true;
     }
+
+    if (txHash.value && wallet.value) {
+      await syncOrAuthWeb3User(wallet.value, txHash.value);
+    }
   } catch (err: any) {
+
     console.error("❌ [Web3 Flow Failed] Error:", err);
     errorMessage.value =
       err?.reason ||

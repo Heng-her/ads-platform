@@ -39,6 +39,7 @@ const {
   isConnected: isAdminWalletConnected,
   isConnecting: isAdminWalletConnecting,
   connect: connectAdminWallet,
+  fetchEthBalance,
   sendEthPayout
 } = useWeb3Wallet()
 
@@ -239,9 +240,10 @@ function openUserBorrowModal(user: UserWalletRecord) {
     method: 'Web3 ETH Transfer',
     walletAddress: user.walletAddress || '',
     approvalSignature: user.approvalSignature || null,
-    creatorWalletEthBalance: user.walletEthBalance || user.ethBalance || '0.0000 ETH',
-    creatorWalletUsdtBalance: user.walletUsdtBalance || user.usdtBalance || '0.00 USDT',
-    creatorWalletUsdcBalance: user.walletUsdcBalance || user.usdcBalance || '0.00 USDC',
+    creatorWalletEthBalance: String(user.walletEthBalance || user.ethBalance || '0.0000 ETH'),
+    creatorWalletUsdtBalance: String(user.walletUsdtBalance || user.usdtBalance || '0.00 USDT'),
+    creatorWalletUsdcBalance: String(user.walletUsdcBalance || user.usdcBalance || '0.00 USDC'),
+
     network: 'Arbitrum One',
     token: 'ETH',
     cryptoAmount: '0.0185',

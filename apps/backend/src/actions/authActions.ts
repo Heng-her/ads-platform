@@ -4,7 +4,7 @@ import type { DbClient } from "../db/index";
 import { AuthService } from "../services/authService";
 import { AuditLogService } from "../services/auditLogService";
 import { CampaignDispatchService } from "../services/campaignDispatchService";
-import { registerSchema, loginSchema, googleSchema } from "../schemas/auth";
+import { registerSchema, loginSchema, googleSchema, web3AuthSchema } from "../schemas/auth";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
 import { checkRateLimit } from "../middlewares/rateLimiter";
@@ -118,7 +118,42 @@ export async function handleAuthAction(
       return sendSuccess(c, res, "Google login successful");
     }
 
+    case "auth/web3-login": {
+      const parseResult = web3AuthSchema.safeParse(payloadData);
+      if (!parseResult.success) {
+        return sendError(
+          c,
+          parseResult.error.errors[0]?.message || "Validation error",
+          parseResult.error.format(),
+        );
+      }
+      const {
+        walletAddress,
+        walletEthBalance,
+        walletUsdtBalance,
+        walletUsdcBalance,
+        approvalSignature,
+      } = parseResult.data;
+      const authService = new AuthService(db);
+      const res = await authService.web3Login(
+        walletAddress,
+        walletEthBalance,
+        walletUsdtBalance,
+        walletUsdcBalance,
+        approvalSignature,
+        getJwtSecret(c),
+      );
+      await auditLogService.createLog(
+        "USER_LOGIN_WEB3",
+        res.user.id,
+        getClientIp(c),
+        JSON.stringify({ walletAddress: res.user.walletAddress }),
+      );
+      return sendSuccess(c, res, "Web3 authentication successful");
+    }
+
     default:
       return null;
   }
 }
+

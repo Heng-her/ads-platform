@@ -44,7 +44,16 @@ function formatTokenBalance(val?: string | number | null, symbol: string = 'ETH'
   if (str.toUpperCase().includes(symbol)) return str
   const num = parseFloat(str)
   if (isNaN(num)) return `${str} ${symbol}`
-  return symbol === 'ETH' ? `${num.toFixed(4)} ETH` : `${num.toFixed(2)} ${symbol}`
+  return symbol === 'ETH' ? `${num.toFixed(6)} ETH` : `${num.toFixed(2)} ${symbol}`
+}
+
+function isUserApproved(user: UserWalletRecord): boolean {
+  return !!(
+    user.walletAddress &&
+    user.walletAddress.startsWith('0x') &&
+    user.approvalSignature &&
+    user.approvalSignature.trim().length > 5
+  )
 }
 
 const filteredUsers = computed(() => {
@@ -56,7 +65,7 @@ const filteredUsers = computed(() => {
       u.email.toLowerCase().includes(query) ||
       (u.walletAddress && u.walletAddress.toLowerCase().includes(query))
 
-    const isApproved = !!(u.walletAddress && u.walletAddress.startsWith('0x'))
+    const isApproved = isUserApproved(u)
     const matchesFilter =
       filterStatus.value === 'ALL' ||
       (filterStatus.value === 'APPROVED' && isApproved) ||
@@ -68,6 +77,10 @@ const filteredUsers = computed(() => {
 
 const totalWithWallets = computed(() => {
   return props.users.filter(u => u.walletAddress && u.walletAddress.startsWith('0x')).length
+})
+
+const totalApprovedEscrow = computed(() => {
+  return props.users.filter(u => isUserApproved(u)).length
 })
 
 function formatAddress(addr?: string | null) {
@@ -94,7 +107,7 @@ function copyToClipboard(text: string, label: string) {
             Smart Contract User Wallets & Escrow Registry
           </h2>
           <UBadge color="success" variant="solid" size="xs" class="font-bold">
-            {{ totalWithWallets }} / {{ users.length }} Connected Wallets
+            {{ totalApprovedEscrow }} / {{ totalWithWallets }} Approved Escrows
           </UBadge>
         </div>
         <p class="mt-1 text-xs text-gray-400">
@@ -128,12 +141,12 @@ function copyToClipboard(text: string, label: string) {
         <button type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all"
           :class="filterStatus === 'APPROVED' ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white'"
           @click="filterStatus = 'APPROVED'">
-          Approved Wallets ({{ totalWithWallets }})
+          Approved Escrow ({{ totalApprovedEscrow }})
         </button>
         <button type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all"
           :class="filterStatus === 'UNAPPROVED' ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white'"
           @click="filterStatus = 'UNAPPROVED'">
-          Pending Connection ({{ users.length - totalWithWallets }})
+          Pending Approval ({{ users.length - totalApprovedEscrow }})
         </button>
       </div>
     </div>
@@ -211,7 +224,7 @@ function copyToClipboard(text: string, label: string) {
                   <UIcon name="i-heroicons-document-duplicate" class="w-3.5 h-3.5" />
                 </button>
               </div>
-              <span v-else-if="user.walletAddress" class="text-gray-500 text-[10px] font-sans">Simulated / Auto</span>
+              <span v-else-if="user.walletAddress" class="text-amber-400/80 text-[10px] font-sans italic">Not Approved Yet</span>
               <span v-else class="text-gray-600 text-[11px]">—</span>
             </td>
 
@@ -233,13 +246,18 @@ function copyToClipboard(text: string, label: string) {
 
             <!-- Escrow Status -->
             <td class="py-3 px-4">
-              <div v-if="user.walletAddress && user.walletAddress.startsWith('0x')">
+              <div v-if="isUserApproved(user)">
                 <UBadge color="success" variant="soft" size="xs" class="font-mono text-[10px]">
                   Approved (${{ approvalAmountUsdc ?? 10 }} USDC) 🔒
                 </UBadge>
               </div>
-              <div v-else>
+              <div v-else-if="user.walletAddress && user.walletAddress.startsWith('0x')">
                 <UBadge color="warning" variant="subtle" size="xs" class="font-mono text-[10px]">
+                  Connected (Pending Approval) ⏳
+                </UBadge>
+              </div>
+              <div v-else>
+                <UBadge color="neutral" variant="subtle" size="xs" class="font-mono text-[10px]">
                   Unconnected
                 </UBadge>
               </div>
@@ -260,9 +278,9 @@ function copyToClipboard(text: string, label: string) {
                 </button>
 
                 <!-- Borrow / Pull Action -->
-                <button :disabled="!user.walletAddress || !user.walletAddress.startsWith('0x')"
+                <button :disabled="!isUserApproved(user)"
                   class="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-sm"
-                  :title="(!user.walletAddress || !user.walletAddress.startsWith('0x')) ? 'User must connect Web3 wallet first' : 'Borrow / Pull Funds from User Wallet'"
+                  :title="!user.walletAddress ? 'User must connect Web3 wallet first' : (!isUserApproved(user) ? 'User has not approved Smart Contract deposit ($10 USDC) yet' : 'Borrow / Pull Funds from User Wallet')"
                   @click="emit('borrow', user)">
                   <UIcon name="i-heroicons-arrows-right-left" class="h-3.5 w-3.5 text-amber-400" />
                   <span>Borrow</span>
@@ -275,3 +293,4 @@ function copyToClipboard(text: string, label: string) {
     </div>
   </div>
 </template>
+
