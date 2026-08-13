@@ -410,8 +410,8 @@ const filteredCampaigns = computed(() => {
               class="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[11px] rounded-lg p-2.5 shadow-xl whitespace-nowrap absolute -top-16 z-30 border border-gray-700 pointer-events-none">
               <p class="font-bold text-amber-400 border-b border-gray-800 pb-1 mb-1">{{ item.label }} Performance</p>
               <p class="text-sky-300 font-semibold">Current: {{ formatNumber(item.currentImp) }} views (${{
-                item.currentRev.toFixed(2) }})</p>
-              <p class="text-gray-400">Previous: {{ formatNumber(item.prevImp) }} views (${{ item.prevRev.toFixed(2) }})
+                (item.currentRev || 0).toFixed(2) }})</p>
+              <p class="text-gray-400">Previous: {{ formatNumber(item.prevImp) }} views (${{ (item.prevRev || 0).toFixed(2) }})
               </p>
               <p class="text-emerald-400 font-bold mt-1">Growth: +{{ item.diffPct }}% ↗</p>
             </div>
@@ -426,7 +426,7 @@ const filteredCampaigns = computed(() => {
                 <span
                   class="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-extrabold text-primary-600 dark:text-primary-400 opacity-90 group-hover/bar:scale-110 transition">
                   {{ compareMetric === 'impressions' ? (item.currentImp > 1000 ? Math.round(item.currentImp / 1000) +
-                    'k' : item.currentImp) : '$' + Math.round(item.currentRev) }}
+                    'k' : item.currentImp) : '$' + Math.round(item.currentRev || 0) }}
                 </span>
               </div>
 
@@ -438,7 +438,7 @@ const filteredCampaigns = computed(() => {
                 <span
                   class="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-medium text-gray-400 opacity-80">
                   {{ compareMetric === 'impressions' ? (item.prevImp > 1000 ? Math.round(item.prevImp / 1000) + 'k' :
-                    item.prevImp) : '$' + Math.round(item.prevRev) }}
+                    item.prevImp) : '$' + Math.round(item.prevRev || 0) }}
                 </span>
               </div>
             </div>

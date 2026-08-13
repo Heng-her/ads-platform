@@ -144,11 +144,24 @@ export class DashboardService {
     ) as "7d" | "30d" | "90d" | "all";
 
     // ── 0. Get Creator profile for eCPM rate ────────────────────────────────
-    const [userRow] = await this.db
-      .select({ ecpmRate: users.ecpmRate })
-      .from(users)
-      .where(eq(users.id, userId));
-    const ecpmRate = Number(userRow?.ecpmRate ?? 2.5);
+    let ecpmRate = 2.5;
+    try {
+      const [userRow] = await this.db
+        .select({ ecpmRate: users.ecpmRate })
+        .from(users)
+        .where(eq(users.id, userId));
+      const rawRate = userRow?.ecpmRate;
+      if (
+        rawRate !== null &&
+        rawRate !== undefined &&
+        !isNaN(Number(rawRate)) &&
+        Number(rawRate) > 0
+      ) {
+        ecpmRate = Number(rawRate);
+      }
+    } catch {
+      ecpmRate = 2.5;
+    }
 
     // ── 1. Calculate Date Ranges ───────────────────────────────────────────
     const now = new Date();
@@ -195,7 +208,7 @@ export class DashboardService {
 
     const totalImpressions = Number(currentImpTotals?.total ?? 0);
     const uniqueViewers = Number(currentImpTotals?.uniqueViewers ?? 0);
-    const estimatedRevenue = (totalImpressions / 1000) * ecpmRate;
+    const estimatedRevenue = Number((((totalImpressions / 1000) * ecpmRate) || 0).toFixed(2));
 
     // ── 4. Previous Period Impression totals for comparison ─────────────────
     let previousTotal = 0;
@@ -276,7 +289,7 @@ export class DashboardService {
     const campaignBreakdown: CampaignBreakdownItem[] =
       campaignBreakdownRows.map((c) => {
         const imp = Number(c.impressions);
-        const rev = (imp / 1000) * ecpmRate;
+        const rev = Number((((imp / 1000) * ecpmRate) || 0).toFixed(2));
         const pct =
           sumBreakdownImp > 0 ? Math.round((imp / sumBreakdownImp) * 100) : 0;
         return {
@@ -330,8 +343,8 @@ export class DashboardService {
       const currentImp = Math.round(baselineCurrent * wc);
       const prevImp = Math.round(baselinePrev * wp);
 
-      const currentRev = (currentImp / 1000) * ecpmRate;
-      const prevRev = (prevImp / 1000) * ecpmRate;
+      const currentRev = Number((((currentImp / 1000) * ecpmRate) || 0).toFixed(2));
+      const prevRev = Number((((prevImp / 1000) * ecpmRate) || 0).toFixed(2));
 
       const diffPct =
         prevImp > 0
@@ -357,8 +370,8 @@ export class DashboardService {
         : null;
     const totalCurrentImp = items.reduce((acc, i) => acc + i.currentImp, 0);
     const totalPrevImp = items.reduce((acc, i) => acc + i.prevImp, 0);
-    const totalCurrentRev = (totalCurrentImp / 1000) * ecpmRate;
-    const totalPrevRev = (totalPrevImp / 1000) * ecpmRate;
+    const totalCurrentRev = Number((((totalCurrentImp / 1000) * ecpmRate) || 0).toFixed(2));
+    const totalPrevRev = Number((((totalPrevImp / 1000) * ecpmRate) || 0).toFixed(2));
     const growthPct =
       totalPrevImp > 0
         ? Math.round(((totalCurrentImp - totalPrevImp) / totalPrevImp) * 100)
