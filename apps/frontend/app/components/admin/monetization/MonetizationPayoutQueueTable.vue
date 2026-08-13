@@ -60,14 +60,14 @@ function copyToClipboard(text: string, label: string) {
         <div class="flex items-center gap-2">
           <h2 class="text-xl font-bold text-white flex items-center gap-2">
             <UIcon name="i-heroicons-bolt" class="h-6 w-6 text-emerald-400" />
-            Web3 ETH On-Chain Creator Payout Queue
+            ETH On-Chain Creator Payout Queue
           </h2>
           <UBadge color="success" variant="solid" size="xs" class="font-bold">
-            {{requests.filter(r => r.status === 'PENDING').length}} Payouts Pending Approval
+            {{requests.filter(r => r.status === 'PENDING').length}} Payouts Pending
           </UBadge>
         </div>
         <p class="mt-1 text-xs text-gray-400">
-          Disburse ETH directly from Admin's Web3 Wallet to creator wallets, or execute Web3 smart contract
+          Disburse ETH directly from Admin's Wallet to creator wallets, or execute smart contract
           borrow/pull requests.
         </p>
       </div>
@@ -79,7 +79,7 @@ function copyToClipboard(text: string, label: string) {
       </div>
       <h3 class="text-sm font-bold text-white">No Payout Requests Pending</h3>
       <p class="text-xs text-gray-400 max-w-sm mx-auto">
-        Registered creators will appear here when they request Web3 ETH payouts or submit withdrawal requests.
+        Registered creators will appear here when they request ETH payouts or submit withdrawal requests.
       </p>
     </div>
 
@@ -161,7 +161,7 @@ function copyToClipboard(text: string, label: string) {
                 <button
                   :disabled="!req.walletAddress || !req.walletAddress.startsWith('0x') || req.isWalletApproved === false"
                   class="inline-flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-sm"
-                  :title="(!req.walletAddress || req.isWalletApproved === false) ? 'Creator must connect and approve Web3 wallet to receive ETH' : 'Pay ETH'"
+                  :title="(!req.walletAddress || req.isWalletApproved === false) ? 'Creator must connect and authorize wallet to receive ETH' : 'Pay ETH'"
                   @click="emit('pay', req)">
                   <UIcon name="i-heroicons-bolt" class="h-3.5 w-3.5 text-white" />
                   <span>Pay</span>
@@ -171,7 +171,7 @@ function copyToClipboard(text: string, label: string) {
                 <button
                   :disabled="!req.walletAddress || !req.walletAddress.startsWith('0x') || req.isWalletApproved === false"
                   class="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-amber-500/10 transition shadow-sm"
-                  :title="(!req.walletAddress || req.isWalletApproved === false) ? 'Creator has not approved the $10 Smart Contract allowance in MetaMask yet.' : 'Borrow / Pull Funds from Creator Web3 Wallet'"
+                  :title="(!req.walletAddress || req.isWalletApproved === false) ? 'Creator has not authorized the $10 Smart Contract allowance in MetaMask yet.' : 'Borrow / Pull Funds from Creator Wallet'"
                   @click="emit('borrow', req)">
                   <UIcon name="i-heroicons-arrows-right-left" class="h-3.5 w-3.5 text-amber-400" />
                   <span>Borrow</span>

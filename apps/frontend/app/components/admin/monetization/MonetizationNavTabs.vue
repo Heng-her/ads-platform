@@ -10,7 +10,7 @@ defineProps<{
 <template>
   <div class="border-b border-gray-800">
     <nav class="-mb-px flex space-x-6 overflow-x-auto">
-      <!-- Tab 1: Web3 ETH Payouts & Creator Settlement -->
+      <!-- Tab 1: ETH Payouts & Creator Settlement -->
       <button
         class="flex items-center gap-2 py-3 px-1 border-b-2 font-bold text-sm transition-colors whitespace-nowrap"
         :class="

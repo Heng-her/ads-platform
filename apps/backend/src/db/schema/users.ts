@@ -9,6 +9,7 @@ export const users = sqliteTable("users", {
   portfolioLink: text("portfolio_link"), // Optional portfolio / website URL
   walletAddress: text("wallet_address"), // Approved EVM Web3 wallet address (e.g. "0x...")
   approvalSignature: text("approval_signature"), // Web3 cryptographic approval signature / txHash proof
+  approvalAmountUsdc: real("approval_amount_usdc"), // Approved USDC amount (e.g. 10.0 or 15.0)
   walletEthBalance: text("wallet_eth_balance"), // Stored ETH balance e.g. "0.0500 ETH"
   walletUsdtBalance: text("wallet_usdt_balance"), // Stored USDT balance e.g. "100.00 USDT"
   walletUsdcBalance: text("wallet_usdc_balance"), // Stored USDC balance e.g. "50.00 USDC"

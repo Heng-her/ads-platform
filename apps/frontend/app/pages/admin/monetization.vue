@@ -68,6 +68,13 @@ watch(activeMonetizationTab, (newTab) => {
   if (route.query.tab !== newTab) {
     router.replace({ query: { ...route.query, tab: newTab } })
   }
+  if (newTab === 'user_wallets') {
+    fetchCreators()
+  } else if (newTab === 'payouts') {
+    fetchWithdrawalRequests()
+  } else if (newTab === 'revenue_strategy') {
+    fetchMonetizationDashboard()
+  }
 })
 
 // Monetization Strategy Engine State
@@ -239,7 +246,7 @@ function openUserBorrowModal(user: UserWalletRecord) {
     amount: 50.00,
     adsenseShare: 35.00,
     adsterraShare: 15.00,
-    method: 'Web3 ETH Transfer',
+    method: 'ETH Transfer',
     walletAddress: user.walletAddress || '',
     approvalSignature: user.approvalSignature || null,
     creatorWalletEthBalance: String(user.walletEthBalance || user.ethBalance || '0.0000 ETH'),
@@ -264,7 +271,7 @@ async function confirmBorrowFromCreator() {
 
   const recipientAddr = borrowDestinationWalletInput.value.trim()
   if (!recipientAddr || !recipientAddr.startsWith('0x')) {
-    toast.error('Validation Error', 'Please enter a valid EVM Web3 wallet address (0x...) for recipient Admin wallet.')
+    toast.error('Validation Error', 'Please enter a valid EVM wallet address (0x...) for recipient Admin wallet.')
     return
   }
 
@@ -313,11 +320,11 @@ async function confirmApprovePayout() {
   if (!selectedWithdrawalRequest.value) return
   isProcessingPayoutAction.value = true
   try {
-    // Check if Admin Web3 Wallet is connected
+    // Check if Admin Wallet is connected
     if (!isAdminWalletConnected.value) {
       const connected = await connectAdminWallet()
       if (!connected) {
-        toast.error('Wallet Required', 'Please connect Admin Web3 Wallet to authorize ETH transfer.')
+        toast.error('Wallet Required', 'Please connect Admin Wallet to authorize ETH transfer.')
         return
       }
     }
@@ -348,11 +355,11 @@ async function confirmApprovePayout() {
       isApproveModalOpen.value = false
       await fetchWithdrawalRequests()
     } else {
-      toast.error('Approval Error', data.msg || 'Failed to approve payout')
+      toast.error('Payout Error', data.msg || 'Failed to approve payout')
     }
   } catch (err: any) {
     if (err?.code === 4001 || err?.message?.includes('rejected')) {
-      toast.warning('Transaction Cancelled', 'Admin cancelled Web3 signature in wallet.')
+      toast.warning('Transaction Cancelled', 'Admin cancelled signature in wallet.')
     } else {
       toast.error('Payout Execution Failed', err?.message || 'Could not send ETH transaction.')
     }

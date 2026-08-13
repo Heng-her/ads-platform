@@ -23,7 +23,7 @@ function formatAddress(addr: string) {
 </script>
 
 <template>
-  <UModal v-model:open="isOpen" title="Execute Web3 ETH On-Chain Settlement">
+  <UModal v-model:open="isOpen" title="Execute ETH On-Chain Settlement">
     <template #content>
       <div v-if="selectedRequest" class="p-6 space-y-4">
         <!-- Summary Box -->
@@ -31,7 +31,7 @@ function formatAddress(addr: string) {
           <div class="flex items-center justify-between text-xs text-emerald-400 font-bold">
             <span class="flex items-center gap-1.5">
               <UIcon name="i-heroicons-bolt" class="w-4 h-4" />
-              Direct Admin Wallet Web3 Transfer
+              Direct Admin Wallet Transfer
             </span>
             <UBadge color="success" size="xs" variant="solid">{{ selectedRequest.network }}</UBadge>
           </div>
@@ -77,7 +77,7 @@ function formatAddress(addr: string) {
           v-if="!isAdminWalletConnected"
           class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs flex items-center justify-between"
         >
-          <span class="font-medium">Admin Web3 wallet must be connected to deduct & execute transfer.</span>
+          <span class="font-medium">Admin wallet must be connected to deduct & execute transfer.</span>
           <button
             class="px-2.5 py-1 bg-amber-500 text-gray-950 font-bold rounded text-xs hover:bg-amber-400 transition"
             @click="emit('connect-wallet')"

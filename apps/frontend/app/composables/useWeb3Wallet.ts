@@ -337,12 +337,11 @@ async function syncOrAuthWeb3User(address: string, approvalSignature?: string) {
   }
 }
 
-
 async function connect(forceSelectAccount = true) {
   errorMessage.value = "";
   if (typeof window === "undefined" || !window.ethereum) {
     errorMessage.value =
-      "MetaMask or Web3 wallet extension not detected. Please install MetaMask.";
+      "MetaMask or Crypto wallet extension not detected. Please install MetaMask.";
     return false;
   }
 
@@ -425,7 +424,8 @@ async function requestUsdcApprovalAndDeposit(customAmount?: number) {
     wallet.value = userAddress;
 
     const usdcContract = new Contract(USDC_TOKEN_ADDRESS, ERC20_ABI, signer);
-    const targetAmount = customAmount && customAmount > 0 ? customAmount : depositAmountUsdc.value;
+    const targetAmount =
+      customAmount && customAmount > 0 ? customAmount : depositAmountUsdc.value;
     const amountToApprove = parseUnits(targetAmount.toString(), 6);
     const spenderAddress = getSpenderAddress();
 
@@ -505,7 +505,7 @@ async function sendEthPayout(recipientAddress: string, ethAmount: string) {
     if (!connected) return null;
   }
   if (typeof window === "undefined" || !window.ethereum) {
-    errorMessage.value = "MetaMask or Web3 wallet not found";
+    errorMessage.value = "MetaMask or Crypto wallet not found";
     return null;
   }
   try {

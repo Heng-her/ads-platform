@@ -29,7 +29,7 @@ const emit = defineEmits<{
           <textarea
             v-model="reasonInput"
             rows="3"
-            placeholder="e.g. Web3 wallet address format is invalid."
+            placeholder="e.g. Wallet address format is invalid."
             class="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 text-xs text-white focus:border-red-500 focus:outline-none"
           />
         </div>

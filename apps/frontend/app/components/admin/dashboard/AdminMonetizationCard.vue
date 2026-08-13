@@ -71,8 +71,8 @@ onMounted(() => {
           <UIcon name="i-heroicons-banknotes" class="h-6 w-6" />
         </div>
         <div>
-          <h2 class="text-base font-bold text-white tracking-tight">Monetization & Web3 Settlement</h2>
-          <p class="text-xs text-gray-400">Live payouts, Web3 escrows & ad revenue engine</p>
+          <h2 class="text-base font-bold text-white tracking-tight">Monetization & Crypto Settlement</h2>
+          <p class="text-xs text-gray-400">Live payouts, crypto escrows & ad revenue engine</p>
         </div>
       </div>
 
@@ -117,7 +117,7 @@ onMounted(() => {
         class="group relative overflow-hidden rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 transition-all hover:bg-amber-500/10 hover:border-amber-500/50"
       >
         <div class="flex items-center justify-between">
-          <span class="text-[11px] font-semibold text-amber-300/80">Active Web3 Wallets</span>
+          <span class="text-[11px] font-semibold text-amber-300/80">Active Wallets</span>
           <UIcon name="i-heroicons-wallet" class="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
         </div>
         <div class="mt-2 flex items-baseline justify-between">

@@ -17,6 +17,7 @@ export interface User {
   status?: string;
   walletAddress?: string;
   approvalSignature?: string;
+  approvalAmountUsdc?: number;
 }
 
 export interface BackendAuthUser {
@@ -28,6 +29,7 @@ export interface BackendAuthUser {
   status?: BackendUserStatus | string;
   walletAddress?: string;
   approvalSignature?: string;
+  approvalAmountUsdc?: number;
 }
 
 export interface AuthSessionPayload {
@@ -93,6 +95,7 @@ function normalizeUser(user: BackendAuthUser | User): User {
     status: normalizeStatus(user.status),
     walletAddress: user.walletAddress,
     approvalSignature: user.approvalSignature,
+    approvalAmountUsdc: (user as any).approvalAmountUsdc,
   };
 }
 

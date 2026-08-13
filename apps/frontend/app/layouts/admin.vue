@@ -5,7 +5,7 @@ const adminNav = [
   { label: 'Overview', icon: 'i-heroicons-chart-pie', to: '/admin' },
   { label: 'Campaigns', icon: 'i-heroicons-megaphone', to: '/admin/campaigns' },
   { label: 'Categories', icon: 'i-heroicons-tag', to: '/admin/categories' },
-  { label: 'Approvals & Users', icon: 'i-heroicons-check-badge', to: '/admin/approvals' },
+  { label: 'Verification & Users', icon: 'i-heroicons-check-badge', to: '/admin/approvals' },
   { label: 'Ads & Monetization', icon: 'i-heroicons-banknotes', to: '/admin/monetization' },
   { label: 'System Logs', icon: 'i-heroicons-document-text', to: '/admin/logs' },
   { label: 'Settings', icon: 'i-heroicons-adjustments-horizontal', to: '/admin/settings' }

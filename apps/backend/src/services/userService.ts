@@ -15,6 +15,7 @@ export class UserService {
         portfolioLink: users.portfolioLink,
         walletAddress: users.walletAddress,
         approvalSignature: users.approvalSignature,
+        approvalAmountUsdc: users.approvalAmountUsdc,
         walletEthBalance: users.walletEthBalance,
         walletUsdtBalance: users.walletUsdtBalance,
         walletUsdcBalance: users.walletUsdcBalance,
@@ -52,7 +53,7 @@ export class UserService {
   }
 
   async getAllUsers() {
-    return await this.db
+    const list = await this.db
       .select({
         id: users.id,
         username: users.username,
@@ -61,6 +62,7 @@ export class UserService {
         portfolioLink: users.portfolioLink,
         walletAddress: users.walletAddress,
         approvalSignature: users.approvalSignature,
+        approvalAmountUsdc: users.approvalAmountUsdc,
         walletEthBalance: users.walletEthBalance,
         walletUsdtBalance: users.walletUsdtBalance,
         walletUsdcBalance: users.walletUsdcBalance,
@@ -74,6 +76,16 @@ export class UserService {
       })
       .from(users)
       .all();
+
+    return list.map((u) => ({
+      ...u,
+      approvalAmountUsdc:
+        u.approvalAmountUsdc !== null && u.approvalAmountUsdc !== undefined
+          ? u.approvalAmountUsdc
+          : u.approvalSignature
+            ? 10
+            : null,
+    }));
   }
 
   async updateUserStatus(

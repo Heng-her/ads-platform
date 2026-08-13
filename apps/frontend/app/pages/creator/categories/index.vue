@@ -363,7 +363,7 @@ async function handleDeleteCategory() {
 
           <div>
             <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Category Name</label>
-            <UInput v-model="newCategoryName" placeholder="e.g. Web3 Gaming, Tech Review" size="md" color="neutral"
+            <UInput v-model="newCategoryName" placeholder="e.g. Crypto Gaming, Tech Review" size="md" color="neutral"
               variant="outline" @keyup.enter="handleAddCategory" />
           </div>
 

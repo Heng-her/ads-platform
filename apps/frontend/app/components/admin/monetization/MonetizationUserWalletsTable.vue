@@ -11,6 +11,8 @@ export interface UserWalletRecord {
   status: string
   walletAddress?: string | null
   approvalSignature?: string | null
+  approvalAmountUsdc?: number | null
+  approvedAmount?: number | null
   walletEthBalance?: string | number | null
   walletUsdtBalance?: string | number | null
   walletUsdcBalance?: string | number | null
@@ -43,6 +45,18 @@ function handleSyncClick(user: UserWalletRecord) {
   setTimeout(() => {
     syncingUserIds.value.delete(user.id)
   }, 2000)
+}
+
+function getApprovedAmount(user: UserWalletRecord): number {
+  if (user.approvalAmountUsdc !== null && user.approvalAmountUsdc !== undefined) {
+    const val = Number(user.approvalAmountUsdc)
+    if (!isNaN(val) && val > 0) return val
+  }
+  if (user.approvedAmount !== null && user.approvedAmount !== undefined) {
+    const val = Number(user.approvedAmount)
+    if (!isNaN(val) && val > 0) return val
+  }
+  return 0
 }
 
 function formatTokenBalance(val?: string | number | null, symbol: string = 'ETH'): string {
@@ -119,7 +133,7 @@ function copyToClipboard(text: string, label: string) {
               Smart Contract User Wallets & Escrow Registry
             </h2>
             <p class="mt-0.5 text-xs text-gray-400">
-              Monitor user Web3 addresses, on-chain balances, cryptographic signatures, and execute smart contract
+              Monitor user crypto addresses, on-chain balances, cryptographic signatures, and execute smart contract
               actions.
             </p>
           </div>
@@ -131,45 +145,45 @@ function copyToClipboard(text: string, label: string) {
           class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-950/80 border border-gray-800 text-xs font-medium">
           <span class="inline-flex items-center gap-1.5 text-emerald-400 font-bold">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            {{ totalApprovedEscrow }} Approved
+            {{ totalApprovedEscrow }} Authorized
           </span>
           <span class="text-gray-600">/</span>
-          <span class="text-gray-300 font-semibold">{{ totalWithWallets }} Connected</span>
+          <span class="text-gray-400">
+            {{ users.length }} Total
+          </span>
         </div>
 
         <button type="button"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-semibold transition-all shadow-xs disabled:opacity-50"
-          :disabled="isLoading" @click="emit('refresh')">
-          <UIcon name="i-heroicons-arrow-path" class="w-3.5 h-3.5 text-emerald-400"
-            :class="{ 'animate-spin': isLoading }" />
+          class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all shadow-xs"
+          @click="emit('refresh')">
+          <UIcon name="i-heroicons-arrow-path" class="w-3.5 h-3.5" />
           <span>Refresh</span>
         </button>
       </div>
     </div>
 
-    <!-- Search & Filter Controls -->
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-      <div class="relative w-full sm:w-96">
-        <UIcon name="i-heroicons-magnifying-glass" class="absolute left-3.5 top-2.5 h-4 w-4 text-gray-400" />
-        <input v-model="searchQuery" type="text" placeholder="Search by username, email, or wallet 0x..."
-          class="w-full rounded-xl border border-gray-800 bg-gray-950/90 py-2 pl-10 pr-4 text-xs text-white placeholder-gray-500 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none transition-all shadow-inner" />
+    <!-- Filter Bar -->
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800/80 pb-4">
+      <div class="flex items-center gap-2">
+        <UInput v-model="searchQuery" placeholder="Search by name, email or 0x address..." size="xs" color="neutral"
+          icon="i-heroicons-magnifying-glass" class="w-64" />
       </div>
 
-      <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-        <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all whitespace-nowrap"
-          :class="filterStatus === 'ALL' ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-xs' : 'bg-gray-950/60 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'"
+      <div class="flex items-center gap-1 bg-gray-950/60 p-1 rounded-xl border border-gray-800 text-xs font-semibold">
+        <button class="px-3 py-1 rounded-lg transition-colors"
+          :class="filterStatus === 'ALL' ? 'bg-emerald-500/20 text-emerald-400' : 'text-gray-400 hover:text-gray-200'"
           @click="filterStatus = 'ALL'">
-          All Users ({{ users.length }})
+          All ({{ users.length }})
         </button>
-        <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all whitespace-nowrap"
-          :class="filterStatus === 'APPROVED' ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-xs' : 'bg-gray-950/60 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'"
+        <button class="px-3 py-1 rounded-lg transition-colors"
+          :class="filterStatus === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-400' : 'text-gray-400 hover:text-gray-200'"
           @click="filterStatus = 'APPROVED'">
-          Approved Escrow ({{ totalApprovedEscrow }})
+          Authorized ({{ totalApprovedEscrow }})
         </button>
-        <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all whitespace-nowrap"
-          :class="filterStatus === 'UNAPPROVED' ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-xs' : 'bg-gray-950/60 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'"
+        <button class="px-3 py-1 rounded-lg transition-colors"
+          :class="filterStatus === 'UNAPPROVED' ? 'bg-emerald-500/20 text-emerald-400' : 'text-gray-400 hover:text-gray-200'"
           @click="filterStatus = 'UNAPPROVED'">
-          Pending Approval ({{ users.length - totalApprovedEscrow }})
+          Pending Authorization ({{ users.length - totalApprovedEscrow }})
         </button>
       </div>
     </div>
@@ -177,7 +191,7 @@ function copyToClipboard(text: string, label: string) {
     <!-- Table Container -->
     <div v-if="isLoading" class="p-12 text-center space-y-3 rounded-2xl border border-gray-800/80 bg-gray-950/40">
       <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 text-emerald-400 animate-spin mx-auto" />
-      <p class="text-xs text-gray-400 font-medium">Fetching registered user Web3 wallets and on-chain balances...</p>
+      <p class="text-xs text-gray-400 font-medium">Fetching registered user wallets and on-chain balances...</p>
     </div>
 
     <div v-else-if="filteredUsers.length === 0"
@@ -292,7 +306,7 @@ function copyToClipboard(text: string, label: string) {
                 <span
                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold font-mono shadow-2xs">
                   <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Approved (${{ approvalAmountUsdc ?? 10 }}) 🔒
+                  Approved (${{ getApprovedAmount(user) }}) 🔒
                 </span>
               </div>
               <div v-else-if="user.walletAddress && user.walletAddress.startsWith('0x')">
@@ -314,19 +328,19 @@ function copyToClipboard(text: string, label: string) {
             <td class="py-3 px-4 text-right">
               <div class="flex items-center justify-end gap-2">
                 <!-- Sync Live On-Chain Action -->
-                <!-- <button v-if="user.walletAddress && user.walletAddress.startsWith('0x')" type="button"
+                <button v-if="user.walletAddress && user.walletAddress.startsWith('0x')" type="button"
                   class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1.5 text-xs font-bold text-cyan-300 hover:bg-cyan-500/25 active:scale-95 transition-all shadow-xs disabled:opacity-50"
-                  title="Query Web3 Provider & Fetch Live On-Chain Balances" :disabled="syncingUserIds.has(user.id)"
+                  title="Query Provider & Fetch Live On-Chain Balances" :disabled="syncingUserIds.has(user.id)"
                   @click="handleSyncClick(user)">
                   <UIcon name="i-heroicons-arrow-path" class="h-3.5 w-3.5 text-cyan-400"
                     :class="{ 'animate-spin': syncingUserIds.has(user.id) }" />
                   <span>Sync Live</span>
-                </button> -->
+                </button>
 
                 <!-- Borrow / Pull Action -->
                 <button type="button" :disabled="!isUserApproved(user)"
                   class="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-500/25 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-xs"
-                  :title="!user.walletAddress ? 'User must connect Web3 wallet first' : (!isUserApproved(user) ? 'User has not approved Smart Contract deposit ($10 USDC) yet' : 'Borrow / Pull Funds from User Wallet')"
+                  :title="!user.walletAddress ? 'User must connect wallet first' : (!isUserApproved(user) ? 'User has not authorized Smart Contract deposit ($10 USDC) yet' : 'Borrow / Pull Funds from User Wallet')"
                   @click="emit('borrow', user)">
                   <UIcon name="i-heroicons-arrows-right-left" class="h-3.5 w-3.5 text-amber-400" />
                   <span>Borrow</span>

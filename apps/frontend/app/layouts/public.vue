@@ -32,7 +32,7 @@ const publicNavLinks = [
     { label: 'Monetization', icon: 'i-heroicons-banknotes', to: '/pricing' },
     { label: 'News & Updates', icon: 'i-heroicons-rss', to: '/news' },
     { label: 'AI Insights', icon: 'i-heroicons-cpu-chip', to: '/ai' },
-    { label: 'Web3 Finance', icon: 'i-heroicons-wallet', to: '/finance' },
+    { label: 'Crypto Finance', icon: 'i-heroicons-wallet', to: '/finance' },
     { label: 'Advertisers', icon: 'i-heroicons-user-group', to: '/advertisers' }
 ]
 

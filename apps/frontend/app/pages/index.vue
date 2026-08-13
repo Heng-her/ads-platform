@@ -12,7 +12,7 @@ import HomeFaq from '~/components/home/HomeFaq.vue'
 import HomeCta from '~/components/home/HomeCta.vue'
 
 useCustomSeoMeta({
-  title: 'Decentralized Web3 Advertising Platform',
+  title: 'Decentralized Crypto Advertising Platform',
   description: 'Transparent, escrow-backed advertising infrastructure powered by smart contracts. Programmatic payouts, 0.5% protocol fees, zero middleman markups.',
   path: '/',
   image: '/images/home.png',

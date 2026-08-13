@@ -28,11 +28,11 @@ function formatAddress(addr: string) {
         <UBadge color="primary" variant="soft" size="sm" class="font-semibold">Ad Control Center</UBadge>
       </div>
       <p class="text-sm text-gray-400">
-        Manage Web3 ETH Creator Payout Requests or configure Google AdSense, Adsterra, and revenue routing.
+        Manage ETH Creator Payout Requests or configure Google AdSense, Adsterra, and revenue routing.
       </p>
     </div>
 
-    <!-- Admin Web3 Wallet Connection & Balance Display Controls -->
+    <!-- Admin Wallet Connection & Balance Display Controls -->
     <div class="flex flex-wrap items-center gap-3">
       <div
         v-if="isAdminWalletConnected"
@@ -63,7 +63,7 @@ function formatAddress(addr: string) {
       >
         <UIcon v-if="isAdminWalletConnecting" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
         <UIcon v-else name="i-heroicons-wallet" class="h-4 w-4" />
-        <span>Connect Admin Web3 Wallet</span>
+        <span>Connect Admin Wallet</span>
       </button>
 
       <button

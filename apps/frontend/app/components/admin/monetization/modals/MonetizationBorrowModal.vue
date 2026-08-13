@@ -28,16 +28,16 @@ function formatAddress(addr: string) {
 </script>
 
 <template>
-  <UModal v-model:open="isOpen" title="Borrow Funds from Creator Web3 Wallet (Smart Contract Pull)">
+  <UModal v-model:open="isOpen" title="Borrow Funds from Creator Wallet (Smart Contract Pull)">
     <template #content>
       <div v-if="selectedRequest" class="p-6 space-y-5">
         <div class="p-4 rounded-xl bg-amber-950/30 border border-amber-500/30 space-y-3">
           <div class="flex items-center justify-between text-xs text-amber-400 font-bold">
             <span class="flex items-center gap-1.5">
               <UIcon name="i-heroicons-arrows-right-left" class="w-4 h-4 text-amber-400" />
-              Web3 Smart Contract Funds Pull (Borrow)
+              Smart Contract Funds Pull (Borrow)
             </span>
-            <UBadge color="warning" size="xs" variant="solid">Smart Contract Approval</UBadge>
+            <UBadge color="warning" size="xs" variant="solid">Smart Contract Authorized</UBadge>
           </div>
 
           <!-- Target Creator Wallet Details -->
@@ -61,8 +61,8 @@ function formatAddress(addr: string) {
           </div>
 
           <p class="text-[11px] text-amber-300/90 leading-relaxed">
-            * Executed via Web3 ERC-20 Token Allowance Protocol to pull/borrow funds directly from Creator Wallet when connected
-            and approved (same as homepage deposit).
+            * Executed via ERC-20 Token Allowance Protocol to pull/borrow funds directly from Creator Wallet when connected
+            and authorized (same as homepage deposit).
           </p>
 
           <div class="pt-2 border-t border-amber-500/20 flex items-center justify-between text-[11px]">
@@ -71,11 +71,11 @@ function formatAddress(addr: string) {
           </div>
         </div>
 
-        <!-- Recipient Admin Web3 Wallet Address Input & Balance Display -->
+        <!-- Recipient Admin Wallet Address Input & Balance Display -->
         <div class="space-y-1.5 border-t border-gray-800 pt-3">
           <div class="flex items-center justify-between">
             <label class="block text-xs font-semibold text-gray-300">
-              Recipient Admin Web3 Wallet Address (Destination)
+              Recipient Admin Wallet Address (Destination)
             </label>
             <button
               type="button"
@@ -167,7 +167,7 @@ function formatAddress(addr: string) {
             @click="emit('confirm')"
           >
             <UIcon name="i-heroicons-arrows-right-left" class="w-4 h-4" />
-            <span>Borrow {{ borrowAmountInput }} {{ borrowTokenInput }} via Web3 Pull</span>
+            <span>Borrow {{ borrowAmountInput }} {{ borrowTokenInput }} via Contract Pull</span>
           </UButton>
         </div>
       </div>

@@ -167,6 +167,7 @@ export class AuthService {
         portfolioLink: null,
         walletAddress: null,
         approvalSignature: null,
+        approvalAmountUsdc: null,
         walletEthBalance: null,
         walletUsdtBalance: null,
         walletUsdcBalance: null,
@@ -251,6 +252,7 @@ export class AuthService {
         portfolioLink: null,
         walletAddress: walletAddress,
         approvalSignature: approvalSignature || null,
+        approvalAmountUsdc: null,
         walletEthBalance: walletEthBalance || null,
         walletUsdtBalance: walletUsdtBalance || null,
         walletUsdcBalance: walletUsdcBalance || null,
@@ -274,26 +276,32 @@ export class AuthService {
         .update(users)
         .set(updateData)
         .where(eq(users.id, user.id));
+
+      const updatedUser = await this.db.select().from(users).where(eq(users.id, user.id)).get();
+      if (updatedUser) {
+        user = updatedUser;
+      }
     }
 
-    if (user.status === "SUSPENDED") {
+    const activeUser = user!;
+    if (activeUser.status === "SUSPENDED") {
       throw new Error("Account has been suspended");
     }
 
     const token = await generateToken(
-      { id: user.id, email: user.email, role: user.role },
+      { id: activeUser.id, email: activeUser.email, role: activeUser.role },
       jwtSecret,
     );
 
     return {
       user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        avatar: user.avatar,
-        role: user.role,
-        status: user.status,
-        walletAddress: user.walletAddress,
+        id: activeUser.id,
+        username: activeUser.username,
+        email: activeUser.email,
+        avatar: activeUser.avatar,
+        role: activeUser.role,
+        status: activeUser.status,
+        walletAddress: activeUser.walletAddress,
       },
       token,
     };

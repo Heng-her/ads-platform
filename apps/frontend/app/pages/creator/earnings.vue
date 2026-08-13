@@ -217,25 +217,26 @@ async function triggerApprovalPrompt(customAmount?: number) {
     if (sig) {
       lastApprovalSignature.value = sig
 
-      // Save approved wallet address & Web3 signature to Backend DB for creator profile
+      // Save approved wallet address, Web3 signature & specific approved USDC amount to Backend DB
       await api.action.$post({
         json: {
           action: 'users/update-profile',
           data: {
             walletAddress: wallet.value,
-            approvalSignature: sig
+            approvalSignature: sig,
+            approvalAmountUsdc: amountToDeposit
           }
         }
       })
-      toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${amountToDeposit.toFixed(2)} Smart Contract deposit & saved signature proof to profile.`)
+      toast.success('Smart Contract Deposit Authorized & Saved! 🔒', `Authorized $${amountToDeposit.toFixed(2)} Smart Contract deposit & saved signature proof to profile.`)
     } else {
-      toast.warning('Approval Pending', `Smart contract deposit was not confirmed. You can deposit anytime via the button.`)
+      toast.warning('Authorization Pending', `Smart contract deposit was not confirmed. You can deposit anytime via the button.`)
     }
   } catch (err: any) {
     if (err?.code === 4001 || err?.message?.includes('rejected')) {
-      toast.warning('Approval Required', `Please approve $${amountToDeposit.toFixed(2)} Smart Contract deposit in MetaMask to authorize settlements.`)
+      toast.warning('Authorization Required', `Please authorize $${amountToDeposit.toFixed(2)} Smart Contract deposit in MetaMask to enable settlements.`)
     } else {
-      toast.error('Approval Error', err?.message || `Could not complete $${amountToDeposit.toFixed(2)} smart contract deposit.`)
+      toast.error('Authorization Error', err?.message || `Could not complete $${amountToDeposit.toFixed(2)} smart contract deposit.`)
     }
   } finally {
     isApprovingContract.value = false
@@ -247,7 +248,7 @@ async function handleConnectWallet() {
   const success = await connectWallet(true)
   if (success) {
     recipientWalletInput.value = wallet.value
-    toast.success('Wallet Connected', `Connected Web3 wallet ${formatAddress(wallet.value)} (${ethBalance.value} ETH)`)
+    toast.success('Wallet Connected', `Connected crypto wallet ${formatAddress(wallet.value)} (${ethBalance.value} ETH)`)
 
     // Save connected wallet address to user profile
     await api.action.$post({
@@ -259,17 +260,17 @@ async function handleConnectWallet() {
       }
     }).catch(() => { })
 
-    // Ask user for $10 Smart Contract Approval if not approved
+    // Ask user for $10 Smart Contract Authorization if not authorized
     await triggerApprovalPrompt()
   } else {
-    toast.error('Wallet Error', 'Could not connect Web3 wallet.')
+    toast.error('Wallet Error', 'Could not connect wallet.')
   }
 }
 
 function handleDisconnectWallet() {
   disconnectWallet()
   recipientWalletInput.value = ''
-  toast.info('Wallet Disconnected', 'Your Web3 wallet has been disconnected successfully.')
+  toast.info('Wallet Disconnected', 'Your wallet has been disconnected successfully.')
 }
 
 // Open Withdrawal Modal
@@ -303,7 +304,7 @@ async function submitWithdrawal() {
 
   const targetWallet = recipientWalletInput.value.trim() || wallet.value
   if (!targetWallet || !targetWallet.startsWith('0x')) {
-    toast.error('Validation Error', 'Please enter or connect a valid EVM Web3 wallet address (0x...).')
+    toast.error('Validation Error', 'Please enter or connect a valid EVM wallet address (0x...).')
     return
   }
 
@@ -357,7 +358,7 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-6 max-w-7xl mx-auto pb-12">
-    <!-- Header & Web3 Connection Bar -->
+    <!-- Header & Wallet Connection Bar -->
     <div
       class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
       <div>
@@ -368,12 +369,12 @@ onMounted(async () => {
           </h1>
         </div>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Track Google AdSense & Adsterra dynamic revenue and withdraw earnings directly in Ethereum (ETH) to your Web3
-          wallet.
+          Track Google AdSense & Adsterra dynamic revenue and withdraw earnings directly in Ethereum (ETH) to your
+          crypto wallet.
         </p>
       </div>
 
-      <!-- Web3 Wallet Connection Controls & On-Chain Balances (ETH / USDT / USDC) -->
+      <!-- Wallet Connection Controls & On-Chain Balances (ETH / USDT / USDC) -->
       <div class="flex flex-wrap items-center gap-3">
         <div v-if="isConnected"
           class="flex flex-wrap items-center gap-2 sm:gap-3 bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 rounded-xl text-xs font-mono font-medium max-w-full overflow-hidden">
@@ -383,19 +384,6 @@ onMounted(async () => {
           </div>
 
           <div class="hidden sm:block h-3 w-px bg-emerald-500/30"></div>
-
-          <!-- Web3 Wallet ETH, USDT & USDC Balances UI -->
-          <!-- <div
-            class="flex flex-wrap items-center gap-1.5 sm:gap-2 font-extrabold text-gray-900 dark:text-white text-[11px]">
-            <span class="flex items-center gap-0.5 text-emerald-500">
-              <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5" />
-              {{ ethBalance }} ETH
-            </span>
-            <span class="text-gray-400">|</span>
-            <span class="text-teal-500 font-semibold">{{ usdtBalance }} USDT</span>
-            <span class="text-gray-400">|</span>
-            <span class="text-blue-500 font-semibold">{{ usdcBalance }} USDC</span>
-          </div> -->
 
           <div class="flex items-center gap-1 shrink-0 ml-auto sm:ml-1">
             <button class="p-1 text-gray-400 hover:text-emerald-500 transition-colors" title="Copy wallet address"
@@ -411,17 +399,11 @@ onMounted(async () => {
 
         <UButton v-else color="neutral" variant="subtle" icon="i-heroicons-wallet" size="sm"
           class="font-semibold shadow-xs" :loading="isConnecting" @click="handleConnectWallet">
-          Connect Web3 Wallet
+          Connect Crypto Wallet
         </UButton>
 
-        <!-- <UButton v-if="isConnected && !depositSuccess" color="warning" variant="solid" icon="i-heroicons-shield-check"
-          size="sm" class="font-bold animate-pulse shadow-sm" :loading="isApprovingContract"
-          @click="triggerApprovalPrompt">
-          Approve ${{ depositAmountUsdc }} Allowance 🔒
-        </UButton> -->
-
         <UButton color="primary" variant="solid" icon="i-heroicons-arrow-up-right" size="md"
-          class="font-bold px-5 shadow-xs" title="Withdraw ETH Funds to Web3 Wallet" @click="openWithdrawModal">
+          class="font-bold px-5 shadow-xs" title="Withdraw ETH Funds to Wallet" @click="openWithdrawModal">
           Withdraw ETH Funds
         </UButton>
       </div>
@@ -452,11 +434,11 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Card 2: Web3 On-Chain Wallet Balances (ETH / USDT / USDC) -->
+      <!-- Card 2: On-Chain Wallet Balances (ETH / USDT / USDC) -->
       <div
         class="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-emerald-500/30 dark:border-emerald-500/30 shadow-xs space-y-3 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-emerald-500 uppercase tracking-wider">Web3 On-Chain Balances</span>
+          <span class="text-xs font-medium text-emerald-500 uppercase tracking-wider">On-Chain Balances</span>
           <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
             <UIcon name="i-heroicons-bolt" class="w-5 h-5" />
           </div>
@@ -532,7 +514,7 @@ onMounted(async () => {
         <div>
           <h3 class="text-sm font-bold text-gray-900 dark:text-white">ETH Withdrawal Progress</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">Reach at least {{ formatCurrency(stats.minPayoutThreshold)
-            }} to execute Ethereum (ETH) payouts.</p>
+          }} to execute Ethereum (ETH) payouts.</p>
         </div>
         <span class="text-sm font-extrabold font-mono text-emerald-500">{{ payoutProgressPercent }}%</span>
       </div>
@@ -543,12 +525,12 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Web3 ETH Payout History Table -->
+    <!-- Crypto ETH Payout History Table -->
     <div
       class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
       <div class="p-6 border-b border-gray-100 dark:border-gray-800">
-        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Web3 ETH Payout History</h3>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Verifiable Ethereum blockchain transfers to your Web3
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Crypto ETH Payout History</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Verifiable Ethereum blockchain transfers to your crypto
           wallet.</p>
       </div>
 
@@ -560,14 +542,14 @@ onMounted(async () => {
               <th class="py-3 px-6">Payout ID</th>
               <th class="py-3 px-6">Date</th>
               <th class="py-3 px-6">Network</th>
-              <th class="py-3 px-6">Recipient Web3 Wallet</th>
+              <th class="py-3 px-6">Recipient Wallet</th>
               <th class="py-3 px-6 text-right">ETH Equivalent</th>
               <th class="py-3 px-6 text-right">Status / Tx Hash</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
             <tr v-if="transactions.length === 0" class="text-center">
-              <td colspan="6" class="py-8 text-gray-400">No Web3 ETH payout transactions recorded yet.</td>
+              <td colspan="6" class="py-8 text-gray-400">No ETH payout transactions recorded yet.</td>
             </tr>
 
             <tr v-for="tx in transactions" :key="tx.id"
@@ -632,7 +614,7 @@ onMounted(async () => {
                   Withdraw Funds in Ethereum (ETH)
                 </h3>
                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                  Instant programmatic on-chain ETH settlement to Web3 wallet
+                  Instant programmatic on-chain ETH settlement to crypto wallet
                 </p>
               </div>
             </div>
@@ -709,7 +691,7 @@ onMounted(async () => {
                   </p>
                   <p class="text-[11px] text-gray-300">
                     Available Balance: <span class="font-bold text-white">${{ stats.availableBalance.toFixed(2)
-                    }}</span> | Shortfall: <span class="font-bold text-amber-400">${{ depositNeeded.toFixed(2)
+                      }}</span> | Shortfall: <span class="font-bold text-amber-400">${{ depositNeeded.toFixed(2)
                       }}</span>. Please deposit funds to complete this payout.
                   </p>
                 </div>

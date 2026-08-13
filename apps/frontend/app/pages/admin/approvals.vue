@@ -173,13 +173,13 @@ function formatDate(dateStr?: string) {
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <div class="flex items-center gap-3">
-          <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">User Accounts & Role Approvals</h1>
+          <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">User Accounts & Verification</h1>
           <UBadge v-if="pendingUsersCount > 0" color="warning" variant="solid" class="font-mono text-xs">
             {{ pendingUsersCount }} PENDING REVIEWS
           </UBadge>
         </div>
         <p class="mt-1 text-sm text-gray-400">
-          Manage platform user registrations, approve new creators, assign Admin roles, or suspend accounts.
+          Manage platform user registrations, verify new creators, assign Admin roles, or suspend accounts.
         </p>
       </div>
 

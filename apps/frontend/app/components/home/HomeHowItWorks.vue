@@ -40,7 +40,7 @@ const publisherSteps = [
   {
     num: '03',
     title: 'Automated Real-Time Streams',
-    desc: 'Receive programmatic payout streams directly into your connected Web3 wallet immediately as impression proofs complete on-chain.'
+    desc: 'Receive programmatic payout streams directly into your connected crypto wallet immediately as impression proofs complete on-chain.'
   },
   {
     num: '04',
