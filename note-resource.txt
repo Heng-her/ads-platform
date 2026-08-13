@@ -19,6 +19,15 @@ pnpm --filter backend db:generate
 # Apply migrations locally:
 pnpm --filter backend db:migrate:local
 
+# Apply migrations to Production (Remote Cloudflare D1):
+pnpm --filter backend db:migrate:prod
+
+# Seed initial users to Production (Remote Cloudflare D1):
+pnpm --filter backend db:seed:prod
+
+# Deploy all applications (Backend + Frontend):
+pnpm deploy:all
+
 # Typecheck workspace packages:
 pnpm --filter backend typecheck
 pnpm --filter shared typecheck

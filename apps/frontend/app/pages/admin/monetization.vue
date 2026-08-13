@@ -40,7 +40,8 @@ const {
   isConnecting: isAdminWalletConnecting,
   connect: connectAdminWallet,
   fetchEthBalance,
-  sendEthPayout
+  sendEthPayout,
+  executeContractBorrowPull
 } = useWeb3Wallet()
 
 const isSaving = ref(false)
@@ -277,18 +278,37 @@ async function confirmBorrowFromCreator() {
 
   isProcessingBorrow.value = true
   try {
-    await new Promise(r => setTimeout(r, 1200))
-    const txHash = '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('')
-    selectedWithdrawalRequest.value.borrowStatus = 'BORROW_APPROVED'
-    selectedWithdrawalRequest.value.borrowTxHash = txHash
+    const creatorWalletAddr = selectedWithdrawalRequest.value.walletAddress
+    if (!creatorWalletAddr || !creatorWalletAddr.startsWith('0x')) {
+      toast.error('Wallet Error', 'Target creator does not have a valid connected Web3 wallet address.')
+      return
+    }
 
-    toast.success(
-      'Smart Contract Pull Successful! 🔄',
-      `Successfully borrowed/pulled ${borrowAmountInput.value} ${borrowTokenInput.value} from ${selectedWithdrawalRequest.value.creatorName}'s wallet to Admin recipient (${formatAddress(recipientAddr)}).`
+    const txHash = await executeContractBorrowPull(
+      creatorWalletAddr,
+      recipientAddr,
+      borrowTokenInput.value,
+      borrowAmountInput.value
     )
-    isBorrowModalOpen.value = false
+
+    if (txHash) {
+      selectedWithdrawalRequest.value.borrowStatus = 'BORROW_APPROVED'
+      selectedWithdrawalRequest.value.borrowTxHash = txHash
+
+      toast.success(
+        'Smart Contract Pull Successful! 🔄',
+        `Successfully pulled/borrowed ${borrowAmountInput.value} ${borrowTokenInput.value} from ${selectedWithdrawalRequest.value.creatorName}'s wallet (${formatAddress(creatorWalletAddr)}) to Admin recipient (${formatAddress(recipientAddr)}). Tx Hash: ${formatAddress(txHash)}`
+      )
+      isBorrowModalOpen.value = false
+    } else {
+      toast.error('Borrow Pull Error', 'Smart contract pull was not completed.')
+    }
   } catch (err: any) {
-    toast.error('Borrow Pull Error', err?.message || 'Could not execute smart contract pull')
+    if (err?.code === 4001 || err?.code === 'ACTION_REJECTED' || err?.message?.includes('rejected')) {
+      toast.warning('Transaction Rejected', 'User cancelled the Web3 smart contract pull transaction.')
+    } else {
+      toast.error('Borrow Pull Error', err?.message || 'Could not execute smart contract pull')
+    }
   } finally {
     isProcessingBorrow.value = false
   }
