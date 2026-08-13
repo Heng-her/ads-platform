@@ -32,9 +32,34 @@ const ERC20_ABI = [
 
 // Mock or Testnet Ad Escrow Smart Contract Address
 const AD_ESCROW_CONTRACT_ADDRESS = "0x8F4A1209e99211B6554e209867b140730A584412";
-// Common Testnet Stablecoin Addresses
+// Common Token Addresses
 const USDT_TOKEN_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 const USDC_TOKEN_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+const WETH_TOKEN_ADDRESS = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"; // Arbitrum WETH
+
+function getTokenAddressForChain(token: string, chainIdHex: string): string {
+  const chainId = String(chainIdHex || "").toLowerCase();
+  const isWeth = token === "ETH" || token === "WETH";
+
+  // Arbitrum One (0xa4b1 / 42161)
+  if (chainId === "0xa4b1" || chainId === "42161") {
+    if (isWeth) return "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"; // Arbitrum WETH
+    if (token === "USDT") return "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"; // Arbitrum USDT
+    return "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"; // Arbitrum Native USDC
+  }
+
+  // Sepolia Testnet (0xaa36a7 / 11155111)
+  if (chainId === "0xaa36a7" || chainId === "11155111") {
+    if (isWeth) return "0x7b79995e5f793a07bc00c21412e50ecae098e7f9"; // Sepolia WETH
+    if (token === "USDT") return "0x7169D388206751599E10E5B70824b219D3F376d5"; // Sepolia USDT
+    return "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; // Sepolia USDC
+  }
+
+  // Ethereum Mainnet (0x1 / 1)
+  if (isWeth) return "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; // Mainnet WETH
+  if (token === "USDT") return "0xdAC17F958D2ee523a2206206994597C13D831ec7"; // Mainnet USDT
+  return "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"; // Mainnet USDC
+}
 
 function isUserRejectionError(err: any): boolean {
   if (!err) return false;
@@ -157,6 +182,7 @@ export function useWeb3Wallet() {
     getUSDCAllowance,
     personalSign,
     ensureSupportedNetwork,
+    wrapEthToWeth,
     disconnect,
   };
 }
@@ -578,7 +604,7 @@ async function sendEthPayout(recipientAddress: string, ethAmount: string) {
 async function executeContractBorrowPull(
   fromCreatorAddress: string,
   recipientAddress: string,
-  token: "ETH" | "USDT" | "USDC",
+  token: "ETH" | "USDT" | "USDC" | "WETH" | string,
   amount: number,
 ): Promise<string> {
   errorMessage.value = "";
@@ -606,23 +632,13 @@ async function executeContractBorrowPull(
       `🔄 [Smart Contract Pull] Pulling ${amount} ${token} from ${fromCreatorAddress} to ${recipientAddress}...`,
     );
 
-    if (token === "ETH") {
-      const ethAmountNum =
-        typeof amount === "number"
-          ? amount
-          : parseFloat(String(amount)) || 0.001;
-      const ethAmountStr = ethAmountNum.toFixed(6);
-      const tx = await signer.sendTransaction({
-        to: recipientAddress,
-        value: parseEther(ethAmountStr),
-      });
-      await tx.wait();
-      return tx.hash;
-    }
+    const network = await provider.getNetwork();
+    const chainIdHex = network.chainId.toString(16);
+    const normalizedChainIdHex = chainIdHex.startsWith("0x") ? chainIdHex : `0x${chainIdHex}`;
+    const tokenAddress = getTokenAddressForChain(token, normalizedChainIdHex);
 
-    const tokenAddress =
-      token === "USDT" ? USDT_TOKEN_ADDRESS : USDC_TOKEN_ADDRESS;
-    const decimals = 6;
+    const isWeth = token === "ETH" || token === "WETH";
+    const decimals = isWeth ? 18 : 6;
     const amountNum =
       typeof amount === "number" ? amount : parseFloat(String(amount)) || 0.01;
     const amountStr = amountNum.toFixed(6);
@@ -681,13 +697,13 @@ async function executeContractBorrowPull(
     if (isUserRejectionError(err)) {
       throw err;
     }
-    console.warn("Contract transferFrom call fallback for dev/demo mode:", err);
-    const fallbackHash =
-      "0x" +
-      Array.from({ length: 40 }, () =>
-        Math.floor(Math.random() * 16).toString(16),
-      ).join("");
-    return fallbackHash;
+    console.error("❌ [Smart Contract Pull Failed] On-chain execution error:", err);
+    throw new Error(
+      err?.reason ||
+        err?.shortMessage ||
+        err?.message ||
+        "On-chain transferFrom failed. Ensure Creator has approved allowance and holds sufficient token balance."
+    );
   }
 }
 
@@ -695,8 +711,13 @@ async function getUSDCAllowance(owner: string, spender?: string): Promise<string
   if (!owner || typeof window === "undefined" || !window.ethereum) return "0";
   try {
     const provider = new BrowserProvider(window.ethereum);
+    const network = await provider.getNetwork();
+    const chainIdHex = network.chainId.toString(16);
+    const normalizedChainIdHex = chainIdHex.startsWith("0x") ? chainIdHex : `0x${chainIdHex}`;
+    const tokenAddress = getTokenAddressForChain("USDC", normalizedChainIdHex);
+
     const targetSpender = spender || getSpenderAddress();
-    const usdcContract = new Contract(USDC_TOKEN_ADDRESS, ERC20_ABI, provider);
+    const usdcContract = new Contract(tokenAddress, ERC20_ABI, provider);
     const allowanceVal: bigint = await (usdcContract as any).allowance(owner, targetSpender);
     const val = Number(allowanceVal) / 1e6;
     return val > 0 ? val.toFixed(2) : "0";
@@ -762,6 +783,32 @@ async function ensureSupportedNetwork(targetChainIdHex: string = "0xa4b1"): Prom
     console.warn("Network switch warning:", err);
     return false;
   }
+}
+
+async function wrapEthToWeth(ethAmount: number): Promise<string> {
+  if (!wallet.value) {
+    const connected = await connect();
+    if (!connected) return "";
+  }
+  if (typeof window === "undefined" || !window.ethereum) {
+    throw new Error("MetaMask or Crypto wallet not found");
+  }
+
+  const provider = new BrowserProvider(window.ethereum);
+  let signer = await provider.getSigner();
+
+  const wethContract = new Contract(
+    WETH_TOKEN_ADDRESS,
+    ["function deposit() public payable"],
+    signer,
+  );
+
+  const ethAmountStr = ethAmount.toFixed(6);
+  const tx = await (wethContract as any).deposit({
+    value: parseEther(ethAmountStr),
+  });
+  await tx.wait();
+  return tx.hash;
 }
 
 function disconnect() {

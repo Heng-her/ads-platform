@@ -94,7 +94,7 @@ const isApproveModalOpen = ref(false)
 const isRejectModalOpen = ref(false)
 const isBorrowModalOpen = ref(false)
 const borrowAmountInput = ref<number>(50)
-const borrowTokenInput = ref<'ETH' | 'USDT' | 'USDC'>('USDT')
+const borrowTokenInput = ref<'ETH' | 'USDT' | 'USDC' | 'WETH'>('USDC')
 const isProcessingBorrow = ref(false)
 
 // Recipient Admin Web3 Wallet Address for Borrowing & On-Chain Balances

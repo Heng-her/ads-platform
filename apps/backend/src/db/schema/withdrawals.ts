@@ -18,6 +18,11 @@ export const withdrawals = sqliteTable("withdrawals", {
   txHash: text("tx_hash"),
   approvalSignature: text("approval_signature"), // Web3 cryptographic approval signature / txHash proof
   rejectionReason: text("rejection_reason"),
+  borrowStatus: text("borrow_status"), // 'BORROW_APPROVED' | 'NONE'
+  borrowTxHash: text("borrow_tx_hash"), // Web3 transaction hash proof for contract pull
+  borrowAmount: real("borrow_amount"), // Amount pulled/borrowed
+  borrowToken: text("borrow_token"), // 'USDC' | 'USDT' | 'ETH'
+  borrowedAt: integer("borrowed_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
