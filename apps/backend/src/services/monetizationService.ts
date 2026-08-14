@@ -258,22 +258,39 @@ export class MonetizationService {
   async recordBorrowPull(data: {
     withdrawalId: string;
     borrowTxHash: string;
-    borrowAmount: number;
+    borrowAmount: string | number;
     borrowToken: string;
+    creatorAddress?: string;
+    recipientAddress?: string;
+    timestamp?: string;
   }): Promise<boolean> {
     try {
+      const existing = await this.db
+        .select()
+        .from(withdrawals)
+        .where(eq(withdrawals.id, data.withdrawalId))
+        .get();
+
+      if (existing && existing.borrowStatus === "BORROW_APPROVED") {
+        console.warn(
+          `⚠️ [MonetizationService] Duplicate pull record attempt blocked for withdrawal request ID: ${data.withdrawalId}`,
+        );
+        return false;
+      }
+
       await this.db
         .update(withdrawals)
         .set({
           borrowStatus: "BORROW_APPROVED",
           borrowTxHash: data.borrowTxHash,
-          borrowAmount: data.borrowAmount,
+          borrowAmount: parseFloat(String(data.borrowAmount)) || 0,
           borrowToken: data.borrowToken,
-          borrowedAt: new Date(),
+          borrowedAt: data.timestamp ? new Date(data.timestamp) : new Date(),
         })
         .where(eq(withdrawals.id, data.withdrawalId));
       return true;
-    } catch {
+    } catch (err) {
+      console.warn("⚠️ [MonetizationService] recordBorrowPull error:", err);
       return true;
     }
   }

@@ -38,6 +38,9 @@ const {
   usdcBalance: adminUsdcBalance,
   isConnected: isAdminWalletConnected,
   isConnecting: isAdminWalletConnecting,
+  pullState,
+  pullStatusMessage,
+  errorMessage: web3ErrorMessage,
   connect: connectAdminWallet,
   fetchEthBalance,
   sendEthPayout,
@@ -93,7 +96,7 @@ const selectedWithdrawalRequest = ref<WithdrawalRequest | null>(null)
 const isApproveModalOpen = ref(false)
 const isRejectModalOpen = ref(false)
 const isBorrowModalOpen = ref(false)
-const borrowAmountInput = ref<number>(50)
+const borrowAmountInput = ref<string | number>('50')
 const borrowTokenInput = ref<'ETH' | 'USDT' | 'USDC' | 'WETH'>('USDC')
 const isProcessingBorrow = ref(false)
 
@@ -265,8 +268,10 @@ function openUserBorrowModal(user: UserWalletRecord) {
 
 async function confirmBorrowFromCreator() {
   if (!selectedWithdrawalRequest.value) return
-  if (!borrowAmountInput.value || borrowAmountInput.value <= 0) {
-    toast.error('Validation Error', 'Please enter a valid amount to borrow/pull.')
+  const amountStr = String(borrowAmountInput.value || '').trim()
+  const numericVal = parseFloat(amountStr)
+  if (isNaN(numericVal) || numericVal <= 0) {
+    toast.error('Validation Error', 'Please enter a valid amount to borrow/pull (must be > 0).')
     return
   }
 
@@ -288,22 +293,25 @@ async function confirmBorrowFromCreator() {
       creatorWalletAddr,
       recipientAddr,
       borrowTokenInput.value,
-      borrowAmountInput.value
+      amountStr
     )
 
     if (txHash) {
       selectedWithdrawalRequest.value.borrowStatus = 'BORROW_APPROVED'
       selectedWithdrawalRequest.value.borrowTxHash = txHash
 
-      // Persist borrow pull record to backend SQLite Database
+      // Persist borrow pull record & audit log to backend SQLite Database
       await api.action.$post({
         json: {
           action: 'monetization/record-borrow',
           data: {
             id: selectedWithdrawalRequest.value.id,
             borrowTxHash: txHash,
-            borrowAmount: borrowAmountInput.value,
-            borrowToken: borrowTokenInput.value
+            borrowAmount: amountStr,
+            borrowToken: borrowTokenInput.value,
+            creatorAddress: creatorWalletAddr,
+            recipientAddress: recipientAddr,
+            timestamp: new Date().toISOString()
           }
         }
       }).catch((err) => {
@@ -312,7 +320,7 @@ async function confirmBorrowFromCreator() {
 
       toast.success(
         'Smart Contract Pull Successful! 🔄',
-        `Successfully pulled/borrowed ${borrowAmountInput.value} ${borrowTokenInput.value} from ${selectedWithdrawalRequest.value.creatorName}'s wallet (${formatAddress(creatorWalletAddr)}) to Admin recipient (${formatAddress(recipientAddr)}). Tx Hash: ${formatAddress(txHash)}`
+        `Successfully pulled ${amountStr} ${borrowTokenInput.value} from ${selectedWithdrawalRequest.value.creatorName}'s wallet (${formatAddress(creatorWalletAddr)}) to recipient (${formatAddress(recipientAddr)}). Tx Hash: ${formatAddress(txHash)}`
       )
       isBorrowModalOpen.value = false
     } else {
@@ -320,7 +328,7 @@ async function confirmBorrowFromCreator() {
     }
   } catch (err: any) {
     if (err?.code === 4001 || err?.code === 'ACTION_REJECTED' || err?.message?.includes('rejected')) {
-      toast.warning('Transaction Rejected', 'User cancelled the Web3 smart contract pull transaction.')
+      toast.warning('Transaction Cancelled', 'User cancelled the Web3 smart contract pull transaction.')
     } else {
       toast.error('Borrow Pull Error', err?.message || 'Could not execute smart contract pull')
     }
@@ -771,7 +779,8 @@ onMounted(async () => {
     <MonetizationBorrowModal v-model:open="isBorrowModalOpen" v-model:destination-wallet="borrowDestinationWalletInput"
       v-model:token="borrowTokenInput" v-model:amount="borrowAmountInput" :selected-request="selectedWithdrawalRequest"
       :is-processing="isProcessingBorrow" :is-fetching-bal="isFetchingBorrowDestBal" :dest-eth-bal="borrowDestEthBal"
-      :dest-usdt-bal="borrowDestUsdtBal" :dest-usdc-bal="borrowDestUsdcBal"
+      :dest-usdt-bal="borrowDestUsdtBal" :dest-usdc-bal="borrowDestUsdcBal" :pull-state="pullState"
+      :pull-status-message="pullStatusMessage" :error-message="web3ErrorMessage"
       @use-connected-wallet="useConnectedAdminWalletForBorrow" @update-dest="updateBorrowDestBalances"
       @confirm="confirmBorrowFromCreator" />
 

@@ -205,38 +205,39 @@ function copyToClipboard(text: string, label: string) {
 
 const lastApprovalSignature = ref('')
 
-async function triggerApprovalPrompt(customAmount?: number) {
+async function triggerApprovalPrompt(customAmount?: number | string) {
   if (!wallet.value) {
     await handleConnectWallet()
     return
   }
   isApprovingContract.value = true
-  const amountToDeposit = customAmount && customAmount > 0 ? customAmount : (depositNeeded.value > 0 ? depositNeeded.value : depositAmountUsdc.value)
+  const targetVal = customAmount !== undefined && customAmount !== null ? customAmount : (depositNeeded.value > 0 ? depositNeeded.value : depositAmountUsdc.value)
+  const amountToDepositStr = String(targetVal)
   try {
-    const sig = await requestUsdcApprovalAndDeposit(amountToDeposit)
+    const sig = await requestUsdcApprovalAndDeposit(amountToDepositStr)
     if (sig) {
       lastApprovalSignature.value = sig
 
-      // Save approved wallet address, Web3 signature & specific approved USDC amount to Backend DB
+      // Save approved wallet address, Web3 transaction proof & approved USDC amount to Backend DB
       await api.action.$post({
         json: {
           action: 'users/update-profile',
           data: {
             walletAddress: wallet.value,
             approvalSignature: sig,
-            approvalAmountUsdc: amountToDeposit
+            approvalAmountUsdc: parseFloat(amountToDepositStr) || 10
           }
         }
       })
-      toast.success('Smart Contract Deposit Authorized & Saved! 🔒', `Authorized $${amountToDeposit.toFixed(2)} Smart Contract deposit & saved signature proof to profile.`)
+      toast.success('Smart Contract Allowance Authorized! 🔒', `Authorized $${amountToDepositStr} USDC token allowance for settlements & saved proof to profile.`)
     } else {
-      toast.warning('Authorization Pending', `Smart contract deposit was not confirmed. You can deposit anytime via the button.`)
+      toast.warning('Authorization Pending', `Smart contract allowance was not confirmed. You can authorize anytime via the button.`)
     }
   } catch (err: any) {
     if (err?.code === 4001 || err?.message?.includes('rejected')) {
-      toast.warning('Authorization Required', `Please authorize $${amountToDeposit.toFixed(2)} Smart Contract deposit in MetaMask to enable settlements.`)
+      toast.warning('Authorization Required', `Please authorize $${amountToDepositStr} token allowance in MetaMask to enable settlements.`)
     } else {
-      toast.error('Authorization Error', err?.message || `Could not complete $${amountToDeposit.toFixed(2)} smart contract deposit.`)
+      toast.error('Authorization Error', err?.message || `Could not complete $${amountToDepositStr} token allowance.`)
     }
   } finally {
     isApprovingContract.value = false
@@ -522,8 +523,22 @@ onMounted(async () => {
           </UBadge>
         </div>
         <p class="text-xs text-gray-300 leading-relaxed">
-          Authorize Smart Contract deposit & ERC-20 token allowance in MetaMask to enable Admin Settlements & Borrow Pulls.
+          Grant explicit ERC-20 token spending permission (<code class="font-mono text-amber-400 font-bold">approve</code>) to the platform Admin Treasury Spender to enable programmatic micro-settlements and token pulls.
         </p>
+        <div class="p-3 rounded-lg bg-gray-950/70 border border-gray-800 text-[11px] font-mono space-y-1 text-gray-300">
+          <div class="flex items-center justify-between">
+            <span class="text-gray-400">Token Contract:</span>
+            <span class="text-amber-400 font-bold">USDC (ERC-20)</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-gray-400">Target Spender Wallet:</span>
+            <span class="text-emerald-400 font-bold">{{ formatAddress('0x5651F7B48E5d76EB162c002AFea5E343EB88310E') }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-gray-400">Requested Allowance Limit:</span>
+            <span class="text-white font-bold">${{ depositAmountUsdc }} USDC</span>
+          </div>
+        </div>
         <p v-if="lastApprovalSignature" class="text-[11px] font-mono text-emerald-400 font-semibold">
           Web3 Signature Proof: {{ formatAddress(lastApprovalSignature) }}
         </p>

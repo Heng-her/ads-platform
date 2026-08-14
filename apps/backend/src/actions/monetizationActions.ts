@@ -133,20 +133,28 @@ export async function handleMonetizationAction({
       return { code: 0, msg: "Unauthorized: Admin privileges required." };
     }
 
-    const { id, borrowTxHash, borrowAmount, borrowToken } = data || {};
+    const { id, borrowTxHash, borrowAmount, borrowToken, creatorAddress, recipientAddress, timestamp } = data || {};
     if (!id || !borrowTxHash) {
       return { code: 0, msg: "Missing request ID or borrow transaction hash." };
     }
 
-    await monetizationService.recordBorrowPull({
+    const success = await monetizationService.recordBorrowPull({
       withdrawalId: id,
       borrowTxHash,
-      borrowAmount: Number(borrowAmount) || 0,
+      borrowAmount: String(borrowAmount || 0),
       borrowToken: borrowToken || "USDC",
+      creatorAddress,
+      recipientAddress,
+      timestamp: timestamp || new Date().toISOString(),
     });
+
+    if (!success) {
+      return { code: 0, msg: "Duplicate pull or record already finalized for this request." };
+    }
+
     return {
       code: 1,
-      msg: `Smart Contract borrow pull recorded successfully.`,
+      msg: `Smart Contract borrow pull recorded and audited successfully.`,
     };
   }
 

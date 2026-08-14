@@ -3,9 +3,11 @@ import { useAuthStore } from "~/stores/auth";
 import {
   BrowserProvider,
   parseUnits,
+  formatUnits,
   Contract,
   parseEther,
   formatEther,
+  isAddress,
 } from "ethers";
 
 import type { Eip1193Provider } from "ethers";
@@ -21,44 +23,101 @@ declare global {
   }
 }
 
+// Chain Configuration Mapping (Arbitrum One, Sepolia, Mainnet)
+export const CHAIN_CONFIG: Record<
+  string,
+  {
+    chainName: string;
+    USDC: string;
+    USDT: string;
+    WETH: string;
+    escrowSpender: string;
+  }
+> = {
+  // Arbitrum One (0xa4b1 / 42161)
+  "0xa4b1": {
+    chainName: "Arbitrum One",
+    USDC: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+    USDT: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+    WETH: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+    escrowSpender: "0x8F4A1209e99211B6554e209867b140730A584412",
+  },
+  "42161": {
+    chainName: "Arbitrum One",
+    USDC: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+    USDT: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+    WETH: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+    escrowSpender: "0x8F4A1209e99211B6554e209867b140730A584412",
+  },
+  // Sepolia Testnet (0xaa36a7 / 11155111)
+  "0xaa36a7": {
+    chainName: "Sepolia Testnet",
+    USDC: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+    USDT: "0x7169D388206751599E10E5B70824b219D3F376d5",
+    WETH: "0x7b79995e5f793a07bc00c21412e50ecae098e7f9",
+    escrowSpender: "0x8F4A1209e99211B6554e209867b140730A584412",
+  },
+  "11155111": {
+    chainName: "Sepolia Testnet",
+    USDC: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+    USDT: "0x7169D388206751599E10E5B70824b219D3F376d5",
+    WETH: "0x7b79995e5f793a07bc00c21412e50ecae098e7f9",
+    escrowSpender: "0x8F4A1209e99211B6554e209867b140730A584412",
+  },
+  // Ethereum Mainnet (0x1 / 1)
+  "0x1": {
+    chainName: "Ethereum Mainnet",
+    USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    USDT: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    escrowSpender: "0x8F4A1209e99211B6554e209867b140730A584412",
+  },
+  "1": {
+    chainName: "Ethereum Mainnet",
+    USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    USDT: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    escrowSpender: "0x8F4A1209e99211B6554e209867b140730A584412",
+  },
+};
+
+export type PullTransactionState =
+  | "idle"
+  | "checking"
+  | "approval_required"
+  | "approving"
+  | "approved"
+  | "pulling"
+  | "confirming"
+  | "success"
+  | "failed"
+  | "user_rejected";
+
 // Standard ERC-20 Approval & Balance ABI
 const ERC20_ABI = [
   "function approve(address spender, uint256 amount) public returns (bool)",
   "function allowance(address owner, address spender) public view returns (uint256)",
   "function balanceOf(address account) public view returns (uint256)",
+  "function transfer(address to, uint256 amount) public returns (bool)",
+  "function transferFrom(address from, address to, uint256 amount) public returns (bool)",
   "function symbol() public view returns (string)",
   "function decimals() public view returns (uint8)",
 ];
 
-// Mock or Testnet Ad Escrow Smart Contract Address
+// Default Mock/Escrow Spender Address
 const AD_ESCROW_CONTRACT_ADDRESS = "0x8F4A1209e99211B6554e209867b140730A584412";
-// Common Token Addresses
-const USDT_TOKEN_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
-const USDC_TOKEN_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
-const WETH_TOKEN_ADDRESS = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"; // Arbitrum WETH
 
 function getTokenAddressForChain(token: string, chainIdHex: string): string {
-  const chainId = String(chainIdHex || "").toLowerCase();
-  const isWeth = token === "ETH" || token === "WETH";
+  if (isAddress(token)) return token;
 
-  // Arbitrum One (0xa4b1 / 42161)
-  if (chainId === "0xa4b1" || chainId === "42161") {
-    if (isWeth) return "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"; // Arbitrum WETH
-    if (token === "USDT") return "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"; // Arbitrum USDT
-    return "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"; // Arbitrum Native USDC
-  }
+  const chainIdKey = String(chainIdHex || "").toLowerCase();
+  const tokenUpper = String(token || "").toUpperCase();
+  const config = CHAIN_CONFIG[chainIdKey] || CHAIN_CONFIG["0xa4b1"];
 
-  // Sepolia Testnet (0xaa36a7 / 11155111)
-  if (chainId === "0xaa36a7" || chainId === "11155111") {
-    if (isWeth) return "0x7b79995e5f793a07bc00c21412e50ecae098e7f9"; // Sepolia WETH
-    if (token === "USDT") return "0x7169D388206751599E10E5B70824b219D3F376d5"; // Sepolia USDT
-    return "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; // Sepolia USDC
-  }
-
-  // Ethereum Mainnet (0x1 / 1)
-  if (isWeth) return "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; // Mainnet WETH
-  if (token === "USDT") return "0xdAC17F958D2ee523a2206206994597C13D831ec7"; // Mainnet USDT
-  return "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"; // Mainnet USDC
+  if (tokenUpper === "USDT") return config.USDT;
+  if (tokenUpper === "WETH") return config.WETH;
+  if (tokenUpper === "USDC") return config.USDC;
+  return config.USDC;
 }
 
 function isUserRejectionError(err: any): boolean {
@@ -105,7 +164,10 @@ function getSpenderAddress(): string {
       const savedConfig = localStorage.getItem("admin_platform_config");
       if (savedConfig) {
         const parsed = JSON.parse(savedConfig);
-        if (parsed.adminTreasuryWallet) {
+        if (
+          parsed.adminTreasuryWallet &&
+          isAddress(parsed.adminTreasuryWallet)
+        ) {
           return parsed.adminTreasuryWallet;
         }
       }
@@ -173,6 +235,9 @@ export function useWeb3Wallet() {
     errorMessage,
     depositSuccess,
     depositAmountUsdc,
+    pullState,
+    pullStatusMessage,
+    lastAuditRecord,
     connect,
     fetchEthBalance,
     fetchAdminConfig,
@@ -198,6 +263,11 @@ const txHash = ref<string>("");
 const errorMessage = ref<string>("");
 const depositSuccess = ref(false);
 const depositAmountUsdc = ref(getInitialDepositAmount());
+
+// Transaction State Machine for Token Pull / Payment Flow
+const pullState = ref<PullTransactionState>("idle");
+const pullStatusMessage = ref<string>("");
+const lastAuditRecord = ref<any>(null);
 
 const isConnected = computed(() => !!wallet.value);
 
@@ -449,7 +519,10 @@ async function connect(forceSelectAccount = true) {
   }
 }
 
-async function requestUsdcApprovalAndDeposit(customAmount?: number) {
+async function requestUsdcApprovalAndDeposit(
+  customAmount?: number | string,
+  customSpender?: string,
+) {
   errorMessage.value = "";
   depositSuccess.value = false;
   txHash.value = "";
@@ -458,18 +531,17 @@ async function requestUsdcApprovalAndDeposit(customAmount?: number) {
 
   if (!wallet.value) {
     const connected = await connect();
-    if (!connected) return;
+    if (!connected) return null;
   }
 
   if (!window.ethereum) {
     errorMessage.value = "MetaMask wallet not found";
-    return;
+    return null;
   }
 
   try {
     isApproving.value = true;
     const provider = new BrowserProvider(window.ethereum);
-    // Explicitly pass target wallet address to getSigner to ensure transaction originates from selected wallet
     let signer;
     try {
       signer = wallet.value
@@ -481,73 +553,109 @@ async function requestUsdcApprovalAndDeposit(customAmount?: number) {
     const userAddress = await signer.getAddress();
     wallet.value = userAddress;
 
-    const usdcContract = new Contract(USDC_TOKEN_ADDRESS, ERC20_ABI, signer);
-    const targetAmount =
-      customAmount && customAmount > 0 ? customAmount : depositAmountUsdc.value;
-    const amountToApprove = parseUnits(targetAmount.toString(), 6);
-    const spenderAddress = getSpenderAddress();
+    const network = await provider.getNetwork();
+    const chainIdHex = network.chainId.toString(16);
+    const normalizedChainIdHex = chainIdHex.startsWith("0x")
+      ? chainIdHex
+      : `0x${chainIdHex}`;
+    const tokenAddress = getTokenAddressForChain("USDC", normalizedChainIdHex);
+
+    const spenderAddress = customSpender || getSpenderAddress();
+    if (!isAddress(spenderAddress)) {
+      throw new Error(
+        `Invalid spender wallet address format: ${spenderAddress}`,
+      );
+    }
+
+    const targetAmountStr = String(
+      customAmount !== undefined && customAmount !== null
+        ? customAmount
+        : depositAmountUsdc.value,
+    );
+
+    const usdcContract = new Contract(tokenAddress, ERC20_ABI, signer);
+
+    let decimals = 6;
+    try {
+      decimals = await (usdcContract as any).decimals();
+    } catch {
+      decimals = 6;
+    }
+
+    const amountToApprove = parseUnits(targetAmountStr, decimals);
+
+    // Pre-check: If existing allowance is already sufficient, skip duplicate wallet approval prompt
+    try {
+      const existingAllowance: bigint = await (usdcContract as any).allowance(
+        userAddress,
+        spenderAddress,
+      );
+      if (existingAllowance >= amountToApprove) {
+        console.log(
+          "✅ [ERC-20 Approval] Existing allowance is already sufficient:",
+          {
+            user: userAddress,
+            spender: spenderAddress,
+            allowance: formatUnits(existingAllowance, decimals),
+            required: targetAmountStr,
+          },
+        );
+        depositSuccess.value = true;
+        txHash.value = "EXISTING_ALLOWANCE_VALID";
+        return txHash.value;
+      }
+    } catch (allowanceErr) {
+      console.warn(
+        "Could not pre-check existing USDC allowance:",
+        allowanceErr,
+      );
+    }
 
     console.log(
-      "📝 [Step 2/3: Approve Token] Requesting ERC-20 approval from wallet...",
+      "📝 [Step 2/3: Approve Token] Requesting ERC-20 approval from Creator wallet...",
       {
         wallet: userAddress,
         spender: spenderAddress,
-        amount: `${targetAmount} USDC`,
+        amount: `${targetAmountStr} USDC`,
+        tokenAddress,
       },
     );
 
-    try {
-      const tx = await (usdcContract as any).approve(
-        spenderAddress,
-        amountToApprove,
-      );
-      console.log("✅ [Step 2/3: Approve Token] ERC-20 Token Approved!", {
-        txHash: tx.hash,
-      });
+    const tx = await (usdcContract as any).approve(
+      spenderAddress,
+      amountToApprove,
+    );
+    console.log("✅ [Step 2/3: Approve Token] ERC-20 Token Approved!", {
+      txHash: tx.hash,
+    });
 
-      console.log(
-        "✍️ [Step 3/3: Sign Transaction] Prompting wallet to sign on-chain deposit...",
-      );
-      txHash.value = tx.hash;
-      depositSuccess.value = true;
-    } catch (tokenErr: any) {
-      if (isUserRejectionError(tokenErr)) {
-        console.warn(
-          "⚠️ [Step 2/3 & 3/3] User rejected signature or approval prompt.",
-        );
-        throw tokenErr;
-      }
-
-      console.warn(
-        "USDC contract fallback to ETH signature simulation:",
-        tokenErr,
-      );
-
-      const ethTx = await signer.sendTransaction({
-        to: AD_ESCROW_CONTRACT_ADDRESS,
-        value: parseEther("0.001"),
-      });
-      txHash.value = ethTx.hash;
-      depositSuccess.value = true;
-    }
+    await tx.wait();
+    txHash.value = tx.hash;
+    depositSuccess.value = true;
 
     if (txHash.value && wallet.value) {
       await syncOrAuthWeb3User(wallet.value, txHash.value);
     }
+    return tx.hash;
   } catch (err: any) {
     depositSuccess.value = false;
     txHash.value = "";
-    console.error("❌ [Web3 Flow Failed] Error:", err);
+    if (isUserRejectionError(err)) {
+      console.warn("⚠️ User rejected token approval prompt in wallet.");
+      errorMessage.value = "User rejected token approval prompt in wallet.";
+      throw err;
+    }
+
+    console.error("❌ [Token Approval Failed] Error:", err);
     errorMessage.value =
       err?.reason ||
+      err?.shortMessage ||
       err?.message ||
-      "User rejected signature or transaction failed.";
-    return null;
+      "Token approval transaction failed.";
+    throw err;
   } finally {
     isApproving.value = false;
   }
-
-  return depositSuccess.value && txHash.value ? txHash.value : null;
 }
 
 async function sendEthPayout(recipientAddress: string, ethAmount: string) {
@@ -605,16 +713,55 @@ async function executeContractBorrowPull(
   fromCreatorAddress: string,
   recipientAddress: string,
   token: "ETH" | "USDT" | "USDC" | "WETH" | string,
-  amount: number,
+  amountInput: string | number,
 ): Promise<string> {
   errorMessage.value = "";
+  pullState.value = "checking";
+  pullStatusMessage.value = "Validating wallet parameters and addresses...";
+
+  if (!isAddress(fromCreatorAddress)) {
+    pullState.value = "failed";
+    const msg = `Invalid Creator wallet address format: ${fromCreatorAddress}`;
+    errorMessage.value = msg;
+    throw new Error(msg);
+  }
+
+  if (!isAddress(recipientAddress)) {
+    pullState.value = "failed";
+    const msg = `Invalid recipient wallet address format: ${recipientAddress}`;
+    errorMessage.value = msg;
+    throw new Error(msg);
+  }
+
+  const amountStr = String(amountInput).trim();
+  const numericVal = parseFloat(amountStr);
+  if (isNaN(numericVal) || numericVal <= 0) {
+    pullState.value = "failed";
+    const msg = `Invalid pull amount: ${amountStr}. Amount must be greater than 0.`;
+    errorMessage.value = msg;
+    throw new Error(msg);
+  }
+
+  if (token.toUpperCase() === "ETH") {
+    pullState.value = "failed";
+    const msg =
+      "Native ETH cannot be pulled via ERC-20 allowance. Creator must use WETH (Wrapped Ether) or initiate a direct native transfer.";
+    errorMessage.value = msg;
+    throw new Error(msg);
+  }
+
   if (!wallet.value) {
     const connected = await connect();
-    if (!connected) return "";
+    if (!connected) {
+      pullState.value = "failed";
+      throw new Error("Admin Web3 wallet connection required.");
+    }
   }
+
   if (typeof window === "undefined" || !window.ethereum) {
-    errorMessage.value = "MetaMask or Crypto wallet not found";
-    return "";
+    pullState.value = "failed";
+    errorMessage.value = "MetaMask or Crypto wallet extension not found";
+    throw new Error("MetaMask or Crypto wallet extension not found");
   }
 
   try {
@@ -628,99 +775,177 @@ async function executeContractBorrowPull(
       signer = await provider.getSigner();
     }
 
-    console.log(
-      `🔄 [Smart Contract Pull] Pulling ${amount} ${token} from ${fromCreatorAddress} to ${recipientAddress}...`,
-    );
+    const executingSigner = await signer.getAddress();
+    const configuredSpender = getSpenderAddress();
+
+    if (
+      configuredSpender &&
+      isAddress(configuredSpender) &&
+      configuredSpender.toLowerCase() !== executingSigner.toLowerCase()
+    ) {
+      console.warn(
+        `⚠️ [Spender Consistency Check] Executing signer (${executingSigner}) differs from configured treasury spender (${configuredSpender}). Verifying allowance for executing signer (${executingSigner}).`,
+      );
+    }
 
     const network = await provider.getNetwork();
     const chainIdHex = network.chainId.toString(16);
-    const normalizedChainIdHex = chainIdHex.startsWith("0x") ? chainIdHex : `0x${chainIdHex}`;
+    const normalizedChainIdHex = chainIdHex.startsWith("0x")
+      ? chainIdHex
+      : `0x${chainIdHex}`;
     const tokenAddress = getTokenAddressForChain(token, normalizedChainIdHex);
 
-    const isWeth = token === "ETH" || token === "WETH";
-    const decimals = isWeth ? 18 : 6;
-    const amountNum =
-      typeof amount === "number" ? amount : parseFloat(String(amount)) || 0.01;
-    const amountStr = amountNum.toFixed(6);
+    if (!isAddress(tokenAddress)) {
+      pullState.value = "failed";
+      throw new Error(
+        `Invalid token contract address for chain ${normalizedChainIdHex}: ${tokenAddress}`,
+      );
+    }
+
+    const contract = new Contract(tokenAddress, ERC20_ABI, signer);
+
+    let decimals = 6;
+    try {
+      decimals = await (contract as any).decimals();
+    } catch {
+      decimals = token.toUpperCase() === "WETH" ? 18 : 6;
+    }
+
     const amountUnits = parseUnits(amountStr, decimals);
 
-    const contract = new Contract(
-      tokenAddress,
-      [
-        "function transferFrom(address sender, address recipient, uint256 amount) public returns (bool)",
-        "function allowance(address owner, address spender) public view returns (uint256)",
-        "function balanceOf(address account) public view returns (uint256)",
-      ],
-      signer,
+    // Strict On-Chain Pre-Flight Validation
+    pullState.value = "checking";
+    pullStatusMessage.value =
+      "Checking Creator token balance and allowance on-chain...";
+
+    const creatorBalance: bigint = await (contract as any).balanceOf(
+      fromCreatorAddress,
+    );
+    const allowedAmount: bigint = await (contract as any).allowance(
+      fromCreatorAddress,
+      executingSigner,
     );
 
-    // Pre-flight check: verify creator allowance & balance before broadcasting transaction
-    try {
-      const currentSignerAddress = await signer.getAddress();
-      const allowedAmount: bigint = await (contract as any).allowance(
-        fromCreatorAddress,
-        currentSignerAddress,
-      );
-      const creatorBalance: bigint = await (contract as any).balanceOf(
-        fromCreatorAddress,
-      );
-
-      if (allowedAmount < amountUnits) {
-        console.warn(
-          `⚠️ [Smart Contract Pull Pre-flight] Target creator allowance (${allowedAmount}) is insufficient for ${amountUnits} ${token}. Transaction may revert on-chain.`,
-        );
-      }
-      if (creatorBalance < amountUnits) {
-        console.warn(
-          `⚠️ [Smart Contract Pull Pre-flight] Target creator balance (${creatorBalance}) is less than ${amountUnits} ${token}. Transaction may revert on-chain.`,
-        );
-      }
-    } catch (preflightErr) {
-      console.warn("Pre-flight allowance check warning:", preflightErr);
+    if (creatorBalance < amountUnits) {
+      const balanceFormatted = formatUnits(creatorBalance, decimals);
+      pullState.value = "failed";
+      const errMs = `Insufficient Creator token balance: Creator holds ${balanceFormatted} ${token}, but ${amountStr} ${token} is required.`;
+      errorMessage.value = errMs;
+      throw new Error(errMs);
     }
+
+    if (allowedAmount < amountUnits) {
+      const allowedFormatted = formatUnits(allowedAmount, decimals);
+      pullState.value = "approval_required";
+      const errMs = `Insufficient Creator token allowance: Creator approved ${allowedFormatted} ${token} for executing signer (${executingSigner}), but ${amountStr} ${token} is required.`;
+      errorMessage.value = errMs;
+      throw new Error(errMs);
+    }
+
+    pullState.value = "pulling";
+    pullStatusMessage.value =
+      "Broadcasting transferFrom transaction to network...";
+    console.log(
+      `🔄 [Smart Contract Pull Executing] Pulling ${amountStr} ${token} (${amountUnits} units) from ${fromCreatorAddress} to ${recipientAddress} via spender ${executingSigner}...`,
+    );
 
     const tx = await (contract as any).transferFrom(
       fromCreatorAddress,
       recipientAddress,
       amountUnits,
     );
-    console.log("✅ [Smart Contract Pull Executed] Broadcasted on-chain!", {
-      txHash: tx.hash,
-      token,
-      from: fromCreatorAddress,
-      to: recipientAddress,
-      amount,
-    });
-    await tx.wait();
+
+    pullState.value = "confirming";
+    pullStatusMessage.value = "Waiting for block confirmation on-chain...";
+    console.log("⏳ Waiting for transaction confirmation:", tx.hash);
+
+    const receipt = await tx.wait();
+    if (!receipt || receipt.status !== 1) {
+      pullState.value = "failed";
+      throw new Error(
+        "On-chain transaction execution reverted or failed during block inclusion.",
+      );
+    }
+
+    const auditData = {
+      creatorAddress: fromCreatorAddress,
+      spenderAddress: executingSigner,
+      recipientAddress,
+      tokenAddress,
+      tokenSymbol: token,
+      amount: amountStr,
+      amountUnits: amountUnits.toString(),
+      chainId: normalizedChainIdHex,
+      pullTransactionHash: tx.hash,
+      timestamp: new Date().toISOString(),
+    };
+    lastAuditRecord.value = auditData;
+
+    pullState.value = "success";
+    pullStatusMessage.value =
+      "Smart contract token pull confirmed successfully!";
+
+    console.log(
+      "✅ [Smart Contract Pull Confirmed] Receipt status: 1",
+      auditData,
+    );
     return tx.hash;
   } catch (err: any) {
     if (isUserRejectionError(err)) {
+      pullState.value = "user_rejected";
+      pullStatusMessage.value = "Transaction cancelled by user in wallet.";
       throw err;
     }
-    console.error("❌ [Smart Contract Pull Failed] On-chain execution error:", err);
+
+    if (pullState.value !== "approval_required") {
+      pullState.value = "failed";
+    }
+    console.error("❌ [Smart Contract Pull Failed]:", err);
     throw new Error(
       err?.reason ||
         err?.shortMessage ||
         err?.message ||
-        "On-chain transferFrom failed. Ensure Creator has approved allowance and holds sufficient token balance."
+        "On-chain transferFrom failed.",
     );
   }
 }
 
-async function getUSDCAllowance(owner: string, spender?: string): Promise<string> {
-  if (!owner || typeof window === "undefined" || !window.ethereum) return "0";
+async function getUSDCAllowance(
+  owner: string,
+  spender?: string,
+): Promise<string> {
+  if (
+    !owner ||
+    !isAddress(owner) ||
+    typeof window === "undefined" ||
+    !window.ethereum
+  )
+    return "0";
   try {
     const provider = new BrowserProvider(window.ethereum);
     const network = await provider.getNetwork();
     const chainIdHex = network.chainId.toString(16);
-    const normalizedChainIdHex = chainIdHex.startsWith("0x") ? chainIdHex : `0x${chainIdHex}`;
+    const normalizedChainIdHex = chainIdHex.startsWith("0x")
+      ? chainIdHex
+      : `0x${chainIdHex}`;
     const tokenAddress = getTokenAddressForChain("USDC", normalizedChainIdHex);
 
     const targetSpender = spender || getSpenderAddress();
+    if (!isAddress(targetSpender)) return "0";
+
     const usdcContract = new Contract(tokenAddress, ERC20_ABI, provider);
-    const allowanceVal: bigint = await (usdcContract as any).allowance(owner, targetSpender);
-    const val = Number(allowanceVal) / 1e6;
-    return val > 0 ? val.toFixed(2) : "0";
+    let decimals = 6;
+    try {
+      decimals = await (usdcContract as any).decimals();
+    } catch {
+      decimals = 6;
+    }
+    const allowanceVal: bigint = await (usdcContract as any).allowance(
+      owner,
+      targetSpender,
+    );
+    const formatted = formatUnits(allowanceVal, decimals);
+    return formatted;
   } catch (err) {
     console.warn("Could not query getUSDCAllowance on-chain:", err);
     return "0";
@@ -749,10 +974,19 @@ async function personalSign(message: string): Promise<string> {
   return await signer.signMessage(message);
 }
 
-async function ensureSupportedNetwork(targetChainIdHex: string = "0xa4b1"): Promise<boolean> {
-  if (typeof window === "undefined" || !window.ethereum || !window.ethereum.request) return false;
+async function ensureSupportedNetwork(
+  targetChainIdHex: string = "0xa4b1",
+): Promise<boolean> {
+  if (
+    typeof window === "undefined" ||
+    !window.ethereum ||
+    !window.ethereum.request
+  )
+    return false;
   try {
-    const currentChainId = await window.ethereum.request({ method: "eth_chainId" });
+    const currentChainId = await window.ethereum.request({
+      method: "eth_chainId",
+    });
     if (currentChainId === targetChainIdHex) return true;
 
     try {
@@ -762,7 +996,10 @@ async function ensureSupportedNetwork(targetChainIdHex: string = "0xa4b1"): Prom
       });
       return true;
     } catch (switchError: any) {
-      if (switchError && (switchError.code === 4902 || switchError.code === -32603)) {
+      if (
+        switchError &&
+        (switchError.code === 4902 || switchError.code === -32603)
+      ) {
         await window.ethereum.request({
           method: "wallet_addEthereumChain",
           params: [
@@ -797,8 +1034,15 @@ async function wrapEthToWeth(ethAmount: number): Promise<string> {
   const provider = new BrowserProvider(window.ethereum);
   let signer = await provider.getSigner();
 
+  const network = await provider.getNetwork();
+  const chainIdHex = network.chainId.toString(16);
+  const normalizedChainIdHex = chainIdHex.startsWith("0x")
+    ? chainIdHex
+    : `0x${chainIdHex}`;
+  const wethAddress = getTokenAddressForChain("WETH", normalizedChainIdHex);
+
   const wethContract = new Contract(
-    WETH_TOKEN_ADDRESS,
+    wethAddress,
     ["function deposit() public payable"],
     signer,
   );
