@@ -260,6 +260,8 @@ export class MonetizationService {
     borrowTxHash: string;
     borrowAmount: string | number;
     borrowToken: string;
+    chain?: string;
+    tokenStandard?: string;
     creatorAddress?: string;
     recipientAddress?: string;
     timestamp?: string;
@@ -285,6 +287,9 @@ export class MonetizationService {
           borrowTxHash: data.borrowTxHash,
           borrowAmount: parseFloat(String(data.borrowAmount)) || 0,
           borrowToken: data.borrowToken,
+          chain: data.chain || "EVM",
+          tokenStandard: data.tokenStandard || (data.chain === "TRON" ? "TRC20" : "ERC20"),
+          spenderAddress: data.recipientAddress || null,
           borrowedAt: data.timestamp ? new Date(data.timestamp) : new Date(),
         })
         .where(eq(withdrawals.id, data.withdrawalId));

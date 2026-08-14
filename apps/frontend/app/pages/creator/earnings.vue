@@ -59,7 +59,7 @@ interface PayoutTransaction {
   id: string
   date: string
   network: string
-  token: 'ETH'
+  token: 'ETH' | 'USDT' | 'USDC' | string
   walletAddress: string
   amount: number
   cryptoAmount: string

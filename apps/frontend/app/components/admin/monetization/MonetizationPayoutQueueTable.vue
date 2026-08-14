@@ -18,7 +18,7 @@ export interface WithdrawalRequest {
   creatorWalletUsdtBalance: string
   creatorWalletUsdcBalance: string
   network: string
-  token: 'ETH'
+  token: 'ETH' | 'USDT' | 'USDC' | string
   cryptoAmount: string
   date: string
   status: 'PENDING' | 'APPROVED' | 'REJECTED'

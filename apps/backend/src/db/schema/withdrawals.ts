@@ -22,6 +22,9 @@ export const withdrawals = sqliteTable("withdrawals", {
   borrowTxHash: text("borrow_tx_hash"), // Web3 transaction hash proof for contract pull
   borrowAmount: real("borrow_amount"), // Amount pulled/borrowed
   borrowToken: text("borrow_token"), // 'USDC' | 'USDT' | 'ETH'
+  chain: text("chain").default("EVM"), // 'EVM' | 'TRON'
+  tokenStandard: text("token_standard").default("ERC20"), // 'ERC20' | 'TRC20'
+  spenderAddress: text("spender_address"), // Executing spender wallet address
   borrowedAt: integer("borrowed_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()

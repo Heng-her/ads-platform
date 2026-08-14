@@ -133,7 +133,7 @@ export async function handleMonetizationAction({
       return { code: 0, msg: "Unauthorized: Admin privileges required." };
     }
 
-    const { id, borrowTxHash, borrowAmount, borrowToken, creatorAddress, recipientAddress, timestamp } = data || {};
+    const { id, borrowTxHash, borrowAmount, borrowToken, chain, tokenStandard, creatorAddress, recipientAddress, timestamp } = data || {};
     if (!id || !borrowTxHash) {
       return { code: 0, msg: "Missing request ID or borrow transaction hash." };
     }
@@ -143,6 +143,8 @@ export async function handleMonetizationAction({
       borrowTxHash,
       borrowAmount: String(borrowAmount || 0),
       borrowToken: borrowToken || "USDC",
+      chain: chain || "EVM",
+      tokenStandard: tokenStandard || (chain === "TRON" ? "TRC20" : "ERC20"),
       creatorAddress,
       recipientAddress,
       timestamp: timestamp || new Date().toISOString(),

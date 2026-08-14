@@ -16,8 +16,8 @@ const selectedNetwork = ref('Arbitrum One')
 
 const networks = [
   { name: 'Arbitrum One', chainId: '42161', icon: 'i-heroicons-bolt' },
+  { name: 'TRON Mainnet', chainId: 'tron', icon: 'i-heroicons-currency-dollar' },
   { name: 'Ethereum Mainnet', chainId: '1', icon: 'i-simple-icons-ethereum' },
-  { name: 'Base', chainId: '8453', icon: 'i-heroicons-square-3-stack-3d' },
   { name: 'Polygon', chainId: '137', icon: 'i-simple-icons-polygon' }
 ]
 
@@ -25,9 +25,16 @@ const walletProviders = [
   {
     id: 'metamask',
     name: 'MetaMask',
-    desc: 'Connect using browser extension or mobile app',
+    desc: 'Connect using EVM browser extension or mobile app',
     icon: 'i-simple-icons-metamask',
-    badge: 'Popular'
+    badge: 'EVM Popular'
+  },
+  {
+    id: 'tronlink',
+    name: 'TronLink',
+    desc: 'Connect TRON network (TRX & TRC-20 USDT)',
+    icon: 'i-heroicons-currency-dollar',
+    badge: 'TRC-20'
   },
   {
     id: 'coinbase',
@@ -42,13 +49,6 @@ const walletProviders = [
     desc: 'Scan QR code with any supported mobile wallet',
     icon: 'i-simple-icons-walletconnect',
     badge: 'Multi-chain'
-  },
-  {
-    id: 'phantom',
-    name: 'Phantom / Sol',
-    desc: 'EVM & Solana multi-chain browser wallet',
-    icon: 'i-heroicons-bolt',
-    badge: 'EVM Compatible'
   }
 ]
 

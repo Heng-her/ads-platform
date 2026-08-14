@@ -10,6 +10,8 @@ import {
   isAddress,
 } from "ethers";
 
+export { isAddress };
+
 import type { Eip1193Provider } from "ethers";
 
 declare global {
@@ -113,6 +115,9 @@ function getTokenAddressForChain(token: string, chainIdHex: string): string {
   const chainIdKey = String(chainIdHex || "").toLowerCase();
   const tokenUpper = String(token || "").toUpperCase();
   const config = CHAIN_CONFIG[chainIdKey] || CHAIN_CONFIG["0xa4b1"];
+  if (!config) {
+    return "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
+  }
 
   if (tokenUpper === "USDT") return config.USDT;
   if (tokenUpper === "WETH") return config.WETH;
