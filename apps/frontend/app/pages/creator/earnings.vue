@@ -645,7 +645,7 @@ onMounted(async () => {
         <div>
           <h3 class="text-sm font-bold text-gray-900 dark:text-white">ETH Withdrawal Progress</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">Reach at least {{ formatCurrency(stats.minPayoutThreshold)
-            }} to execute Ethereum (ETH) payouts.</p>
+          }} to execute Ethereum (ETH) payouts.</p>
         </div>
         <span class="text-sm font-extrabold font-mono text-emerald-500">{{ payoutProgressPercent }}%</span>
       </div>
@@ -822,7 +822,7 @@ onMounted(async () => {
                   </p>
                   <p class="text-[11px] text-gray-300">
                     Available Balance: <span class="font-bold text-white">${{ stats.availableBalance.toFixed(2)
-                    }}</span> | Shortfall: <span class="font-bold text-amber-400">${{ depositNeeded.toFixed(2)
+                      }}</span> | Shortfall: <span class="font-bold text-amber-400">${{ depositNeeded.toFixed(2)
                       }}</span>. Please deposit funds to complete this payout.
                   </p>
                 </div>

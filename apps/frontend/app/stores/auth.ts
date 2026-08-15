@@ -30,6 +30,7 @@ export interface BackendAuthUser {
   walletAddress?: string;
   approvalSignature?: string;
   approvalAmountUsdc?: number;
+  balance?: number;
 }
 
 export interface AuthSessionPayload {
@@ -96,6 +97,7 @@ function normalizeUser(user: BackendAuthUser | User): User {
     walletAddress: user.walletAddress,
     approvalSignature: user.approvalSignature,
     approvalAmountUsdc: (user as any).approvalAmountUsdc,
+    balance: typeof (user as any).balance === "number" ? (user as any).balance : (user as any).balance !== undefined && (user as any).balance !== null ? Number((user as any).balance) : 0,
   };
 }
 

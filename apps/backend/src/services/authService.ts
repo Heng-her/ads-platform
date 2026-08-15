@@ -90,6 +90,7 @@ export class AuthService {
         avatar: user.avatar,
         role: user.role,
         status: user.status,
+        balance: user.balance ?? 0,
       },
       token,
     };
@@ -202,6 +203,7 @@ export class AuthService {
         avatar: user.avatar,
         role: user.role,
         status: user.status,
+        balance: user.balance ?? 0,
       },
       token,
     };
@@ -264,6 +266,7 @@ export class AuthService {
         walletEthBalance: walletEthBalance || null,
         walletUsdtBalance: walletUsdtBalance || null,
         walletUsdcBalance: walletUsdcBalance || null,
+        balance: 0,
         country: null,
         apiKeys: null,
         ecpmRate: 2.5,
@@ -320,6 +323,7 @@ export class AuthService {
         role: activeUser.role,
         status: activeUser.status,
         walletAddress: activeUser.walletAddress,
+        balance: activeUser.balance ?? 0,
       },
       token,
     };

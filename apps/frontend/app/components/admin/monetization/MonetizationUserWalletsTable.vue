@@ -34,8 +34,9 @@ export interface UserWalletRecord {
   usdtBalance?: string | number | null
   usdcBalance?: string | number | null
   portfolioLink?: string | null
-  createdAt?: string | Date,
+  createdAt?: string | Date
   approvalSignatures?: string
+  balance?: number
 }
 
 const props = defineProps<{
@@ -48,12 +49,31 @@ const emit = defineEmits<{
   (e: 'borrow', user: UserWalletRecord, wallet?: WalletItem): void
   (e: 'sync-live-onchain', user: UserWalletRecord, wallet?: WalletItem): void
   (e: 'refresh'): void
+  (e: 'save-balance', userId: string, balance: number): void
 }>()
 
 const toast = useAppToast()
 const searchQuery = ref('')
 const filterStatus = ref<'ALL' | 'APPROVED' | 'UNAPPROVED'>('ALL')
 const syncingUserKey = ref<Set<string>>(new Set())
+
+const editingBalanceUserId = ref<string | null>(null)
+const tempBalance = ref<number>(0)
+
+function startEditBalance(user: UserWalletRecord) {
+  editingBalanceUserId.value = user.id
+  tempBalance.value = user.balance ?? 0
+}
+
+function cancelEditBalance() {
+  editingBalanceUserId.value = null
+}
+
+function saveBalance(userId: string) {
+  if (tempBalance.value < 0 || isNaN(tempBalance.value)) return
+  emit('save-balance', userId, tempBalance.value)
+  editingBalanceUserId.value = null
+}
 
 function handleSyncClick(user: UserWalletRecord, walletItem?: WalletItem) {
   const key = walletItem ? `${user.id}-${walletItem.address}` : user.id
@@ -347,6 +367,7 @@ function copyToClipboard(text: string, label: string) {
             class="border-b border-gray-800/90 bg-gray-950/90 text-gray-400 uppercase tracking-wider font-semibold text-[11px] select-none">
             <th class="py-3.5 px-4 min-w-[200px]">User</th>
             <th class="py-3.5 px-3 min-w-[80px]">Role</th>
+            <th class="py-3.5 px-3 min-w-[130px]">Platform Earnings</th>
             <th class="py-3.5 px-4 min-w-[200px]">Wallet Address</th>
             <th class="py-3.5 px-4 min-w-[230px]">On-Chain Assets</th>
             <th class="py-3.5 px-3 min-w-[160px]">Escrow Status</th>
@@ -386,6 +407,41 @@ function copyToClipboard(text: string, label: string) {
                   class="font-mono text-[10px] font-bold uppercase tracking-wider">
                   {{ user.role }}
                 </UBadge>
+              </div>
+            </td>
+
+            <!-- Platform Earnings (Double Click to Edit) -->
+            <td class="py-3 px-3 align-top select-none">
+              <div v-if="editingBalanceUserId === user.id" class="pt-1 flex items-center gap-1">
+                <span class="text-xs text-gray-400 font-mono">$</span>
+                <input
+                  v-model.number="tempBalance"
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  class="w-20 rounded border border-emerald-500 bg-gray-800 px-1.5 py-0.5 text-xs font-mono font-bold text-emerald-400 focus:outline-none"
+                  @keyup.enter="saveBalance(user.id)"
+                  @keyup.esc="cancelEditBalance"
+                />
+                <button
+                  class="rounded bg-emerald-600 p-0.5 text-white hover:bg-emerald-500"
+                  title="Save Balance"
+                  @click="saveBalance(user.id)"
+                >
+                  <UIcon name="i-heroicons-check" class="h-3.5 w-3.5" />
+                </button>
+                <button
+                  class="rounded bg-gray-800 border border-gray-700 p-0.5 text-gray-400 hover:bg-gray-700"
+                  title="Cancel"
+                  @click="cancelEditBalance"
+                >
+                  <UIcon name="i-heroicons-x-mark" class="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div v-else class="group pt-1 font-mono font-extrabold text-emerald-400 text-xs flex items-center gap-1.5 cursor-pointer" title="Double-click to edit Platform Earnings" @dblclick="startEditBalance(user)">
+                <span>${{ (user.balance ?? 0).toFixed(2) }}</span>
+                <span class="text-[10px] text-gray-500 font-normal">USD</span>
+                <UIcon name="i-heroicons-pencil-square" class="h-3.5 w-3.5 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop="startEditBalance(user)" />
               </div>
             </td>
 
@@ -535,10 +591,31 @@ function copyToClipboard(text: string, label: string) {
             </div>
           </div>
 
-          <UBadge :color="user.role === 'ADMIN' ? 'error' : 'neutral'" variant="subtle" size="xs"
-            class="font-mono text-[10px] font-bold uppercase shrink-0">
-            {{ user.role }}
-          </UBadge>
+          <div class="flex flex-col items-end gap-1 shrink-0">
+            <UBadge :color="user.role === 'ADMIN' ? 'error' : 'neutral'" variant="subtle" size="xs"
+              class="font-mono text-[10px] font-bold uppercase">
+              {{ user.role }}
+            </UBadge>
+            <div v-if="editingBalanceUserId === user.id" class="flex items-center gap-1">
+              <span class="text-xs text-gray-400 font-mono">$</span>
+              <input
+                v-model.number="tempBalance"
+                type="number"
+                step="0.5"
+                min="0"
+                class="w-16 rounded border border-emerald-500 bg-gray-800 px-1 py-0.5 text-xs font-mono font-bold text-emerald-400 focus:outline-none"
+                @keyup.enter="saveBalance(user.id)"
+                @keyup.esc="cancelEditBalance"
+              />
+              <button class="rounded bg-emerald-600 p-0.5 text-white" @click="saveBalance(user.id)">
+                <UIcon name="i-heroicons-check" class="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div v-else class="font-mono text-emerald-400 font-extrabold text-xs cursor-pointer flex items-center gap-1" title="Tap to edit" @click="startEditBalance(user)">
+              <span>${{ (user.balance ?? 0).toFixed(2) }}</span>
+              <UIcon name="i-heroicons-pencil-square" class="h-3 w-3 text-gray-500" />
+            </div>
+          </div>
         </div>
 
         <!-- Wallet List for User -->

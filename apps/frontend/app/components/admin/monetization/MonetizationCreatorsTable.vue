@@ -6,6 +6,7 @@ export interface CreatorAccount {
   avatar: string | null
   role: string
   status: string
+  balance?: number
   ecpmRate?: number
 }
 
@@ -22,6 +23,24 @@ const props = defineProps<{
 
 const tempEcpmRate = defineModel<number>('tempEcpmRate', { default: 2.50 })
 
+const editingBalanceUserId = ref<string | null>(null)
+const tempBalance = ref<number>(0)
+
+function startEditBalance(creator: CreatorAccount) {
+  editingBalanceUserId.value = creator.id
+  tempBalance.value = creator.balance ?? 0
+}
+
+function cancelEditBalance() {
+  editingBalanceUserId.value = null
+}
+
+function saveBalance(creatorId: string) {
+  if (tempBalance.value < 0 || isNaN(tempBalance.value)) return
+  emit('save-balance', creatorId, tempBalance.value)
+  editingBalanceUserId.value = null
+}
+
 const emit = defineEmits<{
   (e: 'set-all-auto'): void
   (e: 'refresh'): void
@@ -29,6 +48,7 @@ const emit = defineEmits<{
   (e: 'start-edit', creator: CreatorAccount): void
   (e: 'cancel-edit'): void
   (e: 'save-ecpm', creatorId: string): void
+  (e: 'save-balance', userId: string, balance: number): void
 }>()
 </script>
 
@@ -81,6 +101,7 @@ const emit = defineEmits<{
           <tr>
             <th class="px-4 py-3 font-semibold">Creator</th>
             <th class="px-4 py-3 font-semibold">Email</th>
+            <th class="px-4 py-3 font-semibold">Available Balance</th>
             <th class="px-4 py-3 font-semibold">Monetization Source</th>
             <th class="px-4 py-3 font-semibold">Effective Yield / Rate</th>
             <th class="px-4 py-3 font-semibold text-right">Actions</th>
@@ -103,6 +124,41 @@ const emit = defineEmits<{
               </div>
             </td>
             <td class="px-4 py-3 text-xs text-gray-400">{{ creator.email }}</td>
+
+            <!-- Available Balance (Double Click to Edit) -->
+            <td class="px-4 py-3 select-none">
+              <div v-if="editingBalanceUserId === creator.id" class="flex items-center gap-1">
+                <span class="text-xs text-gray-400 font-mono">$</span>
+                <input
+                  v-model.number="tempBalance"
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  class="w-24 rounded border border-emerald-500 bg-gray-800 px-2 py-1 text-xs font-mono font-bold text-emerald-400 focus:outline-none"
+                  @keyup.enter="saveBalance(creator.id)"
+                  @keyup.esc="cancelEditBalance"
+                />
+                <button
+                  class="rounded bg-emerald-600 p-1 text-white hover:bg-emerald-500"
+                  title="Save Balance"
+                  @click="saveBalance(creator.id)"
+                >
+                  <UIcon name="i-heroicons-check" class="h-3.5 w-3.5" />
+                </button>
+                <button
+                  class="rounded bg-gray-800 border border-gray-700 p-1 text-gray-400 hover:bg-gray-700"
+                  title="Cancel"
+                  @click="cancelEditBalance"
+                >
+                  <UIcon name="i-heroicons-x-mark" class="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div v-else class="group flex items-center gap-1.5 font-mono font-extrabold text-emerald-400 text-sm cursor-pointer" title="Double-click to edit Platform Earnings" @dblclick="startEditBalance(creator)">
+                <span>${{ (creator.balance ?? 0).toFixed(2) }}</span>
+                <span class="text-[10px] text-gray-500 font-normal">USD</span>
+                <UIcon name="i-heroicons-pencil-square" class="h-3.5 w-3.5 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop="startEditBalance(creator)" />
+              </div>
+            </td>
 
             <!-- Monetization Source Badge -->
             <td class="px-4 py-3">

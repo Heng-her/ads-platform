@@ -39,6 +39,7 @@ export class UserService {
         walletEthBalance: users.walletEthBalance,
         walletUsdtBalance: users.walletUsdtBalance,
         walletUsdcBalance: users.walletUsdcBalance,
+        balance: users.balance,
         country: users.country,
         apiKeys: users.apiKeys,
         ecpmRate: users.ecpmRate,
@@ -98,6 +99,7 @@ export class UserService {
         walletEthBalance: users.walletEthBalance,
         walletUsdtBalance: users.walletUsdtBalance,
         walletUsdcBalance: users.walletUsdcBalance,
+        balance: users.balance,
         country: users.country,
         apiKeys: users.apiKeys,
         ecpmRate: users.ecpmRate,
@@ -143,6 +145,14 @@ export class UserService {
     return this.getUserById(id);
   }
 
+  async updateUserBalance(id: string, balance: number) {
+    await this.db
+      .update(users)
+      .set({ balance, updatedAt: new Date() })
+      .where(eq(users.id, id));
+    return this.getUserById(id);
+  }
+
   async updateUser(
     id: string,
     data: {
@@ -155,6 +165,7 @@ export class UserService {
       country?: string | null;
       apiKeys?: Record<string, string> | null;
       ecpmRate?: number;
+      balance?: number;
     },
   ) {
     await this.db

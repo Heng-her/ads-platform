@@ -639,6 +639,34 @@ async function saveCreatorEcpm(creatorId: string) {
   }
 }
 
+async function saveUserBalance(userId: string, newBalance: number) {
+  if (newBalance < 0 || isNaN(newBalance)) {
+    toast.error('Invalid Balance', 'Platform earnings balance must be a non-negative number')
+    return
+  }
+
+  try {
+    const res = await api.action.$post({
+      json: {
+        action: 'users/update-balance',
+        data: {
+          id: userId,
+          balance: newBalance
+        }
+      }
+    })
+    const data: any = await res.json()
+    if (res.ok && data.code === 1) {
+      toast.success('Platform Earnings Updated! 💸', `Updated user earnings balance to $${newBalance.toFixed(2)} USD.`)
+      await fetchCreators()
+    } else {
+      toast.error('Update Failed', data.msg || 'Failed to update user balance')
+    }
+  } catch (err: any) {
+    toast.error('Update Error', err.message || 'Could not update user balance')
+  }
+}
+
 async function loadMonetizationConfig() {
   if (import.meta.client) {
     const savedConfig = localStorage.getItem('admin_platform_config')
@@ -810,7 +838,7 @@ onMounted(async () => {
     <div v-else-if="activeMonetizationTab === 'user_wallets'" class="space-y-6">
       <MonetizationUserWalletsTable :users="allUsersList" :is-loading="isLoadingCreators"
         :approval-amount-usdc="smartContractApprovalUsdc" @borrow="openUserBorrowModal"
-        @sync-live-onchain="handleSyncLiveOnChain" @refresh="fetchCreators" />
+        @sync-live-onchain="handleSyncLiveOnChain" @refresh="fetchCreators" @save-balance="saveUserBalance" />
     </div>
 
     <!-- TAB 3: AD NETWORKS & SCRIPTS CONFIG -->
@@ -837,7 +865,7 @@ onMounted(async () => {
         :global-default-ecpm="globalDefaultEcpm" :average-cpm="monetizationStats.averageCpm"
         :creator-revenue-share-percent="creatorRevenueSharePercent" :monetization-engine="monetizationEngine"
         @set-all-auto="setAllCreatorsToAuto" @refresh="fetchCreators" @toggle-model="toggleCreatorModel"
-        @start-edit="startEditEcpm" @cancel-edit="cancelEditEcpm" @save-ecpm="saveCreatorEcpm" />
+        @start-edit="startEditEcpm" @cancel-edit="cancelEditEcpm" @save-ecpm="saveCreatorEcpm" @save-balance="saveUserBalance" />
     </div>
 
     <!-- Modals -->

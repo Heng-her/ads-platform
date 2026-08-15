@@ -202,6 +202,33 @@ export async function handleUserAction(
       return sendSuccess(c, updated, "Creator eCPM rate updated successfully");
     }
 
+    case "users/update-balance": {
+      const currentUser = await authenticate(c);
+      if (currentUser.role !== "ADMIN")
+        return sendError(c, "Forbidden", null, 403);
+      const userId = payloadData?.id;
+      const balance = Number(payloadData?.balance);
+      if (!userId) return sendError(c, "User ID is required");
+      if (isNaN(balance) || balance < 0)
+        return sendError(c, "Valid non-negative balance amount is required");
+
+      const userService = new UserService(db);
+      const existingUser = await userService.getUserById(userId);
+      if (!existingUser) return sendError(c, "User not found", null, 404);
+
+      const updated = await userService.updateUserBalance(userId, balance);
+      await auditLogService.createLog(
+        "USER_UPDATE_BALANCE",
+        currentUser.id,
+        getClientIp(c),
+        JSON.stringify({
+          targetUserId: userId,
+          newBalance: balance,
+        }),
+      );
+      return sendSuccess(c, updated, "Platform earnings balance updated successfully");
+    }
+
     case "users/delete": {
       const currentUser = await authenticate(c);
       if (currentUser.role !== "ADMIN") {

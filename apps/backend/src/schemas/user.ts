@@ -19,6 +19,7 @@ export const updateUserSchema = z.object({
   walletEthBalance: z.string().nullable().optional(),
   walletUsdtBalance: z.string().nullable().optional(),
   walletUsdcBalance: z.string().nullable().optional(),
+  balance: z.number().min(0).optional(),
   country: z.string().nullable().optional(),
   apiKeys: z.record(z.string(), z.string()).nullable().optional(),
 });
