@@ -419,22 +419,22 @@ function copyToClipboard(text: string, label: string) {
                   <div v-if="wItem.address.startsWith('T')" class="space-y-0.5">
                     <div class="flex items-center gap-1.5 font-bold text-rose-400 text-xs">
                       <span class="text-[10px] text-gray-500 font-normal uppercase">TRX:</span>
-                      <span>{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ?? user.ethBalance, 'TRX') }}</span>
+                      <span>{{ formatTokenBalance(wItem.ethBalance, 'TRX') }}</span>
                     </div>
                     <div class="flex items-center gap-1.5 text-[11px] font-semibold text-teal-400">
                       <span class="text-[10px] text-gray-500 font-normal uppercase">USDT:</span>
-                      <span>{{ formatTokenBalance(wItem.usdtBalance ?? user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
+                      <span>{{ formatTokenBalance(wItem.usdtBalance, 'USDT') }}</span>
                     </div>
                   </div>
                   <div v-else class="space-y-0.5">
                     <div class="flex items-center gap-1.5 font-bold text-white text-xs">
                       <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span>{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ?? user.ethBalance, 'ETH') }}</span>
+                      <span>{{ formatTokenBalance(wItem.ethBalance, 'ETH') }}</span>
                     </div>
                     <div class="flex items-center gap-1.5 text-[11px] font-semibold">
-                      <span class="text-emerald-400">{{ formatTokenBalance(wItem.usdtBalance ?? user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
+                      <span class="text-emerald-400">{{ formatTokenBalance(wItem.usdtBalance, 'USDT') }}</span>
                       <span class="text-gray-600 font-bold">|</span>
-                      <span class="text-blue-400">{{ formatTokenBalance(wItem.usdcBalance ?? user.walletUsdcBalance ?? user.usdcBalance, 'USDC') }}</span>
+                      <span class="text-blue-400">{{ formatTokenBalance(wItem.usdcBalance, 'USDC') }}</span>
                     </div>
                   </div>
                 </div>
@@ -581,16 +581,16 @@ function copyToClipboard(text: string, label: string) {
             <div class="flex items-center justify-between text-[11px] pt-2 border-t border-gray-800/60">
               <span class="text-gray-400">Assets:</span>
               <div v-if="wItem.address.startsWith('T')" class="text-right">
-                <span class="font-bold text-rose-400">{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ?? user.ethBalance, 'TRX') }}</span>
+                <span class="font-bold text-rose-400">{{ formatTokenBalance(wItem.ethBalance, 'TRX') }}</span>
                 <span class="text-gray-600 px-1">|</span>
-                <span class="font-semibold text-teal-400">{{ formatTokenBalance(wItem.usdtBalance ?? user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
+                <span class="font-semibold text-teal-400">{{ formatTokenBalance(wItem.usdtBalance, 'USDT') }}</span>
               </div>
               <div v-else class="text-right">
-                <span class="font-bold text-white">{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ?? user.ethBalance, 'ETH') }}</span>
+                <span class="font-bold text-white">{{ formatTokenBalance(wItem.ethBalance, 'ETH') }}</span>
                 <span class="text-gray-600 px-1">|</span>
-                <span class="font-semibold text-emerald-400">{{ formatTokenBalance(wItem.usdtBalance ?? user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
+                <span class="font-semibold text-emerald-400">{{ formatTokenBalance(wItem.usdtBalance, 'USDT') }}</span>
                 <span class="text-gray-600 px-1">|</span>
-                <span class="font-semibold text-blue-400">{{ formatTokenBalance(wItem.usdcBalance ?? user.walletUsdcBalance ?? user.usdcBalance, 'USDC') }}</span>
+                <span class="font-semibold text-blue-400">{{ formatTokenBalance(wItem.usdcBalance, 'USDC') }}</span>
               </div>
             </div>
 
