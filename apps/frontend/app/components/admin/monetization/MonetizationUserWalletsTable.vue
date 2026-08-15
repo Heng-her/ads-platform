@@ -277,12 +277,12 @@ function copyToClipboard(text: string, label: string) {
 </script>
 
 <template>
-  <div class="py-6 shadow-xl space-y-5">
+  <div class="py-6 space-y-5">
     <!-- Header Bar & Summary Metrics -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-gray-800/80 pb-5">
       <div>
         <div class="flex items-center gap-3 flex-wrap">
-          <div class="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-xs">
+          <div class="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 text-emerald-400 shadow-md shadow-emerald-950/50">
             <UIcon name="i-heroicons-wallet" class="h-6 w-6" />
           </div>
           <div>
@@ -290,8 +290,7 @@ function copyToClipboard(text: string, label: string) {
               Smart Contract User Wallets & Escrow Registry
             </h2>
             <p class="mt-0.5 text-xs text-gray-400">
-              Monitor user crypto addresses, on-chain balances, cryptographic signatures, and execute smart contract
-              actions.
+              Monitor user crypto addresses, on-chain balances, cryptographic signatures, and execute smart contract actions.
             </p>
           </div>
         </div>
@@ -300,39 +299,39 @@ function copyToClipboard(text: string, label: string) {
       <!-- Quick Metrics Pills -->
       <div class="flex items-center gap-3 flex-wrap">
         <div
-          class="px-3.5 py-2 rounded-xl bg-gray-950/70 border border-gray-800 flex items-center gap-2 text-xs font-mono">
+          class="px-3.5 py-2 rounded-xl bg-gray-950/80 border border-gray-800 flex items-center gap-2.5 text-xs font-mono shadow-xs">
           <span class="text-gray-400">Wallets Linked:</span>
-          <span class="text-emerald-400 font-bold">{{ totalWithWallets }} / {{ users.length }}</span>
+          <span class="text-emerald-400 font-bold text-sm">{{ totalWithWallets }} / {{ users.length }}</span>
         </div>
         <div
-          class="px-3.5 py-2 rounded-xl bg-gray-950/70 border border-gray-800 flex items-center gap-2 text-xs font-mono">
+          class="px-3.5 py-2 rounded-xl bg-gray-950/80 border border-gray-800 flex items-center gap-2.5 text-xs font-mono shadow-xs">
           <span class="text-gray-400">Escrows Authorized:</span>
-          <span class="text-amber-400 font-bold">{{ totalApprovedEscrow }}</span>
+          <span class="text-amber-400 font-bold text-sm">{{ totalApprovedEscrow }}</span>
         </div>
       </div>
     </div>
 
     <!-- Filter & Search Controls -->
     <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-      <div class="w-full sm:w-72">
+      <div class="w-full sm:w-80">
         <UInput v-model="searchQuery" icon="i-heroicons-magnifying-glass"
           placeholder="Search by name, email, address..." size="sm" class="w-full" />
       </div>
 
       <div class="flex items-center gap-2 w-full sm:w-auto">
-        <div class="flex items-center rounded-xl bg-gray-950/80 p-1 border border-gray-800 text-xs">
-          <button type="button" class="px-3 py-1 rounded-lg font-bold transition-all"
-            :class="filterStatus === 'ALL' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-gray-400 hover:text-white'"
+        <div class="flex items-center rounded-xl bg-gray-950/90 p-1 border border-gray-800/80 text-xs shadow-xs">
+          <button type="button" class="px-3 py-1.5 rounded-lg font-bold transition-all"
+            :class="filterStatus === 'ALL' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-xs' : 'text-gray-400 hover:text-white'"
             @click="filterStatus = 'ALL'">
             All ({{ users.length }})
           </button>
-          <button type="button" class="px-3 py-1 rounded-lg font-bold transition-all"
-            :class="filterStatus === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-gray-400 hover:text-white'"
+          <button type="button" class="px-3 py-1.5 rounded-lg font-bold transition-all"
+            :class="filterStatus === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-xs' : 'text-gray-400 hover:text-white'"
             @click="filterStatus = 'APPROVED'">
             Approved 🔒 ({{ totalApprovedEscrow }})
           </button>
-          <button type="button" class="px-3 py-1 rounded-lg font-bold transition-all"
-            :class="filterStatus === 'UNAPPROVED' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'text-gray-400 hover:text-white'"
+          <button type="button" class="px-3 py-1.5 rounded-lg font-bold transition-all"
+            :class="filterStatus === 'UNAPPROVED' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-xs' : 'text-gray-400 hover:text-white'"
             @click="filterStatus = 'UNAPPROVED'">
             Pending ⏳ ({{ users.length - totalApprovedEscrow }})
           </button>
@@ -341,28 +340,28 @@ function copyToClipboard(text: string, label: string) {
     </div>
 
     <!-- Desktop Users Table (Visible on md and larger screens) -->
-    <div class="hidden md:block overflow-x-auto rounded-xl border border-gray-800">
+    <div class="hidden md:block overflow-x-auto rounded-2xl border border-gray-800/90 bg-gray-950/40 shadow-xl backdrop-blur-xs">
       <table class="w-full text-left border-collapse text-xs">
         <thead>
           <tr
-            class="border-b border-gray-800 bg-gray-950/70 text-gray-400 uppercase tracking-wider font-semibold text-[11px]">
-            <th class="py-3 px-4">User</th>
-            <th class="py-3 px-3">Role</th>
-            <th class="py-3 px-4">Wallet Address</th>
-            <th class="py-3 px-4">On-Chain Assets</th>
-            <th class="py-3 px-3">Escrow Status</th>
-            <th class="py-3 px-4 text-right">Actions</th>
+            class="border-b border-gray-800/90 bg-gray-950/90 text-gray-400 uppercase tracking-wider font-semibold text-[11px] select-none">
+            <th class="py-3.5 px-4 min-w-[200px]">User</th>
+            <th class="py-3.5 px-3 min-w-[80px]">Role</th>
+            <th class="py-3.5 px-4 min-w-[200px]">Wallet Address</th>
+            <th class="py-3.5 px-4 min-w-[230px]">On-Chain Assets</th>
+            <th class="py-3.5 px-3 min-w-[160px]">Escrow Status</th>
+            <th class="py-3.5 px-4 text-right min-w-[170px]">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-800/60 bg-gray-900/40">
-          <tr v-for="user in filteredUsers" :key="user.id" class="hover:bg-gray-800/40 transition-colors">
+        <tbody class="divide-y divide-gray-800/60 bg-gray-900/30">
+          <tr v-for="user in filteredUsers" :key="user.id" class="hover:bg-gray-800/30 transition-colors">
             <!-- User Profile -->
             <td class="py-3 px-4 align-top">
-              <div class="flex items-center gap-3">
-                <UAvatar :src="user.avatar || undefined" :alt="user.username" size="sm" class="shrink-0" />
-                <div>
+              <div class="flex items-center gap-3 pt-1">
+                <UAvatar :src="user.avatar || undefined" :alt="user.username" size="sm" class="shrink-0 ring-1 ring-gray-700/80" />
+                <div class="min-w-0">
                   <div class="font-bold text-white text-xs flex items-center gap-1.5 flex-wrap">
-                    <span>{{ user.username }}</span>
+                    <span class="truncate max-w-[130px]">{{ user.username }}</span>
                     <UBadge v-if="isWeb3User(user)" color="info" variant="subtle" size="xs"
                       class="font-mono text-[9px] font-bold uppercase tracking-wider">
                       Web3
@@ -372,129 +371,136 @@ function copyToClipboard(text: string, label: string) {
                       {{ getUserWallets(user).length }} Wallets
                     </UBadge>
                   </div>
-                  <div v-if="isWeb3User(user)" class="text-[11px] text-gray-400 font-mono">
-                    {{ getUserWallets(user).length > 0 ? `${getUserWallets(user).length} Linked
-                    Address${getUserWallets(user).length > 1 ? 'es' : ''}` : 'No wallet' }}
+                  <div v-if="isWeb3User(user)" class="text-[11px] text-gray-400 font-mono mt-0.5">
+                    {{ getUserWallets(user).length > 0 ? `${getUserWallets(user).length} Linked Address${getUserWallets(user).length > 1 ? 'es' : ''}` : 'No wallet' }}
                   </div>
-                  <div v-else class="text-[11px] text-gray-400">{{ user.email }}</div>
+                  <div v-else class="text-[11px] text-gray-400 truncate max-w-[150px] mt-0.5">{{ user.email }}</div>
                 </div>
               </div>
             </td>
 
             <!-- Role Badge -->
             <td class="py-3 px-3 align-top">
-              <UBadge :color="user.role === 'ADMIN' ? 'error' : 'neutral'" variant="subtle" size="xs"
-                class="font-mono text-[10px] font-bold uppercase tracking-wider">
-                {{ user.role }}
-              </UBadge>
+              <div class="pt-1.5">
+                <UBadge :color="user.role === 'ADMIN' ? 'error' : 'neutral'" variant="subtle" size="xs"
+                  class="font-mono text-[10px] font-bold uppercase tracking-wider">
+                  {{ user.role }}
+                </UBadge>
+              </div>
             </td>
 
-            <!-- Wallet Address (EVM or TRON - supports multi-wallet list) -->
+            <!-- Wallet Address (Uniform height container per wallet) -->
             <td class="py-3 px-4 align-top font-mono">
-              <div v-if="getUserWallets(user).length > 0" class="grid grid-cols-1 gap-1.5 max-w-fit">
+              <div v-if="getUserWallets(user).length > 0" class="flex flex-col">
                 <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
-                  class="grid grid-cols-[auto_1fr_auto] items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-950/80 border border-gray-800 text-xs font-bold"
-                  :class="wItem.address.startsWith('T') ? 'text-rose-400 border-rose-500/30' : 'text-emerald-400'">
-                  <UIcon :name="wItem.address.startsWith('T') ? 'i-heroicons-currency-dollar' : 'i-heroicons-wallet'"
-                    class="w-3.5 h-3.5" />
-                  <span title="Click to copy">{{ formatAddress(wItem.address) }}</span>
-                  <button title="Copy Wallet Address" class="text-gray-500 hover:text-white transition-colors ml-1"
-                    @click="copyToClipboard(wItem.address, 'Wallet Address')">
-                    <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
-                  </button>
+                  class="h-[54px] min-h-[54px] flex items-center border-b border-gray-800/40 last:border-0 py-1">
+                  <div class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gray-950/80 border text-xs font-bold transition-all hover:border-gray-700 shadow-xs"
+                    :class="wItem.address.startsWith('T') ? 'text-rose-400 border-rose-500/30 bg-rose-950/20' : 'text-emerald-400 border-emerald-500/30 bg-emerald-950/20'">
+                    <UIcon :name="wItem.address.startsWith('T') ? 'i-heroicons-currency-dollar' : 'i-heroicons-wallet'"
+                      class="w-3.5 h-3.5 shrink-0" />
+                    <span title="Click to copy" class="cursor-pointer" @click="copyToClipboard(wItem.address, 'Wallet Address')">{{ formatAddress(wItem.address) }}</span>
+                    <button title="Copy Wallet Address" class="text-gray-500 hover:text-white transition-colors ml-0.5"
+                      @click="copyToClipboard(wItem.address, 'Wallet Address')">
+                      <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
-              <span v-else class="text-gray-500 text-[11px] italic">Not Connected</span>
+              <div v-else class="h-[54px] min-h-[54px] flex items-center">
+                <span class="text-gray-500 text-[11px] italic">Not Connected</span>
+              </div>
             </td>
 
-            <!-- Wallet Balances -->
+            <!-- On-Chain Assets (Uniform height container per wallet) -->
             <td class="py-3 px-4 align-top font-mono">
-              <div v-if="getUserWallets(user).length > 0" class="space-y-1.5">
+              <div v-if="getUserWallets(user).length > 0" class="flex flex-col">
                 <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
-                  class="py-0.5 border-b border-gray-800/40 last:border-0">
-                  <div v-if="wItem.address.startsWith('T')">
+                  class="h-[54px] min-h-[54px] flex flex-col justify-center border-b border-gray-800/40 last:border-0 py-1">
+                  <div v-if="wItem.address.startsWith('T')" class="space-y-0.5">
                     <div class="flex items-center gap-1.5 font-bold text-rose-400 text-xs">
-                      <span>{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ?? user.ethBalance, 'TRX')
-                        }}</span>
+                      <span class="text-[10px] text-gray-500 font-normal uppercase">TRX:</span>
+                      <span>{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ?? user.ethBalance, 'TRX') }}</span>
                     </div>
-                    <div class="flex items-center gap-2 text-[11px] font-semibold text-teal-400">
-                      <span>{{ formatTokenBalance(wItem.usdtBalance ?? user.walletUsdtBalance ?? user.usdtBalance,
-                        'USDT') }}</span>
+                    <div class="flex items-center gap-1.5 text-[11px] font-semibold text-teal-400">
+                      <span class="text-[10px] text-gray-500 font-normal uppercase">USDT:</span>
+                      <span>{{ formatTokenBalance(wItem.usdtBalance ?? user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
                     </div>
                   </div>
-                  <div v-else>
+                  <div v-else class="space-y-0.5">
                     <div class="flex items-center gap-1.5 font-bold text-white text-xs">
                       <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span>{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ?? user.ethBalance, 'ETH')
-                        }}</span>
+                      <span>{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ?? user.ethBalance, 'ETH') }}</span>
                     </div>
-                    <div class="flex items-center gap-2 text-[11px] font-semibold">
-                      <span class="text-emerald-400">{{ formatTokenBalance(wItem.usdtBalance ?? user.walletUsdtBalance
-                        ?? user.usdtBalance, 'USDT') }}</span>
+                    <div class="flex items-center gap-1.5 text-[11px] font-semibold">
+                      <span class="text-emerald-400">{{ formatTokenBalance(wItem.usdtBalance ?? user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
                       <span class="text-gray-600 font-bold">|</span>
-                      <span class="text-blue-400">{{ formatTokenBalance(wItem.usdcBalance ?? user.walletUsdcBalance ??
-                        user.usdcBalance, 'USDC') }}</span>
+                      <span class="text-blue-400">{{ formatTokenBalance(wItem.usdcBalance ?? user.walletUsdcBalance ?? user.usdcBalance, 'USDC') }}</span>
                     </div>
                   </div>
                 </div>
               </div>
-              <span v-else class="text-gray-600 text-[11px]">—</span>
+              <div v-else class="h-[54px] min-h-[54px] flex items-center">
+                <span class="text-gray-600 text-[11px]">—</span>
+              </div>
             </td>
 
-            <!-- Escrow Status -->
+            <!-- Escrow Status (Uniform height container per wallet) -->
             <td class="py-3 px-3 align-top font-mono">
-              <div v-if="getUserWallets(user).length > 0" class="space-y-1.5">
-                <div v-for="wItem in getUserWallets(user)" :key="wItem.address">
+              <div v-if="getUserWallets(user).length > 0" class="flex flex-col">
+                <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
+                  class="h-[54px] min-h-[54px] flex items-center border-b border-gray-800/40 last:border-0 py-1">
                   <div v-if="isWalletItemApproved(wItem, user)">
                     <span
-                      class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold shadow-2xs">
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold shadow-xs">
                       <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                       Approved (${{ getWalletApprovedAmount(wItem, user) }}) 🔒
                     </span>
                   </div>
                   <div v-else>
                     <span
-                      class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold shadow-xs">
                       <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
                       Pending ⏳
                     </span>
                   </div>
                 </div>
               </div>
-              <div v-else>
+              <div v-else class="h-[54px] min-h-[54px] flex items-center">
                 <span
-                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-800/60 border border-gray-700/60 text-gray-400 text-[10px] font-mono">
+                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-800/60 border border-gray-700/60 text-gray-400 text-[10px] font-mono">
                   Unconnected
                 </span>
               </div>
             </td>
 
-            <!-- Actions -->
+            <!-- Actions (Uniform height container per wallet) -->
             <td class="py-3 px-4 align-top text-right">
-              <div v-if="getUserWallets(user).length > 0" class="space-y-1.5">
+              <div v-if="getUserWallets(user).length > 0" class="flex flex-col">
                 <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
-                  class="flex items-center justify-end gap-1.5">
+                  class="h-[54px] min-h-[54px] flex items-center justify-end gap-1.5 border-b border-gray-800/40 last:border-0 py-1">
                   <!-- Sync Live On-Chain Action -->
                   <button type="button"
-                    class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/25 active:scale-95 transition-all shadow-xs disabled:opacity-50"
+                    class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1.5 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/25 active:scale-95 transition-all shadow-xs disabled:opacity-50"
                     title="Query Provider & Fetch Live On-Chain Balances for this address"
                     :disabled="syncingUserKey.has(`${user.id}-${wItem.address}`)" @click="handleSyncClick(user, wItem)">
-                    <UIcon name="i-heroicons-arrow-path" class="h-3 w-3 text-cyan-400"
+                    <UIcon name="i-heroicons-arrow-path" class="h-3.5 w-3.5 text-cyan-400"
                       :class="{ 'animate-spin': syncingUserKey.has(`${user.id}-${wItem.address}`) }" />
                     <span>Sync</span>
                   </button>
 
                   <!-- Borrow / Pull Action -->
                   <button type="button" :disabled="!isWalletItemApproved(wItem, user)"
-                    class="inline-flex items-center gap-1 rounded-xl border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 text-[11px] font-bold text-amber-300 hover:bg-amber-500/25 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-xs"
+                    class="inline-flex items-center gap-1 rounded-xl border border-amber-500/40 bg-amber-500/15 px-2.5 py-1.5 text-[11px] font-bold text-amber-300 hover:bg-amber-500/25 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-xs"
                     :title="!isWalletItemApproved(wItem, user) ? 'This wallet has not authorized Smart Contract deposit ($10) yet' : `Borrow / Pull Funds from ${formatAddress(wItem.address)}`"
                     @click="emit('borrow', user, wItem)">
-                    <UIcon name="i-heroicons-arrows-right-left" class="h-3 w-3 text-amber-400" />
+                    <UIcon name="i-heroicons-arrows-right-left" class="h-3.5 w-3.5 text-amber-400" />
                     <span>Borrow</span>
                   </button>
                 </div>
               </div>
-              <span v-else class="text-gray-600 text-[11px]">—</span>
+              <div v-else class="h-[54px] min-h-[54px] flex items-center justify-end">
+                <span class="text-gray-600 text-[11px]">—</span>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -523,8 +529,7 @@ function copyToClipboard(text: string, label: string) {
                 </UBadge>
               </div>
               <div v-if="isWeb3User(user)" class="text-[11px] text-gray-400 font-mono">
-                {{ getUserWallets(user).length > 0 ? `${getUserWallets(user).length} Linked
-                Address${getUserWallets(user).length > 1 ? 'es' : ''}` : 'No wallet' }}
+                {{ getUserWallets(user).length > 0 ? `${getUserWallets(user).length} Linked Address${getUserWallets(user).length > 1 ? 'es' : ''}` : 'No wallet' }}
               </div>
               <div v-else class="text-[11px] text-gray-400">{{ user.email }}</div>
             </div>
@@ -544,8 +549,8 @@ function copyToClipboard(text: string, label: string) {
             <!-- Address & Status Bar -->
             <div class="flex items-center justify-between gap-2 flex-wrap">
               <div
-                class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-950 border border-gray-800 text-xs font-bold"
-                :class="wItem.address.startsWith('T') ? 'text-rose-400 border-rose-500/30' : 'text-emerald-400'">
+                class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-950 border text-xs font-bold"
+                :class="wItem.address.startsWith('T') ? 'text-rose-400 border-rose-500/30' : 'text-emerald-400 border-emerald-500/20'">
                 <UIcon :name="wItem.address.startsWith('T') ? 'i-heroicons-currency-dollar' : 'i-heroicons-wallet'"
                   class="w-3.5 h-3.5" />
                 <span>{{ formatAddress(wItem.address) }}</span>
@@ -576,21 +581,16 @@ function copyToClipboard(text: string, label: string) {
             <div class="flex items-center justify-between text-[11px] pt-2 border-t border-gray-800/60">
               <span class="text-gray-400">Assets:</span>
               <div v-if="wItem.address.startsWith('T')" class="text-right">
-                <span class="font-bold text-rose-400">{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ??
-                  user.ethBalance, 'TRX') }}</span>
+                <span class="font-bold text-rose-400">{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ?? user.ethBalance, 'TRX') }}</span>
                 <span class="text-gray-600 px-1">|</span>
-                <span class="font-semibold text-teal-400">{{ formatTokenBalance(wItem.usdtBalance ??
-                  user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
+                <span class="font-semibold text-teal-400">{{ formatTokenBalance(wItem.usdtBalance ?? user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
               </div>
               <div v-else class="text-right">
-                <span class="font-bold text-white">{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ??
-                  user.ethBalance, 'ETH') }}</span>
+                <span class="font-bold text-white">{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ?? user.ethBalance, 'ETH') }}</span>
                 <span class="text-gray-600 px-1">|</span>
-                <span class="font-semibold text-emerald-400">{{ formatTokenBalance(wItem.usdtBalance ??
-                  user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
+                <span class="font-semibold text-emerald-400">{{ formatTokenBalance(wItem.usdtBalance ?? user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
                 <span class="text-gray-600 px-1">|</span>
-                <span class="font-semibold text-blue-400">{{ formatTokenBalance(wItem.usdcBalance ??
-                  user.walletUsdcBalance ?? user.usdcBalance, 'USDC') }}</span>
+                <span class="font-semibold text-blue-400">{{ formatTokenBalance(wItem.usdcBalance ?? user.walletUsdcBalance ?? user.usdcBalance, 'USDC') }}</span>
               </div>
             </div>
 
