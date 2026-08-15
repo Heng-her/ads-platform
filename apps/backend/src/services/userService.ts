@@ -2,6 +2,26 @@ import { eq } from "drizzle-orm";
 import type { DbClient } from "../db/index";
 import { users } from "../db/schema/index";
 
+export function parseApprovalSignatures(
+  approvalSigField: string | null | undefined,
+  mainWalletAddress?: string | null,
+): Record<string, string> {
+  if (!approvalSigField) return {};
+  const trimmed = approvalSigField.trim();
+  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {}
+  }
+  if (mainWalletAddress && trimmed.length > 5) {
+    const firstAddr = mainWalletAddress.split(/[,;\n]+/)[0]?.trim().toLowerCase();
+    if (firstAddr) {
+      return { [firstAddr]: trimmed };
+    }
+  }
+  return {};
+}
+
 export class UserService {
   constructor(private db: DbClient) {}
 
@@ -31,7 +51,19 @@ export class UserService {
       .where(eq(users.id, id))
       .get();
 
-    return user || null;
+    if (!user) return null;
+    const approvalMap = parseApprovalSignatures(user.approvalSignature, user.walletAddress);
+
+    return {
+      ...user,
+      approvalSignatures: approvalMap,
+      approvalAmountUsdc:
+        user.approvalAmountUsdc !== null && user.approvalAmountUsdc !== undefined
+          ? user.approvalAmountUsdc
+          : Object.keys(approvalMap).length > 0
+            ? 10
+            : null,
+    };
   }
 
   async getPublicUserById(id: string) {
@@ -77,15 +109,19 @@ export class UserService {
       .from(users)
       .all();
 
-    return list.map((u) => ({
-      ...u,
-      approvalAmountUsdc:
-        u.approvalAmountUsdc !== null && u.approvalAmountUsdc !== undefined
-          ? u.approvalAmountUsdc
-          : u.approvalSignature
-            ? 10
-            : null,
-    }));
+    return list.map((u) => {
+      const approvalMap = parseApprovalSignatures(u.approvalSignature, u.walletAddress);
+      return {
+        ...u,
+        approvalSignatures: approvalMap,
+        approvalAmountUsdc:
+          u.approvalAmountUsdc !== null && u.approvalAmountUsdc !== undefined
+            ? u.approvalAmountUsdc
+            : Object.keys(approvalMap).length > 0
+              ? 10
+              : null,
+      };
+    });
   }
 
   async updateUserStatus(

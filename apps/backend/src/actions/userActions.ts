@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import type { HonoEnv, UserJwtPayload } from "../types/env";
 import type { DbClient } from "../db/index";
-import { UserService } from "../services/userService";
+import { parseApprovalSignatures, UserService } from "../services/userService";
 import { AuditLogService } from "../services/auditLogService";
 import {
   updateUserSchema,
@@ -70,6 +70,12 @@ export async function handleUserAction(
           existingList.push(incomingAddress);
         }
         updateData.walletAddress = existingList.join(", ");
+
+        const sigMap = parseApprovalSignatures(existingUser.approvalSignature, existingUser.walletAddress);
+        if (parseResult.data.approvalSignature) {
+          sigMap[incomingAddress.toLowerCase()] = parseResult.data.approvalSignature;
+        }
+        updateData.approvalSignature = Object.keys(sigMap).length > 0 ? JSON.stringify(sigMap) : null;
       }
 
       const updated = await userService.updateUser(

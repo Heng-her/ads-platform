@@ -34,7 +34,8 @@ export interface UserWalletRecord {
   usdtBalance?: string | number | null
   usdcBalance?: string | number | null
   portfolioLink?: string | null
-  createdAt?: string | Date
+  createdAt?: string | Date,
+  approvalSignatures?: string
 }
 
 const props = defineProps<{
@@ -155,17 +156,15 @@ function getUserWallets(user: UserWalletRecord): WalletItem[] {
     const rawAddresses = String(user.walletAddress).split(/[,;\n]+/).map(a => a.trim()).filter(a => isValidWalletAddress(a))
     rawAddresses.forEach((addr, idx) => {
       if (!list.some(existing => existing.address.toLowerCase() === addr.toLowerCase())) {
-        const isApproved = idx === 0 ? isUserApproved(user) : !!(user.approvalSignature && user.approvalSignature.trim().length > 5)
         list.push({
           id: `w-addr-${idx}`,
           address: addr,
           label: addr.startsWith('T') ? `TRON Wallet${rawAddresses.length > 1 ? ` #${idx + 1}` : ''}` : `EVM Wallet${rawAddresses.length > 1 ? ` #${idx + 1}` : ''}`,
-          approvalSignature: idx === 0 ? user.approvalSignature : null,
-          approvalAmountUsdc: idx === 0 ? getApprovedAmount(user) : null,
+          approvalSignature: null,
+          approvalAmountUsdc: null,
           ethBalance: idx === 0 ? (user.walletEthBalance ?? user.ethBalance) : null,
           usdtBalance: idx === 0 ? (user.walletUsdtBalance ?? user.usdtBalance) : null,
           usdcBalance: idx === 0 ? (user.walletUsdcBalance ?? user.usdcBalance) : null,
-          isApproved
         })
       }
     })
@@ -192,12 +191,31 @@ function getUserWallets(user: UserWalletRecord): WalletItem[] {
   return list
 }
 
+function getApprovalMap(user: UserWalletRecord): Record<string, string> {
+  if (user.approvalSignatures && typeof user.approvalSignatures === 'object') {
+    return user.approvalSignatures
+  }
+  if (user.approvalSignature) {
+    const trimmed = String(user.approvalSignature).trim()
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        return JSON.parse(trimmed)
+      } catch {}
+    }
+    if (user.walletAddress && trimmed.length > 5) {
+      const first = String(user.walletAddress).split(/[,;\n]+/)[0]?.trim().toLowerCase()
+      if (first) return { [first]: trimmed }
+    }
+  }
+  return {}
+}
+
 function isWalletItemApproved(wItem: WalletItem, user: UserWalletRecord): boolean {
   if (wItem.isApproved !== undefined) return wItem.isApproved
-  if (wItem.approvalSignature && wItem.approvalSignature.trim().length > 5) return true
-  if (user.walletAddress && wItem.address.toLowerCase() === user.walletAddress.toLowerCase()) {
-    return isUserApproved(user)
-  }
+  const map = getApprovalMap(user)
+  const addrLower = wItem.address.toLowerCase()
+  if (map[addrLower] && map[addrLower].trim().length > 5) return true
+  if (wItem.approvalSignature && String(wItem.approvalSignature).trim().length > 5) return true
   return false
 }
 

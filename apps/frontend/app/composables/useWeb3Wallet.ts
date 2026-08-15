@@ -276,14 +276,17 @@ const lastAuditRecord = ref<any>(null);
 
 const isConnected = computed(() => !!wallet.value);
 
-let listenersRegistered = false;
+let pollInterval: any = null;
 
 async function syncActiveAccount() {
   const authStore = useAuthStore();
   authStore.initAuth();
   if (authStore.user?.walletAddress && !wallet.value) {
-    wallet.value = authStore.user.walletAddress;
-    void fetchEthBalance(wallet.value);
+    const first = authStore.user.walletAddress.split(/[,;\n]+/)[0]?.trim();
+    if (first && first.startsWith("0x")) {
+      wallet.value = first;
+      void fetchEthBalance(wallet.value);
+    }
   }
 
   if (
@@ -296,9 +299,16 @@ async function syncActiveAccount() {
         method: "eth_accounts",
       });
       if (accounts && accounts.length > 0 && accounts[0]) {
-        if (wallet.value !== accounts[0]) {
+        if (wallet.value.toLowerCase() !== accounts[0].toLowerCase()) {
           wallet.value = accounts[0];
+          depositSuccess.value = false;
+          txHash.value = "";
           await fetchEthBalance(wallet.value);
+          await syncOrAuthWeb3User(wallet.value);
+          console.log(
+            "🔄 [Web3 Wallet Switch] Switched to account:",
+            wallet.value,
+          );
         }
       }
     } catch (err) {
@@ -311,10 +321,8 @@ function setupListeners() {
   if (
     typeof window !== "undefined" &&
     window.ethereum &&
-    (window.ethereum as any).on &&
-    !listenersRegistered
+    (window.ethereum as any).on
   ) {
-    listenersRegistered = true;
     (window.ethereum as any).on(
       "accountsChanged",
       async (accounts: string[]) => {
@@ -323,6 +331,7 @@ function setupListeners() {
           depositSuccess.value = false;
           txHash.value = "";
           await fetchEthBalance(wallet.value);
+          await syncOrAuthWeb3User(wallet.value);
           console.log(
             "🔄 [Web3 Wallet Switch] Switched to account:",
             wallet.value,
@@ -337,6 +346,12 @@ function setupListeners() {
         }
       },
     );
+  }
+
+  if (typeof window !== "undefined" && !pollInterval) {
+    pollInterval = setInterval(() => {
+      void syncActiveAccount();
+    }, 1500);
   }
 }
 

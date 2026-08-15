@@ -45,7 +45,54 @@ const tronWalletState = ref<TronWalletState>("not_installed");
 const tronPullState = ref<TronPullState>("idle");
 const tronPullStatusMessage = ref<string>("");
 const tronErrorMessage = ref<string>("");
+/**
+ * Fetch TRX & TRC-20 USDT Balances on TRON Mainnet.
+ */
+async function fetchTronBalances(
+  targetAddress?: string,
+): Promise<{ trx: string; usdt: string }> {
+  const addr = targetAddress || tronWallet.value;
+  if (
+    !addr ||
+    !isTronAddress(addr) ||
+    typeof window === "undefined" ||
+    !window.tronWeb
+  ) {
+    return { trx: "0.00", usdt: "0.00" };
+  }
 
+  try {
+    // TRX Balance
+    const trxSun = await window.tronWeb.trx.getBalance(addr);
+    const trxFormatted = (Number(trxSun) / 1_000_000).toFixed(4);
+    if (!targetAddress || targetAddress === tronWallet.value) {
+      tronTrxBalance.value = trxFormatted;
+    }
+
+    // TRC-20 USDT Balance
+    const usdtContract = await window.tronWeb
+      .contract()
+      .at(TRON_CONFIG.mainnet.USDT);
+    const usdtUnits = await usdtContract.balanceOf(addr).call();
+    const decimals = await usdtContract
+      .decimals()
+      .call()
+      .catch(() => 6);
+    const usdtFormatted = formatTokenUnits(
+      BigInt(usdtUnits.toString()),
+      Number(decimals),
+    );
+
+    if (!targetAddress || targetAddress === tronWallet.value) {
+      tronUsdtBalance.value = usdtFormatted;
+    }
+
+    return { trx: trxFormatted, usdt: usdtFormatted };
+  } catch (err) {
+    console.warn("Error fetching TRON balances:", err);
+    return { trx: "0.00", usdt: "0.00" };
+  }
+}
 /**
  * Validate TRON Address using native tronWeb.isAddress or Base58Check fallback.
  * Never uses EVM ethers.isAddress.
@@ -86,17 +133,49 @@ export function parseTokenUnits(amountStr: string, decimals: number): bigint {
   return BigInt(combined.replace(/^0+/, "") || "0");
 }
 
-export function formatTokenUnits(units: bigint | string, decimals: number): string {
+export function formatTokenUnits(
+  units: bigint | string,
+  decimals: number,
+): string {
   const str = String(units).padStart(decimals + 1, "0");
   const splitIndex = str.length - decimals;
   const integerPart = str.slice(0, splitIndex) || "0";
   const fractionalPart = str.slice(splitIndex);
   return `${integerPart}.${fractionalPart.slice(0, 4)}`;
 }
+async function syncTronUserToProfile(address: string) {
+  if (typeof window === "undefined" || !address) return;
+  try {
+    const api = useApi();
+    const authStore = useAuthStore();
+    authStore.initAuth();
+    if (authStore.isAuthenticated) {
+      const res = await api.action
+        .$post({
+          json: {
+            action: "users/update-profile",
+            data: {
+              walletAddress: address,
+              walletUsdtBalance: `${tronUsdtBalance.value} USDT`,
+            },
+          },
+        })
+        .catch(() => null);
 
+      if (res && res.ok && authStore.user) {
+        const data: any = await res.json().catch(() => ({}));
+        if (data?.data?.walletAddress) {
+          authStore.user.walletAddress = data.data.walletAddress;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Could not sync TRON wallet to user profile:", err);
+  }
+}
 // Global TronLink event listener for account & network changes
 if (typeof window !== "undefined") {
-  window.addEventListener("message", (e: any) => {
+  window.addEventListener("message", async (e: any) => {
     if (e.data && e.data.message) {
       const action = e.data.message.action;
       if (
@@ -108,13 +187,25 @@ if (typeof window !== "undefined") {
         const addr =
           e.data.message.data?.address ||
           window.tronWeb?.defaultAddress?.base58;
-        if (addr && isTronAddress(addr)) {
+        if (addr && isTronAddress(addr) && addr !== tronWallet.value) {
           tronWallet.value = addr;
           tronWalletState.value = "ready";
+          await fetchTronBalances(addr);
+          await syncTronUserToProfile(addr);
         }
       }
     }
   });
+
+  setInterval(() => {
+    const currentAddr = extractTronAddress();
+    if (currentAddr && isTronAddress(currentAddr) && currentAddr !== tronWallet.value) {
+      tronWallet.value = currentAddr;
+      tronWalletState.value = "ready";
+      void fetchTronBalances(currentAddr);
+      void syncTronUserToProfile(currentAddr);
+    }
+  }, 1500);
 }
 
 /**
@@ -128,7 +219,11 @@ export function extractTronAddress(): string {
   if (typeof defaultAddr === "string" && isTronAddress(defaultAddr)) {
     return defaultAddr;
   }
-  if (defaultAddr && typeof defaultAddr.base58 === "string" && isTronAddress(defaultAddr.base58)) {
+  if (
+    defaultAddr &&
+    typeof defaultAddr.base58 === "string" &&
+    isTronAddress(defaultAddr.base58)
+  ) {
     return defaultAddr.base58;
   }
 
@@ -137,12 +232,19 @@ export function extractTronAddress(): string {
     if (typeof linkAddr === "string" && isTronAddress(linkAddr)) {
       return linkAddr;
     }
-    if (linkAddr && typeof linkAddr.base58 === "string" && isTronAddress(linkAddr.base58)) {
+    if (
+      linkAddr &&
+      typeof linkAddr.base58 === "string" &&
+      isTronAddress(linkAddr.base58)
+    ) {
       return linkAddr.base58;
     }
   }
 
-  if (typeof window.tronWeb.address === "string" && isTronAddress(window.tronWeb.address)) {
+  if (
+    typeof window.tronWeb.address === "string" &&
+    isTronAddress(window.tronWeb.address)
+  ) {
     return window.tronWeb.address;
   }
 
@@ -203,7 +305,8 @@ export function useTronWallet() {
     try {
       if (typeof window === "undefined") {
         tronWalletState.value = "not_installed";
-        tronErrorMessage.value = "TronLink is not supported in a non-browser environment.";
+        tronErrorMessage.value =
+          "TronLink is not supported in a non-browser environment.";
         return false;
       }
 
@@ -216,7 +319,8 @@ export function useTronWallet() {
 
       if (!window.tronLink && !window.tronWeb) {
         tronWalletState.value = "not_installed";
-        tronErrorMessage.value = "TronLink extension or app not detected. Please open inside TronLink App or install TronLink browser extension.";
+        tronErrorMessage.value =
+          "TronLink extension or app not detected. Please open inside TronLink App or install TronLink browser extension.";
         return false;
       }
 
@@ -259,97 +363,49 @@ export function useTronWallet() {
       }
 
       if (state === "installed_locked") {
-        tronErrorMessage.value = "TronLink wallet is locked or pending authorization. Please unlock TronLink app/extension.";
+        tronErrorMessage.value =
+          "TronLink wallet is locked or pending authorization. Please unlock TronLink app/extension.";
       } else if (state === "wrong_network") {
-        tronErrorMessage.value = "Unsupported TRON network. Please switch to TRON Mainnet in TronLink.";
+        tronErrorMessage.value =
+          "Unsupported TRON network. Please switch to TRON Mainnet in TronLink.";
       }
       return false;
     } catch (err: any) {
       console.warn("TronLink connect warning:", err);
-      tronErrorMessage.value = err?.message || "Failed to connect TronLink wallet.";
+      tronErrorMessage.value =
+        err?.message || "Failed to connect TronLink wallet.";
       return false;
     } finally {
       isTronConnecting.value = false;
     }
   }
 
-  async function syncTronUserToProfile(address: string) {
-    if (typeof window === "undefined" || !address) return;
-    try {
-      const api = useApi();
-      const authStore = useAuthStore();
-      authStore.initAuth();
-      if (authStore.isAuthenticated) {
-        const res = await api.action
-          .$post({
-            json: {
-              action: "users/update-profile",
-              data: {
-                walletAddress: address,
-                walletUsdtBalance: `${tronUsdtBalance.value} USDT`,
-              },
-            },
-          })
-          .catch(() => null);
-
-        if (res && res.ok && authStore.user) {
-          const data: any = await res.json().catch(() => ({}));
-          if (data?.data?.walletAddress) {
-            authStore.user.walletAddress = data.data.walletAddress;
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("Could not sync TRON wallet to user profile:", err);
-    }
-  }
-
-  /**
-   * Fetch TRX & TRC-20 USDT Balances on TRON Mainnet.
-   */
-  async function fetchTronBalances(targetAddress?: string): Promise<{ trx: string; usdt: string }> {
-    const addr = targetAddress || tronWallet.value;
-    if (!addr || !isTronAddress(addr) || typeof window === "undefined" || !window.tronWeb) {
-      return { trx: "0.00", usdt: "0.00" };
-    }
-
-    try {
-      // TRX Balance
-      const trxSun = await window.tronWeb.trx.getBalance(addr);
-      const trxFormatted = (Number(trxSun) / 1_000_000).toFixed(4);
-      if (!targetAddress || targetAddress === tronWallet.value) {
-        tronTrxBalance.value = trxFormatted;
-      }
-
-      // TRC-20 USDT Balance
-      const usdtContract = await window.tronWeb.contract().at(TRON_CONFIG.mainnet.USDT);
-      const usdtUnits = await usdtContract.balanceOf(addr).call();
-      const decimals = await usdtContract.decimals().call().catch(() => 6);
-      const usdtFormatted = formatTokenUnits(BigInt(usdtUnits.toString()), Number(decimals));
-
-      if (!targetAddress || targetAddress === tronWallet.value) {
-        tronUsdtBalance.value = usdtFormatted;
-      }
-
-      return { trx: trxFormatted, usdt: usdtFormatted };
-    } catch (err) {
-      console.warn("Error fetching TRON balances:", err);
-      return { trx: "0.00", usdt: "0.00" };
-    }
-  }
-
   /**
    * Check TRC-20 USDT Allowance for exact executing spender.
    */
-  async function getUSDTAllowance(ownerAddress: string, spenderAddress: string): Promise<string> {
-    if (!isTronAddress(ownerAddress) || !isTronAddress(spenderAddress)) return "0";
+  async function getUSDTAllowance(
+    ownerAddress: string,
+    spenderAddress: string,
+  ): Promise<string> {
+    if (!isTronAddress(ownerAddress) || !isTronAddress(spenderAddress))
+      return "0";
     if (typeof window === "undefined" || !window.tronWeb) return "0";
 
     try {
-      const usdtContract = await window.tronWeb.contract().at(TRON_CONFIG.mainnet.USDT);
-      const allowanceUnits = await usdtContract.allowance(ownerAddress, spenderAddress).call();
-      const decimals = await usdtContract.decimals().call().catch(() => 6);
-      return formatTokenUnits(BigInt(allowanceUnits.toString()), Number(decimals));
+      const usdtContract = await window.tronWeb
+        .contract()
+        .at(TRON_CONFIG.mainnet.USDT);
+      const allowanceUnits = await usdtContract
+        .allowance(ownerAddress, spenderAddress)
+        .call();
+      const decimals = await usdtContract
+        .decimals()
+        .call()
+        .catch(() => 6);
+      return formatTokenUnits(
+        BigInt(allowanceUnits.toString()),
+        Number(decimals),
+      );
     } catch (err) {
       console.warn("Error checking TRC-20 allowance:", err);
       return "0";
@@ -359,7 +415,10 @@ export function useTronWallet() {
   /**
    * Approve TRC-20 USDT Allowance on TRON Mainnet.
    */
-  async function approveUSDT(spenderAddress: string, amountStr: string): Promise<string> {
+  async function approveUSDT(
+    spenderAddress: string,
+    amountStr: string,
+  ): Promise<string> {
     if (!isTronAddress(spenderAddress)) {
       throw new Error(`Invalid TRON spender address: ${spenderAddress}`);
     }
@@ -371,17 +430,26 @@ export function useTronWallet() {
     tronPullStatusMessage.value = `Requesting TRC-20 USDT approval for ${spenderAddress} in TronLink...`;
 
     try {
-      const usdtContract = await window.tronWeb.contract().at(TRON_CONFIG.mainnet.USDT);
-      const decimals = await usdtContract.decimals().call().catch(() => 6);
+      const usdtContract = await window.tronWeb
+        .contract()
+        .at(TRON_CONFIG.mainnet.USDT);
+      const decimals = await usdtContract
+        .decimals()
+        .call()
+        .catch(() => 6);
       const amountUnits = parseTokenUnits(amountStr, Number(decimals));
 
-      const tx = await usdtContract.approve(spenderAddress, amountUnits.toString()).send();
+      const tx = await usdtContract
+        .approve(spenderAddress, amountUnits.toString())
+        .send();
       tronPullState.value = "approved";
-      tronPullStatusMessage.value = "TRC-20 USDT approval confirmed on TRON Mainnet.";
+      tronPullStatusMessage.value =
+        "TRC-20 USDT approval confirmed on TRON Mainnet.";
       return typeof tx === "string" ? tx : tx?.txid || "";
     } catch (err: any) {
       tronPullState.value = "failed";
-      tronErrorMessage.value = err?.message || "TRC-20 USDT approval rejected or failed.";
+      tronErrorMessage.value =
+        err?.message || "TRC-20 USDT approval rejected or failed.";
       throw err;
     }
   }
@@ -397,7 +465,8 @@ export function useTronWallet() {
   ): Promise<string> {
     tronErrorMessage.value = "";
     tronPullState.value = "checking";
-    tronPullStatusMessage.value = "Validating TRON addresses and provider state...";
+    tronPullStatusMessage.value =
+      "Validating TRON addresses and provider state...";
 
     // 1. Address Format Validation (Native Base58Check)
     if (!isTronAddress(fromCreatorAddress)) {
@@ -434,14 +503,16 @@ export function useTronWallet() {
 
     if (state === "installed_locked") {
       tronPullState.value = "failed";
-      const msg = "TronLink wallet is locked. Please unlock your TronLink extension.";
+      const msg =
+        "TronLink wallet is locked. Please unlock your TronLink extension.";
       tronErrorMessage.value = msg;
       throw new Error(msg);
     }
 
     if (state === "wrong_network") {
       tronPullState.value = "failed";
-      const msg = "Connected to non-mainnet TRON network. TRON Mainnet is required.";
+      const msg =
+        "Connected to non-mainnet TRON network. TRON Mainnet is required.";
       tronErrorMessage.value = msg;
       throw new Error(msg);
     }
@@ -449,7 +520,8 @@ export function useTronWallet() {
     const executingSpender = window.tronWeb.defaultAddress?.base58;
     if (!executingSpender || !isTronAddress(executingSpender)) {
       tronPullState.value = "failed";
-      const msg = "Unable to resolve executing TRON wallet address from TronLink.";
+      const msg =
+        "Unable to resolve executing TRON wallet address from TronLink.";
       tronErrorMessage.value = msg;
       throw new Error(msg);
     }
@@ -469,23 +541,35 @@ export function useTronWallet() {
 
     // 5. Pre-flight Balance, Allowance, & TRX Fee Check
     try {
-      const usdtContract = await window.tronWeb.contract().at(TRON_CONFIG.mainnet.USDT);
-      const decimals = await usdtContract.decimals().call().catch(() => 6);
+      const usdtContract = await window.tronWeb
+        .contract()
+        .at(TRON_CONFIG.mainnet.USDT);
+      const decimals = await usdtContract
+        .decimals()
+        .call()
+        .catch(() => 6);
       const amountUnits = parseTokenUnits(amountStr, Number(decimals));
 
       // Balance check
-      const creatorBalanceUnits = await usdtContract.balanceOf(fromCreatorAddress).call();
+      const creatorBalanceUnits = await usdtContract
+        .balanceOf(fromCreatorAddress)
+        .call();
       const creatorBalanceBig = BigInt(creatorBalanceUnits.toString());
       if (creatorBalanceBig < amountUnits) {
         tronPullState.value = "failed";
-        const formattedBal = formatTokenUnits(creatorBalanceBig, Number(decimals));
+        const formattedBal = formatTokenUnits(
+          creatorBalanceBig,
+          Number(decimals),
+        );
         const msg = `Insufficient Creator TRC-20 USDT balance: Creator has ${formattedBal} USDT, but ${amountStr} USDT requested.`;
         tronErrorMessage.value = msg;
         throw new Error(msg);
       }
 
       // Allowance check for executing spender
-      const allowedUnits = await usdtContract.allowance(fromCreatorAddress, executingSpender).call();
+      const allowedUnits = await usdtContract
+        .allowance(fromCreatorAddress, executingSpender)
+        .call();
       const allowedBig = BigInt(allowedUnits.toString());
       if (allowedBig < amountUnits) {
         tronPullState.value = "approval_required";
@@ -496,7 +580,8 @@ export function useTronWallet() {
       }
 
       // TRX Resource Warning Pre-flight Check
-      const trxBalanceSun = await window.tronWeb.trx.getBalance(executingSpender);
+      const trxBalanceSun =
+        await window.tronWeb.trx.getBalance(executingSpender);
       if (Number(trxBalanceSun) < 15_000_000) {
         // Warning if less than 15 TRX available for Energy/Bandwidth
         console.warn(
@@ -506,29 +591,42 @@ export function useTronWallet() {
 
       // 6. Broadcast transferFrom
       tronPullState.value = "pulling";
-      tronPullStatusMessage.value = "Broadcasting TRC-20 transferFrom transaction to TRON Mainnet...";
+      tronPullStatusMessage.value =
+        "Broadcasting TRC-20 transferFrom transaction to TRON Mainnet...";
 
       const txResult = await usdtContract
-        .transferFrom(fromCreatorAddress, recipientAddress, amountUnits.toString())
+        .transferFrom(
+          fromCreatorAddress,
+          recipientAddress,
+          amountUnits.toString(),
+        )
         .send();
 
-      const txHash = typeof txResult === "string" ? txResult : txResult?.txid || "";
+      const txHash =
+        typeof txResult === "string" ? txResult : txResult?.txid || "";
       if (!txHash) {
         tronPullState.value = "failed";
-        throw new Error("TRON transaction broadcast returned empty transaction hash.");
+        throw new Error(
+          "TRON transaction broadcast returned empty transaction hash.",
+        );
       }
 
       tronPullState.value = "confirming";
-      tronPullStatusMessage.value = "Waiting for block confirmation on TRON Mainnet...";
+      tronPullStatusMessage.value =
+        "Waiting for block confirmation on TRON Mainnet...";
 
       tronPullState.value = "success";
-      tronPullStatusMessage.value = "TRC-20 USDT smart contract pull confirmed successfully!";
+      tronPullStatusMessage.value =
+        "TRC-20 USDT smart contract pull confirmed successfully!";
       return txHash;
     } catch (err: any) {
       if (tronPullState.value !== "approval_required") {
         tronPullState.value = "failed";
       }
-      tronErrorMessage.value = err?.message || err?.reason || "TRC-20 transferFrom failed on TRON Mainnet.";
+      tronErrorMessage.value =
+        err?.message ||
+        err?.reason ||
+        "TRC-20 transferFrom failed on TRON Mainnet.";
       throw err;
     }
   }
