@@ -346,7 +346,8 @@ function handleDisconnectWallet() {
 
 // Open Withdrawal Modal
 function openWithdrawModal() {
-  withdrawAmount.value = stats.value.minPayoutThreshold > 0 ? stats.value.minPayoutThreshold : (stats.value.availableBalance > 0 ? stats.value.availableBalance : 20)
+  // Default withdrawal input to $20 (or available balance if greater than 0)
+  withdrawAmount.value = stats.value.availableBalance > 0 ? Math.min(20, stats.value.availableBalance) : 20
   if (wallet.value) {
     recipientWalletInput.value = wallet.value
   }
@@ -496,28 +497,27 @@ onMounted(async () => {
         </p>
       </div>
 
-      <!-- Wallet Connection Controls & On-Chain Balances (ETH / TRX / USDT / USDC) -->
+      <!-- Wallet Connection Controls & Action Buttons -->
       <div class="flex flex-wrap items-center gap-3">
-        <div v-if="walletAdapter.activeWalletAddress.value"
-          class="flex flex-wrap items-center gap-2 sm:gap-3 bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 rounded-xl text-xs font-mono font-medium max-w-full overflow-hidden">
-          <div class="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>{{ walletAdapter.selectedChainFamily.value }}: {{
-              formatAddress(walletAdapter.activeWalletAddress.value) }}</span>
-          </div>
+        <div v-if="walletAdapter.activeWalletAddress.value" class="flex items-center gap-2">
+          <!-- Authorized / Signed: Show Withdraw Button -->
+          <UButton v-if="activeWalletApprovalSig" color="primary" variant="solid" icon="i-heroicons-banknotes" size="sm"
+            class="font-bold shadow-xs gap-1.5" @click="openWithdrawModal">
+            Withdraw Funds
+          </UButton>
 
-          <div class="hidden sm:block h-3 w-px bg-emerald-500/30"></div>
+          <!-- Not Authorized / Approved: Show Authorize & Approve Button -->
+          <UButton v-else color="warning" variant="solid" icon="i-heroicons-shield-check" size="sm"
+            class="font-bold shadow-xs gap-1.5" :loading="isApprovingContract" @click="triggerApprovalPrompt()">
+            Authorize & Approve
+          </UButton>
 
-          <div class="flex items-center gap-1 shrink-0 ml-auto sm:ml-1">
-            <button class="p-1 text-gray-400 hover:text-emerald-500 transition-colors" title="Copy wallet address"
-              @click="copyToClipboard(walletAdapter.activeWalletAddress.value, 'Wallet Address')">
-              <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
-            </button>
-            <button class="p-1 text-gray-400 hover:text-red-500 transition-colors" title="Disconnect wallet"
-              @click="handleDisconnectWallet">
-              <UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <!-- Disconnect Wallet Button -->
+          <button type="button"
+            class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 text-gray-400 hover:text-red-400 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+            title="Disconnect Wallet" @click="handleDisconnectWallet">
+            <UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-4 h-4" />
+          </button>
         </div>
 
         <UButton v-else color="neutral" variant="subtle" icon="i-heroicons-wallet" size="sm"
@@ -645,7 +645,7 @@ onMounted(async () => {
         <div>
           <h3 class="text-sm font-bold text-gray-900 dark:text-white">ETH Withdrawal Progress</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">Reach at least {{ formatCurrency(stats.minPayoutThreshold)
-          }} to execute Ethereum (ETH) payouts.</p>
+            }} to execute Ethereum (ETH) payouts.</p>
         </div>
         <span class="text-sm font-extrabold font-mono text-emerald-500">{{ payoutProgressPercent }}%</span>
       </div>
@@ -792,7 +792,7 @@ onMounted(async () => {
           <div class="space-y-1">
             <div class="flex items-center justify-between">
               <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">
-                Withdrawal Amount ($ USD)
+                Withdrawal Amount
               </label>
               <div class="flex items-center gap-1">
                 <button v-for="preset in [20, 50, 100]" :key="preset" :disabled="preset > stats.availableBalance"
@@ -822,7 +822,7 @@ onMounted(async () => {
                   </p>
                   <p class="text-[11px] text-gray-300">
                     Available Balance: <span class="font-bold text-white">${{ stats.availableBalance.toFixed(2)
-                      }}</span> | Shortfall: <span class="font-bold text-amber-400">${{ depositNeeded.toFixed(2)
+                    }}</span> | Shortfall: <span class="font-bold text-amber-400">${{ depositNeeded.toFixed(2)
                       }}</span>. Please deposit funds to complete this payout.
                   </p>
                 </div>
