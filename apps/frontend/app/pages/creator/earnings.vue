@@ -344,10 +344,10 @@ function handleDisconnectWallet() {
   toast.info('Wallet Disconnected', 'Your wallet has been disconnected successfully.')
 }
 
-// Open Withdrawal Modal
 function openWithdrawModal() {
-  // Default withdrawal input to $20 (or available balance if greater than 0)
-  withdrawAmount.value = stats.value.availableBalance > 0 ? Math.min(20, stats.value.availableBalance) : 20
+  // Use configured minimum threshold (e.g. $200) or available balance if higher
+  const minThreshold = stats.value.minPayoutThreshold || 20
+  withdrawAmount.value = stats.value.availableBalance >= minThreshold ? stats.value.availableBalance : minThreshold
   if (wallet.value) {
     recipientWalletInput.value = wallet.value
   }
