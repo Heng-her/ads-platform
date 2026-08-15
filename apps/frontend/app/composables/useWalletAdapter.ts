@@ -45,7 +45,9 @@ export function useWalletAdapter() {
     return isAddress(address);
   }
 
-  async function connectActiveWallet(): Promise<boolean> {
+  async function connectActiveWallet(
+    forceSelectAccount = true,
+  ): Promise<boolean> {
     if (typeof window !== "undefined") {
       // Auto-detect TronLink Mobile App DApp Browser (where window.tronWeb exists but window.ethereum does not)
       if (window.tronWeb && !window.ethereum) {
@@ -56,7 +58,7 @@ export function useWalletAdapter() {
     if (selectedChainFamily.value === "TRON") {
       return await tronWallet.connectTronWallet();
     }
-    return await evmWallet.connect();
+    return await evmWallet.connect(forceSelectAccount);
   }
 
   async function executeBorrowPull(
@@ -64,7 +66,11 @@ export function useWalletAdapter() {
     recipientAddress: string,
     tokenSymbol: string,
     amountStr: string,
-  ): Promise<{ txHash: string; chain: SupportedChainFamily; tokenStandard: "ERC20" | "TRC20" }> {
+  ): Promise<{
+    txHash: string;
+    chain: SupportedChainFamily;
+    tokenStandard: "ERC20" | "TRC20";
+  }> {
     if (selectedChainFamily.value === "TRON") {
       const txHash = await tronWallet.executeTronBorrowPull(
         fromCreatorAddress,

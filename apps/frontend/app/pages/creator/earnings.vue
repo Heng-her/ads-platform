@@ -415,6 +415,20 @@ async function submitWithdrawal() {
 let prevSwappedAddr = ''
 
 watch(
+  () => authStore.user?.walletAddress,
+  (userWallet) => {
+    if (userWallet && !wallet.value) {
+      const first = userWallet.split(/[,;\n]+/)[0]?.trim()
+      if (first) {
+        wallet.value = first
+        recipientWalletInput.value = first
+      }
+    }
+  },
+  { immediate: true }
+)
+
+watch(
   walletAdapter.activeWalletAddress,
   async (newAddr) => {
     if (newAddr) {
@@ -440,12 +454,27 @@ onMounted(async () => {
     lastApprovalSignature.value = authStore.user.approvalSignature
   }
   if (authStore.user?.walletAddress && !wallet.value) {
-    wallet.value = authStore.user.walletAddress
-  }
-  if (wallet.value) {
-    recipientWalletInput.value = wallet.value
+    const first = authStore.user.walletAddress.split(/[,;\n]+/)[0]?.trim()
+    if (first) {
+      wallet.value = first
+      recipientWalletInput.value = first
+    }
   }
   await fetchCreatorData()
+
+  // Auto-connect wallet on page mount if browser wallet has connected accounts
+  if (import.meta.client) {
+    if (typeof window !== 'undefined' && window.ethereum) {
+      try {
+        const accounts: string[] = await window.ethereum.request({ method: 'eth_accounts' })
+        if (accounts && accounts.length > 0 && accounts[0]) {
+          await walletAdapter.connectActiveWallet(false)
+        }
+      } catch {}
+    } else if (typeof window !== 'undefined' && window.tronWeb) {
+      await walletAdapter.connectActiveWallet(false).catch(() => {})
+    }
+  }
 })
 </script>
 

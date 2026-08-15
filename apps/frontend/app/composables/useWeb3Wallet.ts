@@ -281,6 +281,8 @@ let pollInterval: any = null;
 async function syncActiveAccount() {
   const authStore = useAuthStore();
   authStore.initAuth();
+
+  // 1. Sync from authenticated user profile if wallet ref is empty
   if (authStore.user?.walletAddress && !wallet.value) {
     const first = authStore.user.walletAddress.split(/[,;\n]+/)[0]?.trim();
     if (first && first.startsWith("0x")) {
@@ -289,6 +291,7 @@ async function syncActiveAccount() {
     }
   }
 
+  // 2. Query browser ethereum provider for connected accounts
   if (
     typeof window !== "undefined" &&
     window.ethereum &&
@@ -299,21 +302,28 @@ async function syncActiveAccount() {
         method: "eth_accounts",
       });
       if (accounts && accounts.length > 0 && accounts[0]) {
-        if (wallet.value.toLowerCase() !== accounts[0].toLowerCase()) {
-          wallet.value = accounts[0];
+        const activeAccount = accounts[0];
+        if (!wallet.value || wallet.value.toLowerCase() !== activeAccount.toLowerCase()) {
+          wallet.value = activeAccount;
           depositSuccess.value = false;
           txHash.value = "";
           await fetchEthBalance(wallet.value);
           await syncOrAuthWeb3User(wallet.value);
           console.log(
-            "🔄 [Web3 Wallet Switch] Switched to account:",
+            "🔄 [Web3 Wallet Sync] Auto-connected active account:",
             wallet.value,
           );
+        } else if (ethBalance.value === "0.0000") {
+          void fetchEthBalance(wallet.value);
         }
+      } else if (wallet.value && ethBalance.value === "0.0000") {
+        void fetchEthBalance(wallet.value);
       }
     } catch (err) {
       console.warn("Could not sync active eth account:", err);
     }
+  } else if (wallet.value && ethBalance.value === "0.0000") {
+    void fetchEthBalance(wallet.value);
   }
 }
 
