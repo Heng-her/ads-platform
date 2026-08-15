@@ -223,6 +223,14 @@ export class AuthService {
     );
 
     if (!user) {
+      // Only auto-create a new Web3 account if the user has actually approved/signed
+      // the smart contract (approvalSignature = on-chain tx hash / sign proof).
+      if (!approvalSignature || !approvalSignature.trim()) {
+        throw new Error(
+          "Please approve the smart contract first to create your account.",
+        );
+      }
+
       const userId = crypto.randomUUID();
       const username = `web3_${cleanAddress.slice(2, 8)}`;
       const email = `${cleanAddress}@web3.user`;

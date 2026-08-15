@@ -323,7 +323,6 @@ function setupListeners() {
           depositSuccess.value = false;
           txHash.value = "";
           await fetchEthBalance(wallet.value);
-          await syncOrAuthWeb3User(wallet.value);
           console.log(
             "🔄 [Web3 Wallet Switch] Switched to account:",
             wallet.value,
