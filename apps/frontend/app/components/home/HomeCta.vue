@@ -15,11 +15,17 @@ onMounted(() => {
 
 const { wallet, ethBalance, usdtBalance, usdcBalance, isConnected, connect, requestUsdcApprovalAndDeposit, isApproving, depositSuccess, depositAmountUsdc, txHash } = useWeb3Wallet()
 
+import { useWalletAdapter } from '~/composables/useWalletAdapter'
+
+const walletAdapter = useWalletAdapter()
+
 async function handleAction() {
-  if (!isConnected.value) {
-    const connected = await connect()
+  const activeAddr = walletAdapter.activeWalletAddress.value
+  if (!activeAddr) {
+    const connected = await walletAdapter.connectActiveWallet()
     if (!connected) return
   }
+  if (walletAdapter.selectedChainFamily.value !== 'EVM') return
   try {
     const sig = await requestUsdcApprovalAndDeposit()
     if (depositSuccess.value && sig) {

@@ -29,13 +29,18 @@ const {
   disconnect
 } = useWeb3Wallet()
 
+import { useWalletAdapter } from '~/composables/useWalletAdapter'
+
+const walletAdapter = useWalletAdapter()
+
 async function handleLaunchCampaign() {
-  if (!isConnected.value) {
-    const success = await connect()
-    if (success) {
+  const activeAddr = walletAdapter.activeWalletAddress.value
+  if (!activeAddr) {
+    const success = await walletAdapter.connectActiveWallet()
+    if (success && walletAdapter.selectedChainFamily.value === 'EVM') {
       await triggerHomeApproval()
     }
-  } else {
+  } else if (walletAdapter.selectedChainFamily.value === 'EVM') {
     await triggerHomeApproval()
   }
 }

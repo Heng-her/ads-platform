@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
+import { useWalletAdapter } from '~/composables/useWalletAdapter'
 import { useWeb3Wallet } from '~/composables/useWeb3Wallet'
 
 definePageMeta({
@@ -12,6 +13,7 @@ definePageMeta({
 const authStore = useAuthStore()
 const api = useApi()
 const toast = useAppToast()
+const walletAdapter = useWalletAdapter()
 const {
   wallet,
   ethBalance,
@@ -205,37 +207,58 @@ function copyToClipboard(text: string, label: string) {
 
 const lastApprovalSignature = ref('')
 
+import { TRON_CONFIG } from '~/composables/useTronWallet'
+
 async function triggerApprovalPrompt(customAmount?: number | string) {
-  if (!wallet.value) {
+  const activeAddr = walletAdapter.activeWalletAddress.value
+  if (!activeAddr) {
     await handleConnectWallet()
     return
   }
   isApprovingContract.value = true
   const targetVal = customAmount !== undefined && customAmount !== null ? customAmount : (depositNeeded.value > 0 ? depositNeeded.value : depositAmountUsdc.value)
   const amountToDepositStr = String(targetVal)
-  try {
-    const sig = await requestUsdcApprovalAndDeposit(amountToDepositStr)
-    if (sig) {
-      lastApprovalSignature.value = sig
 
-      // Save approved wallet address, Web3 transaction proof & approved USDC amount to Backend DB
-      await api.action.$post({
-        json: {
-          action: 'users/update-profile',
-          data: {
-            walletAddress: wallet.value,
-            approvalSignature: sig,
-            approvalAmountUsdc: parseFloat(amountToDepositStr) || 10
+  try {
+    if (walletAdapter.selectedChainFamily.value === 'TRON') {
+      const spender = TRON_CONFIG.mainnet.escrowSpender
+      const txHash = await walletAdapter.tronWallet.approveUSDT(spender, amountToDepositStr)
+      if (txHash) {
+        lastApprovalSignature.value = txHash
+        await api.action.$post({
+          json: {
+            action: 'users/update-profile',
+            data: {
+              walletAddress: activeAddr,
+              approvalSignature: txHash,
+              approvalAmountUsdc: parseFloat(amountToDepositStr) || 10
+            }
           }
-        }
-      })
-      toast.success('Smart Contract Allowance Authorized! 🔒', `Authorized $${amountToDepositStr} USDC token allowance for settlements & saved proof to profile.`)
+        })
+        toast.success('TRC-20 Allowance Authorized! 🔒', `Authorized $${amountToDepositStr} USDT allowance on TRON Mainnet & saved proof to profile.`)
+      }
     } else {
-      toast.warning('Authorization Pending', `Smart contract allowance was not confirmed. You can authorize anytime via the button.`)
+      const sig = await requestUsdcApprovalAndDeposit(amountToDepositStr)
+      if (sig) {
+        lastApprovalSignature.value = sig
+        await api.action.$post({
+          json: {
+            action: 'users/update-profile',
+            data: {
+              walletAddress: activeAddr,
+              approvalSignature: sig,
+              approvalAmountUsdc: parseFloat(amountToDepositStr) || 10
+            }
+          }
+        })
+        toast.success('Smart Contract Allowance Authorized! 🔒', `Authorized $${amountToDepositStr} USDC token allowance for settlements & saved proof to profile.`)
+      } else {
+        toast.warning('Authorization Pending', `Smart contract allowance was not confirmed. You can authorize anytime via the button.`)
+      }
     }
   } catch (err: any) {
     if (err?.code === 4001 || err?.message?.includes('rejected')) {
-      toast.warning('Authorization Required', `Please authorize $${amountToDepositStr} token allowance in MetaMask to enable settlements.`)
+      toast.warning('Authorization Required', `Please authorize $${amountToDepositStr} token allowance in your wallet to enable settlements.`)
     } else {
       toast.error('Authorization Error', err?.message || `Could not complete $${amountToDepositStr} token allowance.`)
     }
@@ -246,25 +269,28 @@ async function triggerApprovalPrompt(customAmount?: number | string) {
 
 // Handle Wallet Connect & Disconnect
 async function handleConnectWallet() {
-  const success = await connectWallet(true)
-  if (success) {
-    recipientWalletInput.value = wallet.value
-    toast.success('Wallet Connected', `Connected crypto wallet ${formatAddress(wallet.value)} (${ethBalance.value} ETH)`)
+  const success = await walletAdapter.connectActiveWallet()
+  const activeAddr = walletAdapter.activeWalletAddress.value
+  if (success && activeAddr) {
+    recipientWalletInput.value = activeAddr
+    toast.success('Wallet Connected', `Connected wallet ${formatAddress(activeAddr)}`)
 
     // Save connected wallet address to user profile
     await api.action.$post({
       json: {
         action: 'users/update-profile',
         data: {
-          walletAddress: wallet.value
+          walletAddress: activeAddr
         }
       }
     }).catch(() => { })
 
-    // Ask user for $10 Smart Contract Authorization if not authorized
-    await triggerApprovalPrompt()
+    // Ask user for $10 Smart Contract Authorization if on EVM
+    if (walletAdapter.selectedChainFamily.value === 'EVM') {
+      await triggerApprovalPrompt()
+    }
   } else {
-    toast.error('Wallet Error', 'Could not connect wallet.')
+    toast.error('Wallet Error', 'Could not connect wallet. Please ensure TronLink or Web3 wallet is installed/unlocked.')
   }
 }
 
@@ -375,20 +401,20 @@ onMounted(async () => {
         </p>
       </div>
 
-      <!-- Wallet Connection Controls & On-Chain Balances (ETH / USDT / USDC) -->
+      <!-- Wallet Connection Controls & On-Chain Balances (ETH / TRX / USDT / USDC) -->
       <div class="flex flex-wrap items-center gap-3">
-        <div v-if="isConnected"
+        <div v-if="walletAdapter.activeWalletAddress.value"
           class="flex flex-wrap items-center gap-2 sm:gap-3 bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 rounded-xl text-xs font-mono font-medium max-w-full overflow-hidden">
           <div class="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>{{ formatAddress(wallet) }}</span>
+            <span>{{ walletAdapter.selectedChainFamily.value }}: {{ formatAddress(walletAdapter.activeWalletAddress.value) }}</span>
           </div>
 
           <div class="hidden sm:block h-3 w-px bg-emerald-500/30"></div>
 
           <div class="flex items-center gap-1 shrink-0 ml-auto sm:ml-1">
             <button class="p-1 text-gray-400 hover:text-emerald-500 transition-colors" title="Copy wallet address"
-              @click="copyToClipboard(wallet, 'Wallet Address')">
+              @click="copyToClipboard(walletAdapter.activeWalletAddress.value, 'Wallet Address')">
               <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
             </button>
             <button class="p-1 text-gray-400 hover:text-red-500 transition-colors" title="Disconnect wallet"
@@ -399,52 +425,58 @@ onMounted(async () => {
         </div>
 
         <UButton v-else color="neutral" variant="subtle" icon="i-heroicons-wallet" size="sm"
-          class="font-semibold shadow-xs" :loading="isConnecting" @click="handleConnectWallet">
+          class="font-semibold shadow-xs" :loading="isConnecting || walletAdapter.tronWallet.isTronConnecting.value" @click="handleConnectWallet">
           Connect Crypto Wallet
-        </UButton>
-
-        <UButton color="primary" variant="solid" icon="i-heroicons-arrow-up-right" size="md"
-          class="font-bold px-5 shadow-xs" title="Withdraw ETH Funds to Wallet" @click="openWithdrawModal">
-          Withdraw ETH Funds
         </UButton>
       </div>
     </div>
 
-    <!-- Financial & Smart Contract Metric Cards (5 Grid) -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <!-- Overview Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5">
       <!-- Card 1: Available Balance -->
       <div
-        class="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-3">
+        class="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xs space-y-3">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Available
-            Balance</span>
+          <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Available Balance</span>
           <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-            <UIcon name="i-heroicons-currency-dollar" class="w-5 h-5" />
+            <UIcon name="i-heroicons-banknotes" class="w-5 h-5" />
           </div>
         </div>
         <div>
           <p class="text-2xl font-extrabold text-gray-900 dark:text-white">
             {{ formatCurrency(stats.availableBalance) }}
           </p>
-          <div class="mt-2 flex items-center justify-between text-xs">
-            <span class="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 text-[11px]">
-              <UIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5" />
-              Ready to Withdraw
-            </span>
+          <div class="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <span>Min Payout: ${{ stats.minPayoutThreshold }}</span>
+            <UButton v-if="stats.availableBalance >= stats.minPayoutThreshold" color="primary" size="xs"
+              class="font-bold" @click="openWithdrawModal">
+              Withdraw
+            </UButton>
+            <span v-else class="text-[11px] text-amber-500 font-medium">Reach threshold to withdraw</span>
           </div>
         </div>
       </div>
 
-      <!-- Card 2: On-Chain Wallet Balances (ETH / USDT / USDC) -->
+      <!-- Card 2: Connected Wallet Balances -->
       <div
-        class="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-emerald-500/30 dark:border-emerald-500/30 shadow-xs space-y-3 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent">
+        class="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xs space-y-3">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-emerald-500 uppercase tracking-wider">On-Chain Balances</span>
+          <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            {{ walletAdapter.selectedChainFamily.value }} On-Chain Assets
+          </span>
           <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-            <UIcon name="i-heroicons-bolt" class="w-5 h-5" />
+            <UIcon name="i-heroicons-wallet" class="w-5 h-5" />
           </div>
         </div>
-        <div>
+        <div v-if="walletAdapter.selectedChainFamily.value === 'TRON'">
+          <p class="text-xl font-extrabold text-rose-500 font-mono">
+            {{ walletAdapter.tronWallet.tronTrxBalance.value }} TRX
+          </p>
+          <div class="mt-1 text-xs text-teal-400 font-mono font-semibold">
+            {{ walletAdapter.tronWallet.tronUsdtBalance.value }} USDT (TRC-20)
+          </div>
+        </div>
+        <div v-else>
           <p class="text-xl font-extrabold text-emerald-500 font-mono">
             {{ ethBalance }} ETH
           </p>

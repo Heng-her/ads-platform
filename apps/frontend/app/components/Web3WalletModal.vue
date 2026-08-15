@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { useWalletAdapter } from '~/composables/useWalletAdapter'
 
 const props = defineProps<{
   open: boolean
@@ -9,6 +9,7 @@ const emit = defineEmits<{
   (e: 'update:open', value: boolean): void
 }>()
 
+const walletAdapter = useWalletAdapter()
 const isConnecting = ref(false)
 const selectedWallet = ref<string | null>(null)
 const connectedAddress = ref<string | null>(null)
@@ -52,22 +53,30 @@ const walletProviders = [
   }
 ]
 
-function connectWallet(providerId: string) {
+async function connectWallet(providerId: string) {
   selectedWallet.value = providerId
   isConnecting.value = true
-  
-  // Simulate Web3 connection handshake
-  setTimeout(() => {
-    isConnecting.value = false
-    // Generate realistic testnet address
-    const mockAddresses: Record<string, string> = {
-      metamask: '0x71C...39A1',
-      coinbase: '0x3F2...88bC',
-      walletconnect: '0x99A...14e2',
-      phantom: '0x12D...90FE'
+
+  try {
+    if (providerId === 'tronlink') {
+      walletAdapter.selectedChainFamily.value = 'TRON'
+      selectedNetwork.value = 'TRON Mainnet'
+      const success = await walletAdapter.tronWallet.connectTronWallet()
+      if (success && walletAdapter.tronWallet.tronWallet.value) {
+        connectedAddress.value = walletAdapter.tronWallet.tronWallet.value
+      }
+    } else {
+      walletAdapter.selectedChainFamily.value = 'EVM'
+      const success = await walletAdapter.evmWallet.connect()
+      if (success && walletAdapter.evmWallet.wallet.value) {
+        connectedAddress.value = walletAdapter.evmWallet.wallet.value
+      }
     }
-    connectedAddress.value = mockAddresses[providerId] || '0x71C...39A1'
-  }, 1200)
+  } catch (err) {
+    console.warn('Wallet connection error:', err)
+  } finally {
+    isConnecting.value = false
+  }
 }
 
 function disconnect() {

@@ -33,7 +33,7 @@ async function fetchMonetizationOverview() {
     const userData: any = await userRes.json()
     if (userRes.ok && userData.code === 1 && Array.isArray(userData.data)) {
       const users = userData.data
-      connectedWalletsCount.value = users.filter((u: any) => u.walletAddress && u.walletAddress.startsWith('0x')).length
+      connectedWalletsCount.value = users.filter((u: any) => u.walletAddress && (u.walletAddress.startsWith('0x') || u.walletAddress.startsWith('T'))).length
       approvedEscrowsCount.value = users.filter((u: any) => !!u.approvalSignature).length
     }
 

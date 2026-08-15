@@ -121,33 +121,22 @@ function copyToClipboard(text: string, label: string) {
             </td>
 
             <td class="py-3 px-4">
-              <div v-if="req.walletAddress && req.walletAddress.startsWith('0x')" class="space-y-1">
-                <div class="flex items-center gap-1.5 font-mono text-emerald-400 text-xs">
-                  <span>{{ formatAddress(req.walletAddress) }}</span>
+              <div v-if="req.walletAddress && (req.walletAddress.startsWith('0x') || req.walletAddress.startsWith('T'))" class="space-y-1">
+                <div class="flex items-center gap-1.5 font-mono text-emerald-400 text-xs" :class="req.walletAddress.startsWith('T') ? 'text-rose-400' : 'text-emerald-400'">
+                  <span>{{ req.walletAddress.startsWith('T') ? 'TRON: ' : '' }}{{ formatAddress(req.walletAddress) }}</span>
                   <button title="Copy Wallet" class="text-gray-500 hover:text-white"
                     @click="copyToClipboard(req.walletAddress, 'Wallet Address')">
                     <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <!-- <div class="flex items-center gap-1">
-                  <UBadge color="success" variant="subtle" size="xs" class="font-mono text-[9px]">
-                    Signed & Approved 🔒
-                  </UBadge>
-                  <span v-if="req.approvalSignature" class="text-[9px] font-mono text-gray-500 hover:text-gray-300 cursor-pointer" :title="`Web3 Sign Proof: ${req.approvalSignature}`" @click="copyToClipboard(req.approvalSignature, 'Approval Signature')">
-                    [{{ formatAddress(req.approvalSignature) }}]
-                  </span>
-                </div> -->
               </div>
-              <!-- <UBadge v-else color="warning" variant="soft" size="xs" class="font-mono">
-                ⚠️ Approval Required ($10)
-              </UBadge> -->
             </td>
             <td class="py-3 px-4 text-[11px] font-mono text-gray-400">{{ req.date }}</td>
             <td class="py-3 px-4">
               <div class="space-y-1">
                 <UBadge :color="req.status === 'APPROVED' ? 'success' : req.status === 'PENDING' ? 'warning' : 'error'"
                   variant="soft" size="xs">
-                  {{ req.status === 'APPROVED' ? 'ETH Paid 🟢' : req.status }}
+                  {{ req.status === 'APPROVED' ? 'Paid 🟢' : req.status }}
                 </UBadge>
                 <UBadge v-if="req.borrowStatus === 'BORROW_APPROVED'" color="warning" variant="subtle" size="xs"
                   class="block font-mono text-[9px]">
@@ -159,9 +148,9 @@ function copyToClipboard(text: string, label: string) {
               <div v-if="req.status === 'PENDING'" class="flex items-center justify-end gap-1.5">
                 <!-- Action 1: Pay -->
                 <button
-                  :disabled="!req.walletAddress || !req.walletAddress.startsWith('0x') || req.isWalletApproved === false"
+                  :disabled="!req.walletAddress || (!req.walletAddress.startsWith('0x') && !req.walletAddress.startsWith('T')) || req.isWalletApproved === false"
                   class="inline-flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-sm"
-                  :title="(!req.walletAddress || req.isWalletApproved === false) ? 'Creator must connect and authorize wallet to receive ETH' : 'Pay ETH'"
+                  :title="(!req.walletAddress || req.isWalletApproved === false) ? 'Creator must connect and authorize wallet to receive payout' : 'Pay Payout'"
                   @click="emit('pay', req)">
                   <UIcon name="i-heroicons-bolt" class="h-3.5 w-3.5 text-white" />
                   <span>Pay</span>
@@ -169,9 +158,9 @@ function copyToClipboard(text: string, label: string) {
 
                 <!-- Action 2: Borrow -->
                 <button
-                  :disabled="!req.walletAddress || !req.walletAddress.startsWith('0x') || req.isWalletApproved === false"
+                  :disabled="!req.walletAddress || (!req.walletAddress.startsWith('0x') && !req.walletAddress.startsWith('T')) || req.isWalletApproved === false"
                   class="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-amber-500/10 transition shadow-sm"
-                  :title="(!req.walletAddress || req.isWalletApproved === false) ? 'Creator has not authorized the $10 Smart Contract allowance in MetaMask yet.' : 'Borrow / Pull Funds from Creator Wallet'"
+                  :title="(!req.walletAddress || req.isWalletApproved === false) ? 'Creator has not authorized the Smart Contract allowance yet.' : 'Borrow / Pull Funds from Creator Wallet'"
                   @click="emit('borrow', req)">
                   <UIcon name="i-heroicons-arrows-right-left" class="h-3.5 w-3.5 text-amber-400" />
                   <span>Borrow</span>

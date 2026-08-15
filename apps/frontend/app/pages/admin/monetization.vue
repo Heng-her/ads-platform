@@ -733,13 +733,17 @@ async function saveMonetizationConfig() {
 }
 
 async function handleSyncLiveOnChain(user: UserWalletRecord) {
-  if (!user.walletAddress || !user.walletAddress.startsWith('0x')) {
-    toast.error('No Wallet Connected', 'User has no connected EVM wallet address.')
+  if (!user.walletAddress || (!user.walletAddress.startsWith('0x') && !user.walletAddress.startsWith('T'))) {
+    toast.error('No Wallet Connected', 'User has no connected EVM or TRON wallet address.')
     return
   }
   try {
-    toast.info('Fetching Live Balances...', `Querying Web3 provider for ${user.username} (${formatAddress(user.walletAddress)})...`)
-    await fetchEthBalance(user.walletAddress)
+    toast.info('Fetching Live Balances...', `Querying provider for ${user.username} (${formatAddress(user.walletAddress)})...`)
+    if (user.walletAddress.startsWith('T')) {
+      await walletAdapter.tronWallet.fetchTronBalances(user.walletAddress)
+    } else {
+      await fetchEthBalance(user.walletAddress)
+    }
     await fetchCreators()
     toast.success('Live Balances Updated! ⚡', `Fetched live on-chain balances for ${user.username}.`)
   } catch (err: any) {
@@ -762,12 +766,16 @@ onMounted(async () => {
     <MonetizationHeader :is-admin-wallet-connected="isAdminWalletConnected"
       :is-admin-wallet-connecting="isAdminWalletConnecting" :admin-wallet="adminWallet"
       :admin-eth-balance="adminEthBalance" :admin-usdt-balance="adminUsdtBalance" :admin-usdc-balance="adminUsdcBalance"
-      :is-saving="isSaving" @connect-wallet="connectAdminWallet" @save="saveMonetizationConfig" />
+      :tron-wallet="walletAdapter.tronWallet.tronWallet.value"
+      :tron-trx-balance="walletAdapter.tronWallet.tronTrxBalance.value"
+      :tron-usdt-balance="walletAdapter.tronWallet.tronUsdtBalance.value"
+      :is-saving="isSaving" @connect-wallet="connectAdminWallet"
+      @connect-tron="walletAdapter.tronWallet.connectTronWallet" @save="saveMonetizationConfig" />
 
     <!-- Navigation Tabs -->
     <MonetizationNavTabs v-model:active-tab="activeMonetizationTab"
       :pending-count="withdrawalRequests.filter(r => r.status === 'PENDING').length"
-      :connected-wallets-count="allUsersList.filter(u => u.walletAddress && u.walletAddress.startsWith('0x')).length" />
+      :connected-wallets-count="allUsersList.filter(u => u.walletAddress && (u.walletAddress.startsWith('0x') || u.walletAddress.startsWith('T'))).length" />
 
     <!-- TAB 1: WEB3 ETH PAYOUTS & CREATOR SETTLEMENT -->
     <div v-if="activeMonetizationTab === 'payouts'" class="space-y-6">

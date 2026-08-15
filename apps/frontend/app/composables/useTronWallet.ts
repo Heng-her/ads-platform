@@ -94,6 +94,61 @@ export function formatTokenUnits(units: bigint | string, decimals: number): stri
   return `${integerPart}.${fractionalPart.slice(0, 4)}`;
 }
 
+// Global TronLink event listener for account & network changes
+if (typeof window !== "undefined") {
+  window.addEventListener("message", (e: any) => {
+    if (e.data && e.data.message) {
+      const action = e.data.message.action;
+      if (
+        action === "setAccount" ||
+        action === "setNode" ||
+        action === "accountsChanged" ||
+        action === "connect"
+      ) {
+        const addr =
+          e.data.message.data?.address ||
+          window.tronWeb?.defaultAddress?.base58;
+        if (addr && isTronAddress(addr)) {
+          tronWallet.value = addr;
+          tronWalletState.value = "ready";
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Safely extract TRON Base58 address from TronLink App or Extension provider.
+ * Handles both string defaultAddress and object defaultAddress.base58.
+ */
+export function extractTronAddress(): string {
+  if (typeof window === "undefined" || !window.tronWeb) return "";
+
+  const defaultAddr = window.tronWeb.defaultAddress;
+  if (typeof defaultAddr === "string" && isTronAddress(defaultAddr)) {
+    return defaultAddr;
+  }
+  if (defaultAddr && typeof defaultAddr.base58 === "string" && isTronAddress(defaultAddr.base58)) {
+    return defaultAddr.base58;
+  }
+
+  if (window.tronLink && window.tronLink.tronWeb) {
+    const linkAddr = window.tronLink.tronWeb.defaultAddress;
+    if (typeof linkAddr === "string" && isTronAddress(linkAddr)) {
+      return linkAddr;
+    }
+    if (linkAddr && typeof linkAddr.base58 === "string" && isTronAddress(linkAddr.base58)) {
+      return linkAddr.base58;
+    }
+  }
+
+  if (typeof window.tronWeb.address === "string" && isTronAddress(window.tronWeb.address)) {
+    return window.tronWeb.address;
+  }
+
+  return "";
+}
+
 export function useTronWallet() {
   /**
    * Detect TronLink and update wallet state machine.
@@ -109,11 +164,9 @@ export function useTronWallet() {
       return "not_installed";
     }
 
-    const currentAddr =
-      window.tronWeb?.defaultAddress?.base58 ||
-      (window.tronLink?.tronWeb && window.tronLink.tronWeb.defaultAddress?.base58);
+    const currentAddr = extractTronAddress();
 
-    if (!currentAddr || !isTronAddress(currentAddr)) {
+    if (!currentAddr) {
       tronWalletState.value = "installed_locked";
       return "installed_locked";
     }
@@ -126,9 +179,10 @@ export function useTronWallet() {
     ).toLowerCase();
 
     if (
-      fullHost.includes("nile") ||
-      fullHost.includes("shasta") ||
-      fullHost.includes("testnet")
+      fullHost &&
+      (fullHost.includes("nile") ||
+        fullHost.includes("shasta") ||
+        fullHost.includes("testnet"))
     ) {
       tronWalletState.value = "wrong_network";
       return "wrong_network";
@@ -166,6 +220,16 @@ export function useTronWallet() {
         return false;
       }
 
+      // 1. Check if wallet is already unlocked (TronLink App DApp browser)
+      let addr = extractTronAddress();
+      if (addr) {
+        tronWallet.value = addr;
+        tronWalletState.value = "ready";
+        await fetchTronBalances();
+        return true;
+      }
+
+      // 2. Request authorization popup if extension supports requestAccounts
       if (window.tronLink && typeof window.tronLink.request === "function") {
         try {
           await window.tronLink.request({ method: "tron_requestAccounts" });
@@ -174,7 +238,7 @@ export function useTronWallet() {
         }
       }
 
-      // Poll up to 2 seconds for defaultAddress after authorization
+      // 3. Poll up to 2 seconds for defaultAddress after authorization
       let state = checkTronProviderState();
       let pollCount = 0;
       while (state === "installed_locked" && pollCount < 10) {
@@ -184,8 +248,8 @@ export function useTronWallet() {
         pollCount++;
       }
 
-      if (state === "ready" || state === "connected" || tronWallet.value) {
-        const addr = tronWallet.value || window.tronWeb?.defaultAddress?.base58;
+      addr = extractTronAddress();
+      if (state === "ready" || state === "connected" || addr) {
         if (addr) {
           tronWallet.value = addr;
           await fetchTronBalances();

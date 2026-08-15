@@ -46,6 +46,13 @@ export function useWalletAdapter() {
   }
 
   async function connectActiveWallet(): Promise<boolean> {
+    if (typeof window !== "undefined") {
+      // Auto-detect TronLink Mobile App DApp Browser (where window.tronWeb exists but window.ethereum does not)
+      if (window.tronWeb && !window.ethereum) {
+        selectedChainFamily.value = "TRON";
+      }
+    }
+
     if (selectedChainFamily.value === "TRON") {
       return await tronWallet.connectTronWallet();
     }
