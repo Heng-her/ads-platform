@@ -298,11 +298,14 @@ const handleSubmit = async () => {
 
           <!-- Portfolio Link -->
           <div class="relative">
-            <label class="block text-xs font-medium mb-1 ml-1 transition-colors duration-200"
-              :class="[focusedField === 'portfolio' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400']"
-              for="portfolio">
-              Portfolio Link
-            </label>
+            <div class="flex items-center justify-between mb-1 ml-1">
+              <label class="block text-xs font-medium transition-colors duration-200"
+                :class="[focusedField === 'portfolio' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400']"
+                for="portfolio">
+                Portfolio Link
+              </label>
+              <span class="text-[11px] text-slate-400 dark:text-slate-500 font-normal">Optional</span>
+            </div>
             <div class="relative flex items-center">
               <UIcon name="i-lucide-link" class="absolute left-3.5 text-slate-400 h-4 w-4 pointer-events-none" />
               <input id="portfolio" v-model="portfolio" name="portfolio" type="url" placeholder="https://yourwork.com"

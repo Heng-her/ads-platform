@@ -5,7 +5,7 @@ export const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   avatar: z.string().optional(),
-  portfolioLink: z.string().url("Invalid portfolio URL").optional(),
+  portfolioLink: z.string().url("Invalid portfolio URL").optional().or(z.literal("")),
   country: z
     .string()
     .length(2, "Country must be a 2-letter ISO code (e.g. US, NG)")
