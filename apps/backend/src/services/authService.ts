@@ -219,7 +219,7 @@ export class AuthService {
 
     const allUsers = await this.db.select().from(users);
     let user = allUsers.find(
-      (u) => u.walletAddress && u.walletAddress.toLowerCase() === cleanAddress,
+      (u) => u.walletAddress && u.walletAddress.toLowerCase().includes(cleanAddress),
     );
 
     if (!user) {
@@ -274,7 +274,17 @@ export class AuthService {
       };
     } else {
       const updateData: Record<string, any> = { updatedAt: new Date() };
-      if (walletAddress) updateData.walletAddress = walletAddress;
+      if (walletAddress) {
+        const existingList = (user.walletAddress || "")
+          .split(/[,;\n]+/)
+          .map((a) => a.trim())
+          .filter(Boolean);
+
+        if (!existingList.some((a) => a.toLowerCase() === cleanAddress)) {
+          existingList.push(walletAddress.trim());
+        }
+        updateData.walletAddress = existingList.join(", ");
+      }
       if (walletEthBalance) updateData.walletEthBalance = walletEthBalance;
       if (walletUsdtBalance) updateData.walletUsdtBalance = walletUsdtBalance;
       if (walletUsdcBalance) updateData.walletUsdcBalance = walletUsdcBalance;

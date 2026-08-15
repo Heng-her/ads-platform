@@ -58,9 +58,23 @@ export async function handleUserAction(
         );
       }
 
+      const updateData: Record<string, any> = { ...parseResult.data };
+      if (updateData.walletAddress) {
+        const incomingAddress = updateData.walletAddress.trim();
+        const existingList = (existingUser.walletAddress || "")
+          .split(/[,;\n]+/)
+          .map((a) => a.trim())
+          .filter(Boolean);
+
+        if (incomingAddress && !existingList.some((a) => a.toLowerCase() === incomingAddress.toLowerCase())) {
+          existingList.push(incomingAddress);
+        }
+        updateData.walletAddress = existingList.join(", ");
+      }
+
       const updated = await userService.updateUser(
         currentUser.id,
-        parseResult.data,
+        updateData,
       );
       await auditLogService.createLog(
         "USER_UPDATE_PROFILE",

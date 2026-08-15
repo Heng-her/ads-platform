@@ -436,8 +436,13 @@ async function syncOrAuthWeb3User(address: string, approvalSignature?: string) {
         })
         .catch(() => {});
 
+      const data: any = await res?.json().catch(() => ({}));
       if (res && res.ok && authStore.user) {
-        authStore.user.walletAddress = address;
+        if (data?.data?.walletAddress) {
+          authStore.user.walletAddress = data.data.walletAddress;
+        } else {
+          authStore.user.walletAddress = address;
+        }
         if (approvalSignature) {
           authStore.user.approvalSignature = approvalSignature;
         }

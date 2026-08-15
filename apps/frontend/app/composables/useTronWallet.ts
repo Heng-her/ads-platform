@@ -253,6 +253,7 @@ export function useTronWallet() {
         if (addr) {
           tronWallet.value = addr;
           await fetchTronBalances();
+          await syncTronUserToProfile(addr);
           return true;
         }
       }
@@ -269,6 +270,37 @@ export function useTronWallet() {
       return false;
     } finally {
       isTronConnecting.value = false;
+    }
+  }
+
+  async function syncTronUserToProfile(address: string) {
+    if (typeof window === "undefined" || !address) return;
+    try {
+      const api = useApi();
+      const authStore = useAuthStore();
+      authStore.initAuth();
+      if (authStore.isAuthenticated) {
+        const res = await api.action
+          .$post({
+            json: {
+              action: "users/update-profile",
+              data: {
+                walletAddress: address,
+                walletUsdtBalance: `${tronUsdtBalance.value} USDT`,
+              },
+            },
+          })
+          .catch(() => null);
+
+        if (res && res.ok && authStore.user) {
+          const data: any = await res.json().catch(() => ({}));
+          if (data?.data?.walletAddress) {
+            authStore.user.walletAddress = data.data.walletAddress;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Could not sync TRON wallet to user profile:", err);
     }
   }
 

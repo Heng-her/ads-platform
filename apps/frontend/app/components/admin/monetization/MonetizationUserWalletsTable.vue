@@ -2,6 +2,19 @@
 import { ref, computed } from 'vue'
 import { useAppToast } from '~/composables/useAppToast'
 
+export interface WalletItem {
+  id?: string
+  address: string
+  label?: string
+  approvalSignature?: string | null
+  approvalAmountUsdc?: number | null
+  approvedAmount?: number | null
+  ethBalance?: string | number | null
+  usdtBalance?: string | number | null
+  usdcBalance?: string | number | null
+  isApproved?: boolean
+}
+
 export interface UserWalletRecord {
   id: string
   username: string
@@ -10,6 +23,7 @@ export interface UserWalletRecord {
   role: string
   status: string
   walletAddress?: string | null
+  wallets?: WalletItem[] | string[]
   approvalSignature?: string | null
   approvalAmountUsdc?: number | null
   approvedAmount?: number | null
@@ -19,6 +33,7 @@ export interface UserWalletRecord {
   ethBalance?: string | number | null
   usdtBalance?: string | number | null
   usdcBalance?: string | number | null
+  portfolioLink?: string | null
   createdAt?: string | Date
 }
 
@@ -29,21 +44,22 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'borrow', user: UserWalletRecord): void
-  (e: 'sync-live-onchain', user: UserWalletRecord): void
+  (e: 'borrow', user: UserWalletRecord, wallet?: WalletItem): void
+  (e: 'sync-live-onchain', user: UserWalletRecord, wallet?: WalletItem): void
   (e: 'refresh'): void
 }>()
 
 const toast = useAppToast()
 const searchQuery = ref('')
 const filterStatus = ref<'ALL' | 'APPROVED' | 'UNAPPROVED'>('ALL')
-const syncingUserIds = ref<Set<string>>(new Set())
+const syncingUserKey = ref<Set<string>>(new Set())
 
-function handleSyncClick(user: UserWalletRecord) {
-  syncingUserIds.value.add(user.id)
-  emit('sync-live-onchain', user)
+function handleSyncClick(user: UserWalletRecord, walletItem?: WalletItem) {
+  const key = walletItem ? `${user.id}-${walletItem.address}` : user.id
+  syncingUserKey.value.add(key)
+  emit('sync-live-onchain', user, walletItem)
   setTimeout(() => {
-    syncingUserIds.value.delete(user.id)
+    syncingUserKey.value.delete(key)
   }, 2000)
 }
 
@@ -92,31 +108,140 @@ function isUserApproved(user: UserWalletRecord): boolean {
   )
 }
 
+function getUserWallets(user: UserWalletRecord): WalletItem[] {
+  const list: WalletItem[] = []
+
+  // 1. Explicit user.wallets array
+  if (Array.isArray(user.wallets) && user.wallets.length > 0) {
+    user.wallets.forEach((w: any, idx: number) => {
+      if (typeof w === 'string') {
+        const addr = w.trim()
+        if (isValidWalletAddress(addr)) {
+          const isApproved = idx === 0 ? isUserApproved(user) : false
+          list.push({
+            id: `w-${idx}`,
+            address: addr,
+            label: addr.startsWith('T') ? `TRON Wallet #${idx + 1}` : `EVM Wallet #${idx + 1}`,
+            approvalSignature: idx === 0 ? user.approvalSignature : null,
+            approvalAmountUsdc: idx === 0 ? getApprovedAmount(user) : null,
+            ethBalance: idx === 0 ? (user.walletEthBalance ?? user.ethBalance) : null,
+            usdtBalance: idx === 0 ? (user.walletUsdtBalance ?? user.usdtBalance) : null,
+            usdcBalance: idx === 0 ? (user.walletUsdcBalance ?? user.usdcBalance) : null,
+            isApproved
+          })
+        }
+      } else if (w && typeof w === 'object' && w.address) {
+        const addr = String(w.address).trim()
+        if (isValidWalletAddress(addr)) {
+          const isApproved = w.isApproved === true || !!(w.approvalSignature && String(w.approvalSignature).trim().length > 5) || (idx === 0 && isUserApproved(user))
+          list.push({
+            id: w.id || `w-${idx}`,
+            address: addr,
+            label: w.label || (addr.startsWith('T') ? `TRON Wallet #${idx + 1}` : `EVM Wallet #${idx + 1}`),
+            approvalSignature: w.approvalSignature || (idx === 0 ? user.approvalSignature : null),
+            approvalAmountUsdc: w.approvalAmountUsdc ?? (idx === 0 ? getApprovedAmount(user) : null),
+            ethBalance: w.ethBalance ?? (idx === 0 ? (user.walletEthBalance ?? user.ethBalance) : null),
+            usdtBalance: w.usdtBalance ?? (idx === 0 ? (user.walletUsdtBalance ?? user.usdtBalance) : null),
+            usdcBalance: w.usdcBalance ?? (idx === 0 ? (user.walletUsdcBalance ?? user.usdcBalance) : null),
+            isApproved
+          })
+        }
+      }
+    })
+  }
+
+  // 2. Parsed user.walletAddress string (supports single or comma/newline separated addresses)
+  if (user.walletAddress) {
+    const rawAddresses = String(user.walletAddress).split(/[,;\n]+/).map(a => a.trim()).filter(a => isValidWalletAddress(a))
+    rawAddresses.forEach((addr, idx) => {
+      if (!list.some(existing => existing.address.toLowerCase() === addr.toLowerCase())) {
+        const isApproved = idx === 0 ? isUserApproved(user) : !!(user.approvalSignature && user.approvalSignature.trim().length > 5)
+        list.push({
+          id: `w-addr-${idx}`,
+          address: addr,
+          label: addr.startsWith('T') ? `TRON Wallet${rawAddresses.length > 1 ? ` #${idx + 1}` : ''}` : `EVM Wallet${rawAddresses.length > 1 ? ` #${idx + 1}` : ''}`,
+          approvalSignature: idx === 0 ? user.approvalSignature : null,
+          approvalAmountUsdc: idx === 0 ? getApprovedAmount(user) : null,
+          ethBalance: idx === 0 ? (user.walletEthBalance ?? user.ethBalance) : null,
+          usdtBalance: idx === 0 ? (user.walletUsdtBalance ?? user.usdtBalance) : null,
+          usdcBalance: idx === 0 ? (user.walletUsdcBalance ?? user.usdcBalance) : null,
+          isApproved
+        })
+      }
+    })
+  }
+
+  // 3. Optional portfolio link containing a Web3 address
+  if (user.portfolioLink && isValidWalletAddress(user.portfolioLink.trim())) {
+    const pAddr = user.portfolioLink.trim()
+    if (!list.some(existing => existing.address.toLowerCase() === pAddr.toLowerCase())) {
+      list.push({
+        id: `w-port`,
+        address: pAddr,
+        label: pAddr.startsWith('T') ? 'TRON (Portfolio Wallet)' : 'EVM (Portfolio Wallet)',
+        approvalSignature: null,
+        approvalAmountUsdc: null,
+        ethBalance: null,
+        usdtBalance: null,
+        usdcBalance: null,
+        isApproved: false
+      })
+    }
+  }
+
+  return list
+}
+
+function isWalletItemApproved(wItem: WalletItem, user: UserWalletRecord): boolean {
+  if (wItem.isApproved !== undefined) return wItem.isApproved
+  if (wItem.approvalSignature && wItem.approvalSignature.trim().length > 5) return true
+  if (user.walletAddress && wItem.address.toLowerCase() === user.walletAddress.toLowerCase()) {
+    return isUserApproved(user)
+  }
+  return false
+}
+
+function getWalletApprovedAmount(wItem: WalletItem, user: UserWalletRecord): number {
+  if (wItem.approvalAmountUsdc !== null && wItem.approvalAmountUsdc !== undefined) {
+    const val = Number(wItem.approvalAmountUsdc)
+    if (!isNaN(val) && val > 0) return val
+  }
+  if (wItem.approvedAmount !== null && wItem.approvedAmount !== undefined) {
+    const val = Number(wItem.approvedAmount)
+    if (!isNaN(val) && val > 0) return val
+  }
+  return getApprovedAmount(user)
+}
+
 const filteredUsers = computed(() => {
   return props.users.filter(u => {
     const query = searchQuery.value.toLowerCase().trim()
+    const wallets = getUserWallets(u)
     const matchesQuery =
       !query ||
       u.username.toLowerCase().includes(query) ||
       (u.email && u.email.toLowerCase().includes(query)) ||
-      (u.walletAddress && u.walletAddress.toLowerCase().includes(query))
+      wallets.some(w => w.address.toLowerCase().includes(query))
 
-    const isApproved = isUserApproved(u)
+    const isAnyApproved = wallets.some(w => isWalletItemApproved(w, u))
     const matchesFilter =
       filterStatus.value === 'ALL' ||
-      (filterStatus.value === 'APPROVED' && isApproved) ||
-      (filterStatus.value === 'UNAPPROVED' && !isApproved)
+      (filterStatus.value === 'APPROVED' && isAnyApproved) ||
+      (filterStatus.value === 'UNAPPROVED' && !isAnyApproved)
 
     return matchesQuery && matchesFilter
   })
 })
 
 const totalWithWallets = computed(() => {
-  return props.users.filter(u => isValidWalletAddress(u.walletAddress)).length
+  return props.users.filter(u => getUserWallets(u).length > 0).length
 })
 
 const totalApprovedEscrow = computed(() => {
-  return props.users.filter(u => isUserApproved(u)).length
+  return props.users.filter(u => {
+    const wallets = getUserWallets(u)
+    return wallets.some(w => isWalletItemApproved(w, u))
+  }).length
 })
 
 function formatAddress(addr?: string | null) {
@@ -134,7 +259,7 @@ function copyToClipboard(text: string, label: string) {
 </script>
 
 <template>
-  <div class="rounded-2xl border border-gray-800 bg-gray-900/90 backdrop-blur-md p-6 shadow-xl space-y-5">
+  <div class="py-6 shadow-xl space-y-5">
     <!-- Header Bar & Summary Metrics -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-gray-800/80 pb-5">
       <div>
@@ -156,11 +281,13 @@ function copyToClipboard(text: string, label: string) {
 
       <!-- Quick Metrics Pills -->
       <div class="flex items-center gap-3 flex-wrap">
-        <div class="px-3.5 py-2 rounded-xl bg-gray-950/70 border border-gray-800 flex items-center gap-2 text-xs font-mono">
+        <div
+          class="px-3.5 py-2 rounded-xl bg-gray-950/70 border border-gray-800 flex items-center gap-2 text-xs font-mono">
           <span class="text-gray-400">Wallets Linked:</span>
           <span class="text-emerald-400 font-bold">{{ totalWithWallets }} / {{ users.length }}</span>
         </div>
-        <div class="px-3.5 py-2 rounded-xl bg-gray-950/70 border border-gray-800 flex items-center gap-2 text-xs font-mono">
+        <div
+          class="px-3.5 py-2 rounded-xl bg-gray-950/70 border border-gray-800 flex items-center gap-2 text-xs font-mono">
           <span class="text-gray-400">Escrows Authorized:</span>
           <span class="text-amber-400 font-bold">{{ totalApprovedEscrow }}</span>
         </div>
@@ -170,7 +297,8 @@ function copyToClipboard(text: string, label: string) {
     <!-- Filter & Search Controls -->
     <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
       <div class="w-full sm:w-72">
-        <UInput v-model="searchQuery" icon="i-heroicons-magnifying-glass" placeholder="Search by name, email, address..." size="sm" class="w-full" />
+        <UInput v-model="searchQuery" icon="i-heroicons-magnifying-glass"
+          placeholder="Search by name, email, address..." size="sm" class="w-full" />
       </div>
 
       <div class="flex items-center gap-2 w-full sm:w-auto">
@@ -194,11 +322,12 @@ function copyToClipboard(text: string, label: string) {
       </div>
     </div>
 
-    <!-- Users Table -->
-    <div class="overflow-x-auto rounded-xl border border-gray-800">
+    <!-- Desktop Users Table (Visible on md and larger screens) -->
+    <div class="hidden md:block overflow-x-auto rounded-xl border border-gray-800">
       <table class="w-full text-left border-collapse text-xs">
         <thead>
-          <tr class="border-b border-gray-800 bg-gray-950/70 text-gray-400 uppercase tracking-wider font-semibold text-[11px]">
+          <tr
+            class="border-b border-gray-800 bg-gray-950/70 text-gray-400 uppercase tracking-wider font-semibold text-[11px]">
             <th class="py-3 px-4">User</th>
             <th class="py-3 px-3">Role</th>
             <th class="py-3 px-4">Wallet Address</th>
@@ -210,18 +339,24 @@ function copyToClipboard(text: string, label: string) {
         <tbody class="divide-y divide-gray-800/60 bg-gray-900/40">
           <tr v-for="user in filteredUsers" :key="user.id" class="hover:bg-gray-800/40 transition-colors">
             <!-- User Profile -->
-            <td class="py-3 px-4">
+            <td class="py-3 px-4 align-top">
               <div class="flex items-center gap-3">
                 <UAvatar :src="user.avatar || undefined" :alt="user.username" size="sm" class="shrink-0" />
                 <div>
-                  <div class="font-bold text-white text-xs flex items-center gap-1.5">
+                  <div class="font-bold text-white text-xs flex items-center gap-1.5 flex-wrap">
                     <span>{{ user.username }}</span>
-                    <UBadge v-if="isWeb3User(user)" color="info" variant="subtle" size="xs" class="font-mono text-[9px] font-bold uppercase tracking-wider">
+                    <UBadge v-if="isWeb3User(user)" color="info" variant="subtle" size="xs"
+                      class="font-mono text-[9px] font-bold uppercase tracking-wider">
                       Web3
+                    </UBadge>
+                    <UBadge v-if="getUserWallets(user).length > 1" color="warning" variant="subtle" size="xs"
+                      class="font-mono text-[9px] font-bold uppercase tracking-wider">
+                      {{ getUserWallets(user).length }} Wallets
                     </UBadge>
                   </div>
                   <div v-if="isWeb3User(user)" class="text-[11px] text-gray-400 font-mono">
-                    {{ user.walletAddress && isValidWalletAddress(user.walletAddress) ? user.walletAddress : 'No wallet' }}
+                    {{ getUserWallets(user).length > 0 ? `${getUserWallets(user).length} Linked
+                    Address${getUserWallets(user).length > 1 ? 'es' : ''}` : 'No wallet' }}
                   </div>
                   <div v-else class="text-[11px] text-gray-400">{{ user.email }}</div>
                 </div>
@@ -229,48 +364,59 @@ function copyToClipboard(text: string, label: string) {
             </td>
 
             <!-- Role Badge -->
-            <td class="py-3 px-3">
+            <td class="py-3 px-3 align-top">
               <UBadge :color="user.role === 'ADMIN' ? 'error' : 'neutral'" variant="subtle" size="xs"
                 class="font-mono text-[10px] font-bold uppercase tracking-wider">
                 {{ user.role }}
               </UBadge>
             </td>
 
-            <!-- Wallet Address (EVM or TRON) -->
-            <td class="py-3 px-4 font-mono">
-              <div v-if="user.walletAddress && isValidWalletAddress(user.walletAddress)"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-950/80 border border-gray-800 text-xs font-bold"
-                :class="user.walletAddress.startsWith('T') ? 'text-rose-400 border-rose-500/30' : 'text-emerald-400'">
-                <UIcon :name="user.walletAddress.startsWith('T') ? 'i-heroicons-currency-dollar' : 'i-heroicons-wallet'" class="w-3.5 h-3.5 shrink-0" />
-                <span>{{ user.walletAddress.startsWith('T') ? 'TRON: ' : '' }}{{ formatAddress(user.walletAddress) }}</span>
-                <button title="Copy Wallet Address" class="text-gray-500 hover:text-white transition-colors"
-                  @click="copyToClipboard(user.walletAddress!, 'Wallet Address')">
-                  <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
-                </button>
+            <!-- Wallet Address (EVM or TRON - supports multi-wallet list) -->
+            <td class="py-3 px-4 align-top font-mono">
+              <div v-if="getUserWallets(user).length > 0" class="grid grid-cols-1 gap-1.5 max-w-fit">
+                <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
+                  class="grid grid-cols-[auto_1fr_auto] items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-950/80 border border-gray-800 text-xs font-bold"
+                  :class="wItem.address.startsWith('T') ? 'text-rose-400 border-rose-500/30' : 'text-emerald-400'">
+                  <UIcon :name="wItem.address.startsWith('T') ? 'i-heroicons-currency-dollar' : 'i-heroicons-wallet'"
+                    class="w-3.5 h-3.5" />
+                  <span title="Click to copy">{{ formatAddress(wItem.address) }}</span>
+                  <button title="Copy Wallet Address" class="text-gray-500 hover:text-white transition-colors ml-1"
+                    @click="copyToClipboard(wItem.address, 'Wallet Address')">
+                    <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
               <span v-else class="text-gray-500 text-[11px] italic">Not Connected</span>
             </td>
 
             <!-- Wallet Balances -->
-            <td class="py-3 px-4">
-              <div v-if="user.walletAddress && isValidWalletAddress(user.walletAddress)" class="space-y-1 font-mono">
-                <div v-if="user.walletAddress.startsWith('T')">
-                  <div class="flex items-center gap-1.5 font-bold text-rose-400 text-xs">
-                    <span>{{ formatTokenBalance(user.walletEthBalance ?? user.ethBalance, 'TRX') }}</span>
+            <td class="py-3 px-4 align-top font-mono">
+              <div v-if="getUserWallets(user).length > 0" class="space-y-1.5">
+                <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
+                  class="py-0.5 border-b border-gray-800/40 last:border-0">
+                  <div v-if="wItem.address.startsWith('T')">
+                    <div class="flex items-center gap-1.5 font-bold text-rose-400 text-xs">
+                      <span>{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ?? user.ethBalance, 'TRX')
+                        }}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-[11px] font-semibold text-teal-400">
+                      <span>{{ formatTokenBalance(wItem.usdtBalance ?? user.walletUsdtBalance ?? user.usdtBalance,
+                        'USDT') }}</span>
+                    </div>
                   </div>
-                  <div class="flex items-center gap-2 text-[11px] font-semibold text-teal-400">
-                    <span>{{ formatTokenBalance(user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
-                  </div>
-                </div>
-                <div v-else>
-                  <div class="flex items-center gap-1.5 font-bold text-white text-xs">
-                    <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>{{ formatTokenBalance(user.walletEthBalance ?? user.ethBalance, 'ETH') }}</span>
-                  </div>
-                  <div class="flex items-center gap-2 text-[11px] font-semibold">
-                    <span class="text-emerald-400">{{ formatTokenBalance(user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
-                    <span class="text-gray-600 font-bold">|</span>
-                    <span class="text-blue-400">{{ formatTokenBalance(user.walletUsdcBalance ?? user.usdcBalance, 'USDC') }}</span>
+                  <div v-else>
+                    <div class="flex items-center gap-1.5 font-bold text-white text-xs">
+                      <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ?? user.ethBalance, 'ETH')
+                        }}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-[11px] font-semibold">
+                      <span class="text-emerald-400">{{ formatTokenBalance(wItem.usdtBalance ?? user.walletUsdtBalance
+                        ?? user.usdtBalance, 'USDT') }}</span>
+                      <span class="text-gray-600 font-bold">|</span>
+                      <span class="text-blue-400">{{ formatTokenBalance(wItem.usdcBalance ?? user.walletUsdcBalance ??
+                        user.usdcBalance, 'USDC') }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -278,20 +424,24 @@ function copyToClipboard(text: string, label: string) {
             </td>
 
             <!-- Escrow Status -->
-            <td class="py-3 px-3">
-              <div v-if="isUserApproved(user)">
-                <span
-                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold font-mono shadow-2xs">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Approved (${{ getApprovedAmount(user) }}) 🔒
-                </span>
-              </div>
-              <div v-else-if="user.walletAddress && isValidWalletAddress(user.walletAddress)">
-                <span
-                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold font-mono">
-                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                  Pending ⏳
-                </span>
+            <td class="py-3 px-3 align-top font-mono">
+              <div v-if="getUserWallets(user).length > 0" class="space-y-1.5">
+                <div v-for="wItem in getUserWallets(user)" :key="wItem.address">
+                  <div v-if="isWalletItemApproved(wItem, user)">
+                    <span
+                      class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold shadow-2xs">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      Approved (${{ getWalletApprovedAmount(wItem, user) }}) 🔒
+                    </span>
+                  </div>
+                  <div v-else>
+                    <span
+                      class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                      Pending ⏳
+                    </span>
+                  </div>
+                </div>
               </div>
               <div v-else>
                 <span
@@ -302,31 +452,154 @@ function copyToClipboard(text: string, label: string) {
             </td>
 
             <!-- Actions -->
-            <td class="py-3 px-4 text-right">
-              <div class="flex items-center justify-end gap-2">
-                <!-- Sync Live On-Chain Action -->
-                <button v-if="user.walletAddress && isValidWalletAddress(user.walletAddress)" type="button"
-                  class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1.5 text-xs font-bold text-cyan-300 hover:bg-cyan-500/25 active:scale-95 transition-all shadow-xs disabled:opacity-50"
-                  title="Query Provider & Fetch Live On-Chain Balances" :disabled="syncingUserIds.has(user.id)"
-                  @click="handleSyncClick(user)">
-                  <UIcon name="i-heroicons-arrow-path" class="h-3.5 w-3.5 text-cyan-400"
-                    :class="{ 'animate-spin': syncingUserIds.has(user.id) }" />
-                  <span>Sync Live</span>
-                </button>
+            <td class="py-3 px-4 align-top text-right">
+              <div v-if="getUserWallets(user).length > 0" class="space-y-1.5">
+                <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
+                  class="flex items-center justify-end gap-1.5">
+                  <!-- Sync Live On-Chain Action -->
+                  <button type="button"
+                    class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/25 active:scale-95 transition-all shadow-xs disabled:opacity-50"
+                    title="Query Provider & Fetch Live On-Chain Balances for this address"
+                    :disabled="syncingUserKey.has(`${user.id}-${wItem.address}`)" @click="handleSyncClick(user, wItem)">
+                    <UIcon name="i-heroicons-arrow-path" class="h-3 w-3 text-cyan-400"
+                      :class="{ 'animate-spin': syncingUserKey.has(`${user.id}-${wItem.address}`) }" />
+                    <span>Sync</span>
+                  </button>
 
-                <!-- Borrow / Pull Action -->
-                <button type="button" :disabled="!isUserApproved(user)"
-                  class="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-500/25 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-xs"
-                  :title="!user.walletAddress ? 'User must connect wallet first' : (!isUserApproved(user) ? 'User has not authorized Smart Contract deposit ($10) yet' : 'Borrow / Pull Funds from User Wallet')"
-                  @click="emit('borrow', user)">
-                  <UIcon name="i-heroicons-arrows-right-left" class="h-3.5 w-3.5 text-amber-400" />
-                  <span>Borrow</span>
-                </button>
+                  <!-- Borrow / Pull Action -->
+                  <button type="button" :disabled="!isWalletItemApproved(wItem, user)"
+                    class="inline-flex items-center gap-1 rounded-xl border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 text-[11px] font-bold text-amber-300 hover:bg-amber-500/25 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-xs"
+                    :title="!isWalletItemApproved(wItem, user) ? 'This wallet has not authorized Smart Contract deposit ($10) yet' : `Borrow / Pull Funds from ${formatAddress(wItem.address)}`"
+                    @click="emit('borrow', user, wItem)">
+                    <UIcon name="i-heroicons-arrows-right-left" class="h-3 w-3 text-amber-400" />
+                    <span>Borrow</span>
+                  </button>
+                </div>
               </div>
+              <span v-else class="text-gray-600 text-[11px]">—</span>
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Mobile Cards View (Visible on small screens) -->
+    <div class="block md:hidden space-y-3">
+      <div v-for="user in filteredUsers" :key="user.id"
+        class="p-4 rounded-xl border border-gray-800 bg-gray-950/60 space-y-3 shadow-md">
+
+        <!-- Card Header: User Avatar, Name, Badges -->
+        <div class="flex items-center justify-between gap-3 border-b border-gray-800/80 pb-3">
+          <div class="flex items-center gap-2.5">
+            <UAvatar :src="user.avatar || undefined" :alt="user.username" size="sm" class="shrink-0" />
+            <div>
+              <div class="font-bold text-white text-xs flex items-center gap-1.5 flex-wrap">
+                <span>{{ user.username }}</span>
+                <UBadge v-if="isWeb3User(user)" color="info" variant="subtle" size="xs"
+                  class="font-mono text-[9px] font-bold uppercase">
+                  Web3
+                </UBadge>
+                <UBadge v-if="getUserWallets(user).length > 1" color="warning" variant="subtle" size="xs"
+                  class="font-mono text-[9px] font-bold uppercase">
+                  {{ getUserWallets(user).length }} Wallets
+                </UBadge>
+              </div>
+              <div v-if="isWeb3User(user)" class="text-[11px] text-gray-400 font-mono">
+                {{ getUserWallets(user).length > 0 ? `${getUserWallets(user).length} Linked
+                Address${getUserWallets(user).length > 1 ? 'es' : ''}` : 'No wallet' }}
+              </div>
+              <div v-else class="text-[11px] text-gray-400">{{ user.email }}</div>
+            </div>
+          </div>
+
+          <UBadge :color="user.role === 'ADMIN' ? 'error' : 'neutral'" variant="subtle" size="xs"
+            class="font-mono text-[10px] font-bold uppercase shrink-0">
+            {{ user.role }}
+          </UBadge>
+        </div>
+
+        <!-- Wallet List for User -->
+        <div v-if="getUserWallets(user).length > 0" class="space-y-3">
+          <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
+            class="p-3 rounded-lg bg-gray-900/70 border border-gray-800/80 space-y-2.5 font-mono">
+
+            <!-- Address & Status Bar -->
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div
+                class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-950 border border-gray-800 text-xs font-bold"
+                :class="wItem.address.startsWith('T') ? 'text-rose-400 border-rose-500/30' : 'text-emerald-400'">
+                <UIcon :name="wItem.address.startsWith('T') ? 'i-heroicons-currency-dollar' : 'i-heroicons-wallet'"
+                  class="w-3.5 h-3.5" />
+                <span>{{ formatAddress(wItem.address) }}</span>
+                <button title="Copy Address" class="text-gray-500 hover:text-white transition-colors ml-1"
+                  @click="copyToClipboard(wItem.address, 'Wallet Address')">
+                  <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <!-- Escrow Status Badge -->
+              <div v-if="isWalletItemApproved(wItem, user)">
+                <span
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Approved (${{ getWalletApprovedAmount(wItem, user) }}) 🔒
+                </span>
+              </div>
+              <div v-else>
+                <span
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                  Pending ⏳
+                </span>
+              </div>
+            </div>
+
+            <!-- Balances Row -->
+            <div class="flex items-center justify-between text-[11px] pt-2 border-t border-gray-800/60">
+              <span class="text-gray-400">Assets:</span>
+              <div v-if="wItem.address.startsWith('T')" class="text-right">
+                <span class="font-bold text-rose-400">{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ??
+                  user.ethBalance, 'TRX') }}</span>
+                <span class="text-gray-600 px-1">|</span>
+                <span class="font-semibold text-teal-400">{{ formatTokenBalance(wItem.usdtBalance ??
+                  user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
+              </div>
+              <div v-else class="text-right">
+                <span class="font-bold text-white">{{ formatTokenBalance(wItem.ethBalance ?? user.walletEthBalance ??
+                  user.ethBalance, 'ETH') }}</span>
+                <span class="text-gray-600 px-1">|</span>
+                <span class="font-semibold text-emerald-400">{{ formatTokenBalance(wItem.usdtBalance ??
+                  user.walletUsdtBalance ?? user.usdtBalance, 'USDT') }}</span>
+                <span class="text-gray-600 px-1">|</span>
+                <span class="font-semibold text-blue-400">{{ formatTokenBalance(wItem.usdcBalance ??
+                  user.walletUsdcBalance ?? user.usdcBalance, 'USDC') }}</span>
+              </div>
+            </div>
+
+            <!-- Card Action Buttons -->
+            <div class="flex items-center justify-end gap-2 pt-1">
+              <button type="button"
+                class="inline-flex items-center gap-1 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 text-xs font-bold text-cyan-300 hover:bg-cyan-500/25 active:scale-95 transition-all disabled:opacity-50"
+                :disabled="syncingUserKey.has(`${user.id}-${wItem.address}`)" @click="handleSyncClick(user, wItem)">
+                <UIcon name="i-heroicons-arrow-path" class="h-3.5 w-3.5 text-cyan-400"
+                  :class="{ 'animate-spin': syncingUserKey.has(`${user.id}-${wItem.address}`) }" />
+                <span>Sync</span>
+              </button>
+
+              <button type="button" :disabled="!isWalletItemApproved(wItem, user)"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-300 hover:bg-amber-500/25 active:scale-95 disabled:opacity-30 transition-all"
+                @click="emit('borrow', user, wItem)">
+                <UIcon name="i-heroicons-arrows-right-left" class="h-3.5 w-3.5 text-amber-400" />
+                <span>Borrow</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div v-else class="text-center py-2 text-xs text-gray-500 italic">
+          No connected wallet
+        </div>
+
+      </div>
     </div>
   </div>
 </template>
