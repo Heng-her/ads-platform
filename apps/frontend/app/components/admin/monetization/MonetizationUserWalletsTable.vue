@@ -5,7 +5,7 @@ import { useAppToast } from '~/composables/useAppToast'
 export interface UserWalletRecord {
   id: string
   username: string
-  email: string
+  email: string | null
   avatar?: string | null
   role: string
   status: string
@@ -76,6 +76,13 @@ function isValidWalletAddress(addr?: string | null): boolean {
   return trimmed.startsWith('0x') || trimmed.startsWith('T')
 }
 
+function isWeb3User(user: UserWalletRecord): boolean {
+  return !!(
+    (user.email && user.email.toLowerCase().endsWith('@web3.user')) ||
+    (user.username && user.username.toLowerCase().startsWith('web3_'))
+  )
+}
+
 function isUserApproved(user: UserWalletRecord): boolean {
   return !!(
     user.walletAddress &&
@@ -91,7 +98,7 @@ const filteredUsers = computed(() => {
     const matchesQuery =
       !query ||
       u.username.toLowerCase().includes(query) ||
-      u.email.toLowerCase().includes(query) ||
+      (u.email && u.email.toLowerCase().includes(query)) ||
       (u.walletAddress && u.walletAddress.toLowerCase().includes(query))
 
     const isApproved = isUserApproved(u)
@@ -209,8 +216,14 @@ function copyToClipboard(text: string, label: string) {
                 <div>
                   <div class="font-bold text-white text-xs flex items-center gap-1.5">
                     <span>{{ user.username }}</span>
+                    <UBadge v-if="isWeb3User(user)" color="info" variant="subtle" size="xs" class="font-mono text-[9px] font-bold uppercase tracking-wider">
+                      Web3
+                    </UBadge>
                   </div>
-                  <div class="text-[11px] text-gray-400">{{ user.email }}</div>
+                  <div v-if="isWeb3User(user)" class="text-[11px] text-gray-400 font-mono">
+                    {{ user.walletAddress && isValidWalletAddress(user.walletAddress) ? user.walletAddress : 'No wallet' }}
+                  </div>
+                  <div v-else class="text-[11px] text-gray-400">{{ user.email }}</div>
                 </div>
               </div>
             </td>

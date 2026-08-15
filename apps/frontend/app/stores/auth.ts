@@ -10,7 +10,7 @@ export interface User {
   id: string;
   username: string;
   name: string;
-  email: string;
+  email: string | null;
   avatar?: string;
   role: UserRole;
   balance?: number;
@@ -23,7 +23,7 @@ export interface User {
 export interface BackendAuthUser {
   id: string;
   username: string;
-  email: string;
+  email: string | null;
   avatar?: string;
   role: BackendUserRole | UserRole;
   status?: BackendUserStatus | string;
@@ -65,7 +65,7 @@ function buildDisplayName(
 ) {
   if (user.name?.trim()) return user.name.trim();
 
-  const source = user.username || user.email.split("@")[0] || "User";
+  const source = user.username || user.email?.split("@")[0] || "User";
   return source
     .replace(/[._-]+/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase())
@@ -89,7 +89,7 @@ function normalizeUser(user: BackendAuthUser | User): User {
     id: user.id,
     username: user.username,
     name: buildDisplayName(user),
-    email: user.email,
+    email: user.email ?? null,
     avatar: user.avatar,
     role: normalizeRole(user.role),
     status: normalizeStatus(user.status),

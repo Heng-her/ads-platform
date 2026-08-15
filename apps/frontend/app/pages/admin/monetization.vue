@@ -283,7 +283,7 @@ function openUserBorrowModal(user: UserWalletRecord) {
     id: `REQ-${user.id.substring(0, 6)}`,
     creatorId: user.id,
     creatorName: user.username,
-    creatorEmail: user.email,
+    creatorEmail: user.email || '',
     creatorAvatar: user.avatar || null,
     amount: 50.00,
     adsenseShare: 35.00,

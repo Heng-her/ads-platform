@@ -3,7 +3,7 @@ import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   username: text("username").notNull().unique(),
-  email: text("email").notNull().unique(),
+  email: text("email").unique(), // NULL for Web3 wallet-registered users (no email)
   passwordHash: text("password_hash").notNull(),
   avatar: text("avatar"), // Profile avatar image URL
   portfolioLink: text("portfolio_link"), // Optional portfolio / website URL

@@ -15,7 +15,7 @@ export interface CloudflareBindings {
 
 export interface UserJwtPayload {
   id: string;
-  email: string;
+  email: string | null;
   role: "ADMIN" | "CREATOR";
 }
 

@@ -64,13 +64,13 @@ async function triggerHomeApproval() {
           }
         }).catch(() => { })
         if (wasGuest) {
-          toast.success('Web3 Account Created! 🎉', `Smart contract approved $${depositAmountUsdc.value} USDC & auto-registered your wallet.`)
+          toast.success('Web3 Account Created!', `Smart contract approved $${depositAmountUsdc.value} USDC & auto-registered your wallet.`)
           await navigateTo('/creator/earnings')
         } else {
-          toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved wallet address to profile.`)
+          toast.success('Smart Contract Approved & Saved!', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved wallet address to profile.`)
         }
       } else {
-        toast.success('Smart Contract Approved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance.`)
+        toast.success('Smart Contract Approved!', `Approved $${depositAmountUsdc.value} Smart Contract allowance.`)
       }
     } else {
       toast.warning('Approval Required', 'Please confirm the smart contract approval in MetaMask.')

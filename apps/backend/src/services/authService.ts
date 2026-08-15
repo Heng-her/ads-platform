@@ -233,7 +233,7 @@ export class AuthService {
 
       const userId = crypto.randomUUID();
       const username = `web3_${cleanAddress.slice(2, 8)}`;
-      const email = `${cleanAddress}@web3.user`;
+      const email = null;
       const salt = await bcrypt.genSalt(10);
       const passwordHash = await bcrypt.hash(crypto.randomUUID(), salt);
 

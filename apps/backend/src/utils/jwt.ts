@@ -20,7 +20,7 @@ export async function verifyToken(token: string, secretStr: string): Promise<Use
     const { payload } = await jwtVerify(token, secret);
     return {
       id: payload.id as string,
-      email: payload.email as string,
+      email: (payload.email as string) ?? null,
       role: payload.role as "ADMIN" | "CREATOR",
     };
   } catch {
