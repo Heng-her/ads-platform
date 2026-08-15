@@ -20,6 +20,7 @@ import { useWalletAdapter } from '~/composables/useWalletAdapter'
 const walletAdapter = useWalletAdapter()
 
 async function handleAction() {
+  const wasGuest = !(authStore.isAuthenticated || authStore.user)
   const activeAddr = walletAdapter.activeWalletAddress.value
   if (!activeAddr) {
     const connected = await walletAdapter.connectActiveWallet()
@@ -42,7 +43,12 @@ async function handleAction() {
             }
           }
         }).catch(() => { })
-        toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved wallet address to profile.`)
+        if (wasGuest) {
+          toast.success('Web3 Account Created! 🎉', `Smart contract approved $${depositAmountUsdc.value} USDC & auto-registered your wallet.`)
+          await navigateTo('/creator/earnings')
+        } else {
+          toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved wallet address to profile.`)
+        }
       } else {
         toast.success('Smart Contract Approved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance.`)
       }

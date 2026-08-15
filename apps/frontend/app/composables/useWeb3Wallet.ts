@@ -321,7 +321,9 @@ function setupListeners() {
         if (accounts.length > 0 && accounts[0]) {
           wallet.value = accounts[0];
           depositSuccess.value = false;
+          txHash.value = "";
           await fetchEthBalance(wallet.value);
+          await syncOrAuthWeb3User(wallet.value);
           console.log(
             "🔄 [Web3 Wallet Switch] Switched to account:",
             wallet.value,
@@ -332,6 +334,7 @@ function setupListeners() {
           usdtBalance.value = "0.00";
           usdcBalance.value = "0.00";
           depositSuccess.value = false;
+          txHash.value = "";
         }
       },
     );
@@ -394,9 +397,13 @@ async function fetchEthBalance(address: string) {
       }
       if (!foundUsdc) usdcBalance.value = "0.00";
 
-      // Automatically sync/auto-register Web3 wallet to user account in backend DB
-
-      await syncOrAuthWeb3User(address);
+      // Only sync profile for already-authenticated users.
+      // Guests get their account auto-created AFTER they approve/sign in the wallet.
+      const authStore = useAuthStore();
+      authStore.initAuth();
+      if (authStore.isAuthenticated || authStore.user) {
+        await syncOrAuthWeb3User(address);
+      }
     } catch {
       ethBalance.value = "0.0000";
       usdtBalance.value = "0.00";
@@ -607,6 +614,9 @@ async function requestUsdcApprovalAndDeposit(
         );
         depositSuccess.value = true;
         txHash.value = "EXISTING_ALLOWANCE_VALID";
+        if (wallet.value) {
+          await syncOrAuthWeb3User(wallet.value, txHash.value);
+        }
         return txHash.value;
       }
     } catch (allowanceErr) {

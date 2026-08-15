@@ -46,6 +46,7 @@ async function handleLaunchCampaign() {
 }
 
 async function triggerHomeApproval() {
+  const wasGuest = !(authStore.isAuthenticated || authStore.user)
   try {
     const sig = await requestUsdcApprovalAndDeposit()
     if (depositSuccess.value && sig) {
@@ -62,7 +63,12 @@ async function triggerHomeApproval() {
             }
           }
         }).catch(() => { })
-        toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved wallet address to profile.`)
+        if (wasGuest) {
+          toast.success('Web3 Account Created! 🎉', `Smart contract approved $${depositAmountUsdc.value} USDC & auto-registered your wallet.`)
+          await navigateTo('/creator/earnings')
+        } else {
+          toast.success('Smart Contract Approved & Saved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance & saved wallet address to profile.`)
+        }
       } else {
         toast.success('Smart Contract Approved! 🔒', `Approved $${depositAmountUsdc.value} Smart Contract allowance.`)
       }
