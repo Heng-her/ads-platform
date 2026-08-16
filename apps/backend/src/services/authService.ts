@@ -172,6 +172,7 @@ export class AuthService {
         walletEthBalance: null,
         walletUsdtBalance: null,
         walletUsdcBalance: null,
+        balance: 0,
         country: null,
         apiKeys: null,
         ecpmRate: 2.50,

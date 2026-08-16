@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
 import { useWalletAdapter } from '~/composables/useWalletAdapter'
 import { useWeb3Wallet } from '~/composables/useWeb3Wallet'
+import { TRON_CONFIG } from '~/composables/useTronWallet'
+
+import CreatorEarningsHeader from '~/components/creator/earnings/CreatorEarningsHeader.vue'
+import CreatorEarningsStatsCards from '~/components/creator/earnings/CreatorEarningsStatsCards.vue'
+import CreatorWithdrawalProgressCard from '~/components/creator/earnings/CreatorWithdrawalProgressCard.vue'
+import CreatorPayoutHistoryTable from '~/components/creator/earnings/CreatorPayoutHistoryTable.vue'
+import type { PayoutTransaction } from '~/components/creator/earnings/CreatorPayoutHistoryTable.vue'
+import CreatorWithdrawModal from '~/components/creator/earnings/CreatorWithdrawModal.vue'
 
 definePageMeta({
   layout: 'creator'
@@ -21,10 +29,7 @@ const {
   usdcBalance,
   isConnected,
   isConnecting,
-  isApproving,
-  depositSuccess,
   depositAmountUsdc,
-  connect: connectWallet,
   disconnect: disconnectWallet,
   requestUsdcApprovalAndDeposit
 } = useWeb3Wallet()
@@ -32,7 +37,6 @@ const {
 // State
 const isLoading = ref(true)
 const isApprovingContract = ref(false)
-const timeRange = ref<'7d' | '30d' | '90d' | 'all'>('30d')
 const isWithdrawModalOpen = ref(false)
 const isSubmittingWithdrawal = ref(false)
 
@@ -46,7 +50,7 @@ const estimatedEth = computed(() => {
   return (withdrawAmount.value / ethPriceUsd.value).toFixed(4)
 })
 
-// Financial Stats (Connected to dynamic eCPM rate & impressions)
+// Financial Stats
 const stats = ref({
   availableBalance: 0.00,
   lifetimeRevenue: 0.00,
@@ -56,20 +60,8 @@ const stats = ref({
   minPayoutThreshold: 20.00
 })
 
-// Web3 ETH Payout Transaction History
-interface PayoutTransaction {
-  id: string
-  date: string
-  network: string
-  token: 'ETH' | 'USDT' | 'USDC' | string
-  walletAddress: string
-  amount: number
-  cryptoAmount: string
-  status: 'Completed' | 'Pending' | 'Processing' | 'Rejected'
-  txHash?: string
-}
-
 const transactions = ref<PayoutTransaction[]>([])
+
 function getInitialRevenueShare(): number {
   if (import.meta.client) {
     try {
@@ -180,10 +172,6 @@ const payoutProgressPercent = computed(() => {
   return Math.min(Math.round(pct), 100)
 })
 
-const canWithdraw = computed(() => {
-  return stats.value.availableBalance >= stats.value.minPayoutThreshold
-})
-
 const depositNeeded = computed(() => {
   const diff = (withdrawAmount.value || 0) - stats.value.availableBalance
   return diff > 0 ? diff : 0
@@ -192,10 +180,6 @@ const depositNeeded = computed(() => {
 function formatAddress(addr: string) {
   if (!addr) return ''
   return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`
-}
-
-function formatCurrency(val: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val)
 }
 
 function copyToClipboard(text: string, label: string) {
@@ -234,8 +218,6 @@ const activeWalletApprovalSig = computed(() => {
   if (!activeAddr) return null
   return currentApprovalMap.value[activeAddr.toLowerCase()] || (lastApprovalSignature.value && activeAddr === lastApprovedAddr.value ? lastApprovalSignature.value : null)
 })
-
-import { TRON_CONFIG } from '~/composables/useTronWallet'
 
 async function triggerApprovalPrompt(customAmount?: number | string) {
   const activeAddr = walletAdapter.activeWalletAddress.value
@@ -319,7 +301,6 @@ async function handleConnectWallet() {
     recipientWalletInput.value = activeAddr
     toast.success('Wallet Connected', `Connected wallet ${formatAddress(activeAddr)}`)
 
-    // Save connected wallet address to user profile
     await api.action.$post({
       json: {
         action: 'users/update-profile',
@@ -329,7 +310,6 @@ async function handleConnectWallet() {
       }
     }).catch(() => { })
 
-    // Ask user for $10 Smart Contract Authorization if on EVM
     if (walletAdapter.selectedChainFamily.value === 'EVM') {
       await triggerApprovalPrompt()
     }
@@ -345,7 +325,6 @@ function handleDisconnectWallet() {
 }
 
 function openWithdrawModal() {
-  // Use configured minimum threshold (e.g. $200) or available balance if higher
   const minThreshold = stats.value.minPayoutThreshold || 20
   withdrawAmount.value = stats.value.availableBalance >= minThreshold ? stats.value.availableBalance : minThreshold
   if (wallet.value) {
@@ -362,7 +341,6 @@ function setMaxAmount() {
   withdrawAmount.value = stats.value.availableBalance || 0
 }
 
-// Execute Web3 ETH Withdrawal Request Submission
 async function submitWithdrawal() {
   if (!withdrawAmount.value || Number(withdrawAmount.value) <= 0) {
     toast.error('Validation Error', 'Withdrawal amount must be greater than $0.00.')
@@ -375,8 +353,8 @@ async function submitWithdrawal() {
   }
 
   const targetWallet = recipientWalletInput.value.trim() || wallet.value
-  if (!targetWallet || !targetWallet.startsWith('0x')) {
-    toast.error('Validation Error', 'Please enter or connect a valid EVM wallet address (0x...).')
+  if (!targetWallet || (!targetWallet.startsWith('0x') && !targetWallet.startsWith('T'))) {
+    toast.error('Validation Error', 'Please enter or connect a valid EVM or TRON wallet address.')
     return
   }
 
@@ -436,7 +414,6 @@ watch(
       wallet.value = newAddr
       recipientWalletInput.value = newAddr
 
-      // If user swapped to a new address and it is currently unapproved, automatically prompt for authorization
       if (prevSwappedAddr && prevSwappedAddr.toLowerCase() !== newAddr.toLowerCase() && !activeWalletApprovalSig.value && !isApprovingContract.value) {
         toast.info('New Wallet Swapped 🔑', `Switched to ${formatAddress(newAddr)}. Authorization is pending — requesting signature...`)
         try {
@@ -463,7 +440,6 @@ onMounted(async () => {
   }
   await fetchCreatorData()
 
-  // Auto-connect wallet on page mount if browser wallet has connected accounts
   if (import.meta.client) {
     if (typeof window !== 'undefined' && window.ethereum) {
       try {
@@ -481,379 +457,63 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-6 max-w-7xl mx-auto pb-12">
-    <!-- Header & Wallet Connection Bar -->
-    <div
-      class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
-      <div>
-        <div class="flex items-center gap-2.5">
-          <UIcon name="i-heroicons-bolt" class="w-8 h-8 text-emerald-500" />
-          <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Creator Earnings & Ethereum (ETH) Payouts
-          </h1>
-        </div>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Track Google AdSense & Adsterra dynamic revenue and withdraw earnings directly in Ethereum (ETH) to your
-          crypto wallet.
-        </p>
-      </div>
+    <!-- 1. Header & Wallet Connection Bar -->
+    <CreatorEarningsHeader
+      :active-wallet-address="walletAdapter.activeWalletAddress.value"
+      :active-wallet-approval-sig="activeWalletApprovalSig"
+      :is-approving-contract="isApprovingContract"
+      :is-connecting="isConnecting || walletAdapter.tronWallet.isTronConnecting.value"
+      @open-withdraw="openWithdrawModal"
+      @trigger-approval="triggerApprovalPrompt()"
+      @connect-wallet="handleConnectWallet"
+      @disconnect-wallet="handleDisconnectWallet"
+    />
 
-      <!-- Wallet Connection Controls & Action Buttons -->
-      <div class="flex flex-wrap items-center gap-3">
-        <div v-if="walletAdapter.activeWalletAddress.value" class="flex items-center gap-2">
-          <!-- Authorized / Signed: Show Withdraw Button -->
-          <UButton v-if="activeWalletApprovalSig" color="primary" variant="solid" icon="i-heroicons-banknotes" size="sm"
-            class="font-bold shadow-xs gap-1.5" @click="openWithdrawModal">
-            Withdraw Funds
-          </UButton>
+    <!-- 2. Overview Stats Cards -->
+    <CreatorEarningsStatsCards
+      :stats="stats"
+      :selected-chain-family="walletAdapter.selectedChainFamily.value"
+      :eth-balance="ethBalance"
+      :usdt-balance="usdtBalance"
+      :usdc-balance="usdcBalance"
+      :tron-trx-balance="walletAdapter.tronWallet.tronTrxBalance.value"
+      :tron-usdt-balance="walletAdapter.tronWallet.tronUsdtBalance.value"
+      :creator-revenue-share-percent="creatorRevenueSharePercent"
+      @open-withdraw="openWithdrawModal"
+    />
 
-          <!-- Not Authorized / Approved: Show Authorize & Approve Button -->
-          <UButton v-else color="warning" variant="solid" icon="i-heroicons-shield-check" size="sm"
-            class="font-bold shadow-xs gap-1.5" :loading="isApprovingContract" @click="triggerApprovalPrompt()">
-            Authorize & Approve
-          </UButton>
+    <!-- 3. Payout Minimum Threshold Progress Card -->
+    <CreatorWithdrawalProgressCard
+      :min-payout-threshold="stats.minPayoutThreshold"
+      :payout-progress-percent="payoutProgressPercent"
+    />
 
-          <!-- Disconnect Wallet Button -->
-          <button type="button"
-            class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 text-gray-400 hover:text-red-400 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-            title="Disconnect Wallet" @click="handleDisconnectWallet">
-            <UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-4 h-4" />
-          </button>
-        </div>
+    <!-- 4. Crypto ETH Payout History Table -->
+    <CreatorPayoutHistoryTable
+      :transactions="transactions"
+      @copy="copyToClipboard"
+    />
 
-        <UButton v-else color="neutral" variant="subtle" icon="i-heroicons-wallet" size="sm"
-          class="font-semibold shadow-xs" :loading="isConnecting || walletAdapter.tronWallet.isTronConnecting.value"
-          @click="handleConnectWallet">
-          Connect Crypto Wallet
-        </UButton>
-      </div>
-    </div>
-
-    <!-- Overview Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5">
-      <!-- Card 1: Available Balance -->
-      <div
-        class="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xs space-y-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Available
-            Balance</span>
-          <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-            <UIcon name="i-heroicons-banknotes" class="w-5 h-5" />
-          </div>
-        </div>
-        <div>
-          <p class="text-2xl font-extrabold text-gray-900 dark:text-white">
-            {{ formatCurrency(stats.availableBalance) }}
-          </p>
-          <div class="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <span>Min Payout: ${{ stats.minPayoutThreshold }}</span>
-            <UButton v-if="stats.availableBalance >= stats.minPayoutThreshold" color="primary" size="xs"
-              class="font-bold" @click="openWithdrawModal">
-              Withdraw
-            </UButton>
-            <span v-else class="text-[11px] text-amber-500 font-medium">Reach threshold to withdraw</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Card 2: Connected Wallet Balances -->
-      <div
-        class="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xs space-y-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            {{ walletAdapter.selectedChainFamily.value }} On-Chain Assets
-          </span>
-          <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-            <UIcon name="i-heroicons-wallet" class="w-5 h-5" />
-          </div>
-        </div>
-        <div v-if="walletAdapter.selectedChainFamily.value === 'TRON'">
-          <p class="text-xl font-extrabold text-rose-500 font-mono">
-            {{ walletAdapter.tronWallet.tronTrxBalance.value }} TRX
-          </p>
-          <div class="mt-1 text-xs text-teal-400 font-mono font-semibold">
-            {{ walletAdapter.tronWallet.tronUsdtBalance.value }} USDT (TRC-20)
-          </div>
-        </div>
-        <div v-else>
-          <p class="text-xl font-extrabold text-emerald-500 font-mono">
-            {{ ethBalance }} ETH
-          </p>
-          <div class="mt-1 text-xs text-gray-400 font-mono flex items-center gap-2">
-            <span class="text-teal-500 font-semibold">{{ usdtBalance }} USDT</span>
-            <span>|</span>
-            <span class="text-blue-500 font-semibold">{{ usdcBalance }} USDC</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Card 3: DApp Escrow Pool Balance -->
-      <div
-        class="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-purple-500/20 dark:border-purple-500/30 shadow-xs space-y-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-purple-500 uppercase tracking-wider">Smart Contract Escrow</span>
-          <div class="p-2 rounded-lg bg-purple-500/10 text-purple-500">
-            <UIcon name="i-heroicons-cube-transparent" class="w-5 h-5" />
-          </div>
-        </div>
-        <div>
-          <p class="text-2xl font-extrabold text-purple-400 font-mono">
-            {{ stats.escrowPoolBalance }} ETH
-          </p>
-          <div class="mt-2 text-xs text-gray-400">DApp Contract Vault</div>
-        </div>
-      </div>
-
-      <!-- Card 4: Google AdSense Share -->
-      <div
-        class="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-blue-500/20 dark:border-blue-500/30 shadow-xs space-y-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-blue-500 uppercase tracking-wider">AdSense Yield</span>
-          <div class="p-2 rounded-lg bg-blue-500/10 text-blue-500">
-            <UIcon name="i-heroicons-sparkles" class="w-5 h-5" />
-          </div>
-        </div>
-        <div>
-          <p class="text-2xl font-extrabold text-blue-500">
-            {{ formatCurrency(stats.adsenseShare) }}
-          </p>
-          <div class="mt-2 text-xs text-gray-400">{{ creatorRevenueSharePercent }}% Auto Share</div>
-        </div>
-      </div>
-
-      <!-- Card 5: Adsterra Share -->
-      <div
-        class="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-amber-500/20 dark:border-amber-500/30 shadow-xs space-y-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-amber-500 uppercase tracking-wider">Adsterra Yield</span>
-          <div class="p-2 rounded-lg bg-amber-500/10 text-amber-500">
-            <UIcon name="i-heroicons-bolt" class="w-5 h-5" />
-          </div>
-        </div>
-        <div>
-          <p class="text-2xl font-extrabold text-amber-500">
-            {{ formatCurrency(stats.adsterraShare) }}
-          </p>
-          <div class="mt-2 text-xs text-gray-400">{{ creatorRevenueSharePercent }}% Auto Share</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Payout Minimum Threshold Progress Card -->
-    <div
-      class="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-3">
-      <div class="flex items-center justify-between">
-        <div>
-          <h3 class="text-sm font-bold text-gray-900 dark:text-white">ETH Withdrawal Progress</h3>
-          <p class="text-xs text-gray-500 dark:text-gray-400">Reach at least {{ formatCurrency(stats.minPayoutThreshold)
-          }} to execute Ethereum (ETH) payouts.</p>
-        </div>
-        <span class="text-sm font-extrabold font-mono text-emerald-500">{{ payoutProgressPercent }}%</span>
-      </div>
-
-      <div class="w-full h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-        <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
-          :style="{ width: payoutProgressPercent + '%' }"></div>
-      </div>
-    </div>
-
-    <!-- Crypto ETH Payout History Table -->
-    <div
-      class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
-      <div class="p-6 border-b border-gray-100 dark:border-gray-800">
-        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Crypto ETH Payout History</h3>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Verifiable Ethereum blockchain transfers to your crypto
-          wallet.</p>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm border-collapse">
-          <thead>
-            <tr
-              class="border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 uppercase text-[11px] font-semibold tracking-wider">
-              <th class="py-3 px-6">Payout ID</th>
-              <th class="py-3 px-6">Date</th>
-              <th class="py-3 px-6">Network</th>
-              <th class="py-3 px-6">Recipient Wallet</th>
-              <th class="py-3 px-6 text-right">ETH Equivalent</th>
-              <th class="py-3 px-6 text-right">Status / Tx Hash</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-            <tr v-if="transactions.length === 0" class="text-center">
-              <td colspan="6" class="py-8 text-gray-400">No ETH payout transactions recorded yet.</td>
-            </tr>
-
-            <tr v-for="tx in transactions" :key="tx.id"
-              class="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition-colors">
-              <td class="py-3.5 px-6 font-mono text-xs font-semibold text-gray-900 dark:text-white">
-                {{ tx.id }}
-              </td>
-              <td class="py-3.5 px-6 text-xs text-gray-500 dark:text-gray-400">
-                {{ tx.date }}
-              </td>
-              <td class="py-3.5 px-6 text-xs text-gray-700 dark:text-gray-300">
-                <UBadge color="success" variant="soft" size="xs" class="font-semibold">
-                  {{ tx.network }} (ETH)
-                </UBadge>
-              </td>
-              <td class="py-3.5 px-6 text-xs font-mono text-emerald-600 dark:text-emerald-400">
-                <div class="flex items-center gap-1">
-                  <span>{{ formatAddress(tx.walletAddress) }}</span>
-                  <button title="Copy Address" @click="copyToClipboard(tx.walletAddress, 'Wallet Address')">
-                    <UIcon name="i-heroicons-clipboard-document"
-                      class="w-3.5 h-3.5 text-gray-400 hover:text-emerald-500" />
-                  </button>
-                </div>
-              </td>
-              <td
-                class="py-3.5 px-6 text-right font-mono text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
-                +{{ tx.cryptoAmount }} ETH
-                <span class="text-[11px] text-gray-400 block font-normal">(${{ tx.amount.toFixed(2) }})</span>
-              </td>
-              <td class="py-3.5 px-6 text-right">
-                <div v-if="tx.txHash" class="space-y-0.5">
-                  <UBadge color="success" variant="soft" size="xs" class="font-semibold">ETH Paid 🟢</UBadge>
-                  <p class="font-mono text-[11px]">
-                    <a href="#" class="text-emerald-500 hover:underline inline-flex items-center gap-0.5"
-                      @click.prevent="copyToClipboard(tx.txHash!, 'Tx Hash')">
-                      <span>{{ formatAddress(tx.txHash) }}</span>
-                      <UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
-                    </a>
-                  </p>
-                </div>
-                <UBadge v-else color="warning" variant="soft" size="xs" class="font-semibold">
-                  Pending On-Chain ⏳
-                </UBadge>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Web3 ETH Withdrawal Modal -->
-    <UModal v-model:open="isWithdrawModalOpen">
-      <template #content>
-        <div class="p-6 space-y-5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
-          <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4">
-            <div class="flex items-center gap-2.5">
-              <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
-                <UIcon name="i-heroicons-bolt" class="w-6 h-6" />
-              </div>
-              <div>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white">
-                  Withdraw Funds in Ethereum (ETH)
-                </h3>
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                  Instant programmatic on-chain ETH settlement to crypto wallet
-                </p>
-              </div>
-            </div>
-            <UButton icon="i-heroicons-x-mark" color="neutral" variant="ghost" size="xs"
-              @click="isWithdrawModalOpen = false" />
-          </div>
-
-          <!-- Available USD Earnings & On-Chain ETH + Stablecoin Balances Header -->
-          <div class="grid grid-cols-2 gap-3 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
-            <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Platform Available Balance</p>
-              <p class="text-xl font-extrabold text-emerald-500">
-                {{ formatCurrency(stats.availableBalance) }}
-              </p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">On-Chain Wallet Balances</p>
-              <p class="text-lg font-extrabold text-white font-mono">
-                {{ ethBalance }} ETH
-              </p>
-              <p class="text-[11px] font-mono text-gray-400">
-                <span class="text-teal-400 font-semibold">{{ usdtBalance }} USDT</span> | <span
-                  class="text-blue-400 font-semibold">{{ usdcBalance }} USDC</span>
-              </p>
-            </div>
-          </div>
-
-
-
-          <!-- Recipient Web3 Wallet Address -->
-          <div class="space-y-1">
-            <div class="flex items-center justify-between">
-              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Target Wallet Address</label>
-              <button v-if="!isConnected" class="text-xs text-emerald-500 font-semibold hover:underline"
-                @click="handleConnectWallet">
-                Connect MetaMask
-              </button>
-            </div>
-            <UInput v-model="recipientWalletInput" placeholder="0x71C..." size="md" color="neutral" variant="outline"
-              class="font-mono text-xs w-full" />
-          </div>
-
-          <!-- Amount Input & Presets -->
-          <div class="space-y-1">
-            <div class="flex items-center justify-between">
-              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">
-                Withdrawal Amount
-              </label>
-              <div class="flex items-center gap-1">
-                <button v-for="preset in [20, 50, 100]" :key="preset" :disabled="preset > stats.availableBalance"
-                  class="px-2 py-0.5 text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-gray-700 dark:text-gray-300"
-                  @click="setPresetAmount(preset)">
-                  ${{ preset }}
-                </button>
-                <button :disabled="stats.availableBalance <= 0"
-                  class="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/20 hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  @click="setMaxAmount">
-                  Max
-                </button>
-              </div>
-            </div>
-            <UInput v-model.number="withdrawAmount" type="number" min="1" :max="stats.availableBalance"
-              placeholder="Enter amount..." size="lg" color="neutral" variant="outline"
-              class="font-mono font-bold text-lg" />
-
-            <div v-if="withdrawAmount > stats.availableBalance"
-              class="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3.5 space-y-2 mt-2">
-              <div class="flex items-start gap-2.5">
-                <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                <div class="space-y-1">
-                  <p class="text-xs font-bold text-amber-300">
-                    ⚠️ Insufficient Balance! You need ${{ depositNeeded.toFixed(2) }} more to reach requested withdrawal
-                    of ${{ withdrawAmount.toFixed(2) }}
-                  </p>
-                  <p class="text-[11px] text-gray-300">
-                    Available Balance: <span class="font-bold text-white">${{ stats.availableBalance.toFixed(2)
-                      }}</span> | Shortfall: <span class="font-bold text-amber-400">${{ depositNeeded.toFixed(2)
-                      }}</span>. Please deposit funds to complete this payout.
-                  </p>
-                </div>
-              </div>
-
-              <div class="pt-1 flex items-center gap-2">
-                <UButton color="warning" variant="solid" icon="i-heroicons-shield-check" size="xs"
-                  class="font-bold shadow-xs animate-pulse" :loading="isApprovingContract"
-                  @click="triggerApprovalPrompt(depositNeeded)">
-                  Deposit ${{ depositNeeded.toFixed(2) }} USDC Funds 🔒
-                </UButton>
-              </div>
-            </div>
-            <p v-else class="text-xs text-emerald-400 font-mono font-semibold pt-1">
-              Estimated On-Chain Payout: ≈ {{ estimatedEth }} ETH (@ ${{ ethPriceUsd.toLocaleString() }}/ETH)
-            </p>
-          </div>
-
-          <!-- Submit Buttons -->
-          <div class="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-2">
-            <UButton color="neutral" variant="subtle" size="sm" @click="isWithdrawModalOpen = false">
-              Cancel
-            </UButton>
-            <UButton color="primary" variant="solid" size="md" class="font-bold px-6" :loading="isSubmittingWithdrawal"
-              :disabled="!withdrawAmount || withdrawAmount <= 0 || withdrawAmount > stats.availableBalance"
-              @click="submitWithdrawal">
-              Confirm ETH Payout (${{ withdrawAmount || 0 }} / {{ estimatedEth }} ETH)
-            </UButton>
-          </div>
-        </div>
-      </template>
-    </UModal>
+    <!-- 5. Web3 ETH Withdrawal Modal -->
+    <CreatorWithdrawModal
+      v-model:open="isWithdrawModalOpen"
+      v-model:withdraw-amount="withdrawAmount"
+      v-model:recipient-wallet-input="recipientWalletInput"
+      :stats="stats"
+      :eth-balance="ethBalance"
+      :usdt-balance="usdtBalance"
+      :usdc-balance="usdcBalance"
+      :is-connected="isConnected"
+      :deposit-needed="depositNeeded"
+      :is-approving-contract="isApprovingContract"
+      :estimated-eth="estimatedEth"
+      :eth-price-usd="ethPriceUsd"
+      :is-submitting-withdrawal="isSubmittingWithdrawal"
+      @connect-wallet="handleConnectWallet"
+      @set-preset="setPresetAmount"
+      @set-max="setMaxAmount"
+      @trigger-approval="triggerApprovalPrompt"
+      @submit="submitWithdrawal"
+    />
   </div>
 </template>
