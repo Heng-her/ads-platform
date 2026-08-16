@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
 import AdminSettingInput from './AdminSettingInput.vue'
+import AdminActionButton from '../common/AdminActionButton.vue'
 
 export interface UploadConfig {
   uploadApiBaseUrl: string
@@ -74,13 +75,14 @@ async function testConnection() {
           </div>
         </div>
 
-        <button type="button" :disabled="isTesting"
-          class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-500/20 disabled:opacity-50"
-          @click="testConnection">
-          <UIcon v-if="isTesting" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
-          <UIcon v-else name="i-heroicons-bolt" class="h-4 w-4" />
-          <span>{{ isTesting ? 'Testing Connection...' : 'Test Connection' }}</span>
-        </button>
+        <AdminActionButton
+          variant="success"
+          icon="i-heroicons-bolt"
+          :loading="isTesting"
+          @click="testConnection"
+        >
+          {{ isTesting ? 'Testing Connection...' : 'Test Connection' }}
+        </AdminActionButton>
       </div>
 
       <!-- Test Status Alert -->

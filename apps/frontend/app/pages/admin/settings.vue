@@ -10,6 +10,7 @@ import AdminSettingsPost, { type PostConfig } from '~/components/admin/settings/
 import AdminSettingsGoogleAuth, { type GoogleAuthConfig } from '~/components/admin/settings/AdminSettingsGoogleAuth.vue'
 import AdminSettingsUploadApi, { type UploadConfig } from '~/components/admin/settings/AdminSettingsUploadApi.vue'
 import AdminSettingsProfile, { type AdminProfile } from '~/components/admin/settings/AdminSettingsProfile.vue'
+import AdminActionButton from '~/components/admin/common/AdminActionButton.vue'
 import { decryptData } from '~/lib/crypto'
 
 definePageMeta({
@@ -246,15 +247,15 @@ async function saveAdminSettings() {
           Configure system-wide parameters, Telegram & Mail notification dispatch, post campaign limits, Google OAuth, Image Upload API, and admin profile.
         </p>
       </div>
-      <button
-        :disabled="isSaving || isLoading"
-        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-500 disabled:opacity-50"
+      <AdminActionButton
+        :loading="isSaving"
+        :disabled="isLoading"
+        icon="i-heroicons-check"
+        size="md"
         @click="saveAdminSettings"
       >
-        <UIcon v-if="isSaving" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
-        <UIcon v-else name="i-heroicons-check" class="h-4 w-4" />
-        <span>{{ isSaving ? 'Applying Changes...' : 'Save Admin Settings' }}</span>
-      </button>
+        {{ isSaving ? 'Applying Changes...' : 'Save Admin Settings' }}
+      </AdminActionButton>
     </div>
 
     <!-- Navigation Tabs -->

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
 import AdminSettingInput from './AdminSettingInput.vue'
+import AdminActionButton from '../common/AdminActionButton.vue'
 
 export interface ChannelConfig {
   telegramBotToken: string
@@ -209,13 +210,14 @@ async function testMailSend() {
       </div>
 
       <div class="flex justify-end pt-2">
-        <button :disabled="isTestingPublicChannel"
-          class="inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition disabled:opacity-50"
-          @click="testPublicChannel">
-          <UIcon v-if="isTestingPublicChannel" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
-          <UIcon v-else name="i-heroicons-paper-airplane" class="h-4 w-4" />
-          <span>Test Public Channel Broadcast</span>
-        </button>
+        <AdminActionButton
+          variant="success"
+          icon="i-heroicons-paper-airplane"
+          :loading="isTestingPublicChannel"
+          @click="testPublicChannel"
+        >
+          Test Public Channel Broadcast
+        </AdminActionButton>
       </div>
     </div>
 
@@ -257,13 +259,14 @@ async function testMailSend() {
       </div>
 
       <div class="flex justify-end pt-2">
-        <button :disabled="isTestingAdminGroup"
-          class="inline-flex items-center gap-2 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-4 py-2 text-xs font-semibold text-indigo-400 hover:bg-indigo-500/20 transition disabled:opacity-50"
-          @click="testAdminGroupAlert">
-          <UIcon v-if="isTestingAdminGroup" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
-          <UIcon v-else name="i-heroicons-shield-check" class="h-4 w-4" />
-          <span>Test Admin Group Alert</span>
-        </button>
+        <AdminActionButton
+          variant="info"
+          icon="i-heroicons-shield-check"
+          :loading="isTestingAdminGroup"
+          @click="testAdminGroupAlert"
+        >
+          Test Admin Group Alert
+        </AdminActionButton>
       </div>
     </div>
 
@@ -287,12 +290,15 @@ async function testMailSend() {
             </p>
           </div>
         </div>
-        <div class="flex items-center gap-4">
-          <button type="button"
-            class="rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-gray-700 transition"
-            @click="applyResendPreset">
-            ⚡ Auto-Fill Resend Preset
-          </button>
+        <div class="flex items-center gap-3">
+          <AdminActionButton
+            variant="secondary"
+            icon="i-heroicons-bolt"
+            size="xs"
+            @click="applyResendPreset"
+          >
+            Auto-Fill Resend Preset
+          </AdminActionButton>
           <div class="flex items-center gap-2">
             <span class="text-xs text-gray-400">Enable Dispatch</span>
             <input v-model="config.enableMail" type="checkbox"
@@ -368,13 +374,14 @@ async function testMailSend() {
         />
 
         <div class="flex justify-end pt-1">
-          <button :disabled="isTestingMail"
-            class="inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition disabled:opacity-50"
-            @click="testMailSend">
-            <UIcon v-if="isTestingMail" name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
-            <UIcon v-else name="i-heroicons-paper-airplane" class="h-4 w-4" />
-            <span>Test Mail Send Message</span>
-          </button>
+          <AdminActionButton
+            variant="success"
+            icon="i-heroicons-paper-airplane"
+            :loading="isTestingMail"
+            @click="testMailSend"
+          >
+            Test Mail Send Message
+          </AdminActionButton>
         </div>
       </div>
     </div>
