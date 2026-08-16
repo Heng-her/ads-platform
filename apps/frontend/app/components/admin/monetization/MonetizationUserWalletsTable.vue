@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useAppToast } from '~/composables/useAppToast'
+import WalletAddressBadge from './WalletAddressBadge.vue'
+import WalletAssetDisplay from './WalletAssetDisplay.vue'
+import WalletStatusBadge from './WalletStatusBadge.vue'
 
 export interface WalletItem {
   id?: string
@@ -450,16 +453,7 @@ function copyToClipboard(text: string, label: string) {
               <div v-if="getUserWallets(user).length > 0" class="flex flex-col">
                 <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
                   class="h-[54px] min-h-[54px] flex items-center border-b border-gray-800/40 last:border-0 py-1">
-                  <div class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gray-950/80 border text-xs font-bold transition-all hover:border-gray-700 shadow-xs"
-                    :class="wItem.address.startsWith('T') ? 'text-rose-400 border-rose-500/30 bg-rose-950/20' : 'text-emerald-400 border-emerald-500/30 bg-emerald-950/20'">
-                    <UIcon :name="wItem.address.startsWith('T') ? 'i-heroicons-currency-dollar' : 'i-heroicons-wallet'"
-                      class="w-3.5 h-3.5 shrink-0" />
-                    <span title="Click to copy" class="cursor-pointer" @click="copyToClipboard(wItem.address, 'Wallet Address')">{{ formatAddress(wItem.address) }}</span>
-                    <button title="Copy Wallet Address" class="text-gray-500 hover:text-white transition-colors ml-0.5"
-                      @click="copyToClipboard(wItem.address, 'Wallet Address')">
-                      <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  <WalletAddressBadge :address="wItem.address" />
                 </div>
               </div>
               <div v-else class="h-[54px] min-h-[54px] flex items-center">
@@ -472,27 +466,12 @@ function copyToClipboard(text: string, label: string) {
               <div v-if="getUserWallets(user).length > 0" class="flex flex-col">
                 <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
                   class="h-[54px] min-h-[54px] flex flex-col justify-center border-b border-gray-800/40 last:border-0 py-1">
-                  <div v-if="wItem.address.startsWith('T')" class="space-y-0.5">
-                    <div class="flex items-center gap-1.5 font-bold text-rose-400 text-xs">
-                      <span class="text-[10px] text-gray-500 font-normal uppercase">TRX:</span>
-                      <span>{{ formatTokenBalance(wItem.ethBalance, 'TRX') }}</span>
-                    </div>
-                    <div class="flex items-center gap-1.5 text-[11px] font-semibold text-teal-400">
-                      <span class="text-[10px] text-gray-500 font-normal uppercase">USDT:</span>
-                      <span>{{ formatTokenBalance(wItem.usdtBalance, 'USDT') }}</span>
-                    </div>
-                  </div>
-                  <div v-else class="space-y-0.5">
-                    <div class="flex items-center gap-1.5 font-bold text-white text-xs">
-                      <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span>{{ formatTokenBalance(wItem.ethBalance, 'ETH') }}</span>
-                    </div>
-                    <div class="flex items-center gap-1.5 text-[11px] font-semibold">
-                      <span class="text-emerald-400">{{ formatTokenBalance(wItem.usdtBalance, 'USDT') }}</span>
-                      <span class="text-gray-600 font-bold">|</span>
-                      <span class="text-blue-400">{{ formatTokenBalance(wItem.usdcBalance, 'USDC') }}</span>
-                    </div>
-                  </div>
+                  <WalletAssetDisplay
+                    :address="wItem.address"
+                    :eth-balance="wItem.ethBalance"
+                    :usdt-balance="wItem.usdtBalance"
+                    :usdc-balance="wItem.usdcBalance"
+                  />
                 </div>
               </div>
               <div v-else class="h-[54px] min-h-[54px] flex items-center">
@@ -505,20 +484,10 @@ function copyToClipboard(text: string, label: string) {
               <div v-if="getUserWallets(user).length > 0" class="flex flex-col">
                 <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
                   class="h-[54px] min-h-[54px] flex items-center border-b border-gray-800/40 last:border-0 py-1">
-                  <div v-if="isWalletItemApproved(wItem, user)">
-                    <span
-                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold shadow-xs">
-                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                      Approved (${{ getWalletApprovedAmount(wItem, user) }}) 🔒
-                    </span>
-                  </div>
-                  <div v-else>
-                    <span
-                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold shadow-xs">
-                      <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                      Pending ⏳
-                    </span>
-                  </div>
+                  <WalletStatusBadge
+                    :is-approved="isWalletItemApproved(wItem, user)"
+                    :approved-amount="getWalletApprovedAmount(wItem, user)"
+                  />
                 </div>
               </div>
               <div v-else class="h-[54px] min-h-[54px] flex items-center">
@@ -625,50 +594,22 @@ function copyToClipboard(text: string, label: string) {
 
             <!-- Address & Status Bar -->
             <div class="flex items-center justify-between gap-2 flex-wrap">
-              <div
-                class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-950 border text-xs font-bold"
-                :class="wItem.address.startsWith('T') ? 'text-rose-400 border-rose-500/30' : 'text-emerald-400 border-emerald-500/20'">
-                <UIcon :name="wItem.address.startsWith('T') ? 'i-heroicons-currency-dollar' : 'i-heroicons-wallet'"
-                  class="w-3.5 h-3.5" />
-                <span>{{ formatAddress(wItem.address) }}</span>
-                <button title="Copy Address" class="text-gray-500 hover:text-white transition-colors ml-1"
-                  @click="copyToClipboard(wItem.address, 'Wallet Address')">
-                  <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <!-- Escrow Status Badge -->
-              <div v-if="isWalletItemApproved(wItem, user)">
-                <span
-                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Approved (${{ getWalletApprovedAmount(wItem, user) }}) 🔒
-                </span>
-              </div>
-              <div v-else>
-                <span
-                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
-                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                  Pending ⏳
-                </span>
-              </div>
+              <WalletAddressBadge :address="wItem.address" />
+              <WalletStatusBadge
+                :is-approved="isWalletItemApproved(wItem, user)"
+                :approved-amount="getWalletApprovedAmount(wItem, user)"
+              />
             </div>
 
             <!-- Balances Row -->
             <div class="flex items-center justify-between text-[11px] pt-2 border-t border-gray-800/60">
               <span class="text-gray-400">Assets:</span>
-              <div v-if="wItem.address.startsWith('T')" class="text-right">
-                <span class="font-bold text-rose-400">{{ formatTokenBalance(wItem.ethBalance, 'TRX') }}</span>
-                <span class="text-gray-600 px-1">|</span>
-                <span class="font-semibold text-teal-400">{{ formatTokenBalance(wItem.usdtBalance, 'USDT') }}</span>
-              </div>
-              <div v-else class="text-right">
-                <span class="font-bold text-white">{{ formatTokenBalance(wItem.ethBalance, 'ETH') }}</span>
-                <span class="text-gray-600 px-1">|</span>
-                <span class="font-semibold text-emerald-400">{{ formatTokenBalance(wItem.usdtBalance, 'USDT') }}</span>
-                <span class="text-gray-600 px-1">|</span>
-                <span class="font-semibold text-blue-400">{{ formatTokenBalance(wItem.usdcBalance, 'USDC') }}</span>
-              </div>
+              <WalletAssetDisplay
+                :address="wItem.address"
+                :eth-balance="wItem.ethBalance"
+                :usdt-balance="wItem.usdtBalance"
+                :usdc-balance="wItem.usdcBalance"
+              />
             </div>
 
             <!-- Card Action Buttons -->
