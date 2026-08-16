@@ -237,7 +237,7 @@ export async function handleCampaignAction(
       const campaignService = new CampaignService(db);
       const result = await campaignService.getAdminCampaignUsers({
         page: Number(payloadData?.page) || 1,
-        limit: 3,
+        limit: Number(payloadData?.limit) || 4,
         search: typeof payloadData?.search === "string" ? payloadData.search.trim() || undefined : undefined,
       });
       return sendSuccess(c, { ...result, total: result.pagination.total, totalPages: result.pagination.totalPages });

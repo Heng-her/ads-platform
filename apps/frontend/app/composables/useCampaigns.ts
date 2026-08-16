@@ -138,11 +138,11 @@ export function useCampaigns() {
     }
   }
 
-  async function fetchAdminCampaignUsers(options: { page?: number; search?: string } = {}) {
+  async function fetchAdminCampaignUsers(options: { page?: number; limit?: number; search?: string } = {}) {
     isLoading.value = true;
     error.value = null;
     try {
-      const response = await api.action.$post({ json: { action: 'campaigns/admin-users', data: options } });
+      const response = await api.action.$post({ json: { action: 'campaigns/admin-users', data: { limit: 4, ...options } } });
       const body: any = await response.json();
       if (!response.ok || body.code !== 1 || !body.data) throw new Error(body.msg || 'Failed to load users');
       return body.data as { items: AdminCampaignUser[]; total: number; totalPages: number };
