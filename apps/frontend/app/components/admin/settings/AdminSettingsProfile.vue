@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAppToast } from '~/composables/useAppToast'
 import type { CloudinaryUploadResponse } from '~/composables/useCloudinaryUpload'
+import AdminSettingInput from './AdminSettingInput.vue'
 
 export interface AdminProfile {
   username: string
@@ -69,35 +70,31 @@ function onAdminAvatarError(msg: string) {
             </div>
           </div>
           <!-- Optional URL input fallback -->
-          <div class="space-y-1 pt-1">
-            <label class="block text-[11px] text-gray-400">Or paste image URL directly</label>
-            <input
+          <div class="pt-1">
+            <AdminSettingInput
               v-model="profile.avatar"
+              label="Or paste image URL directly"
               type="url"
+              icon="i-heroicons-photo"
               placeholder="https://example.com/admin-avatar.jpg"
-              class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-1.5 text-xs text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             />
           </div>
         </div>
 
-        <div class="space-y-1">
-          <label class="block text-xs font-semibold text-gray-300">Admin Display Name</label>
-          <input
-            v-model="profile.username"
-            type="text"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-          />
-        </div>
+        <AdminSettingInput
+          v-model="profile.username"
+          label="Admin Display Name"
+          icon="i-heroicons-user"
+          placeholder="Admin User"
+        />
 
-        <div class="space-y-1">
-          <label class="block text-xs font-semibold text-gray-300">Email Address (Admin Primary)</label>
-          <input
-            v-model="profile.email"
-            type="email"
-            disabled
-            class="w-full cursor-not-allowed rounded-lg border border-gray-800 bg-gray-950/60 px-3.5 py-2 text-sm text-gray-400"
-          />
-        </div>
+        <AdminSettingInput
+          v-model="profile.email"
+          label="Email Address (Admin Primary)"
+          type="email"
+          icon="i-heroicons-envelope"
+          disabled
+        />
       </div>
     </div>
   </div>

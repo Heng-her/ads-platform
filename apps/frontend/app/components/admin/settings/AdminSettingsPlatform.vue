@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import AdminSettingInput from './AdminSettingInput.vue'
 
 export interface PlatformConfig {
   siteName: string
@@ -15,8 +15,6 @@ export interface SecurityConfig {
 
 const config = defineModel<PlatformConfig>({ required: true })
 const securityConfig = defineModel<SecurityConfig>('security', { required: true })
-
-const showPassword = ref(false)
 </script>
 
 <template>
@@ -27,32 +25,28 @@ const showPassword = ref(false)
       <p class="mt-1 text-sm text-gray-400">Manage site metadata, domain URL, and creator registration permissions.</p>
 
       <div class="mt-6 grid gap-6 md:grid-cols-2">
-        <div class="space-y-1">
-          <label class="block text-xs font-semibold text-gray-300">Site Title / Brand Name</label>
-          <input
-            v-model="config.siteName"
-            type="text"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-          />
-        </div>
+        <AdminSettingInput
+          v-model="config.siteName"
+          label="Site Title / Brand Name"
+          icon="i-heroicons-globe-alt"
+          placeholder="New Platform"
+        />
 
-        <div class="space-y-1">
-          <label class="block text-xs font-semibold text-gray-300">Website Base URL / Domain</label>
-          <input
-            v-model="config.siteUrl"
-            type="text"
-            placeholder="http://localhost:3000"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-          />
-          <p class="text-[11px] text-gray-400">Used for generating full article notification links (e.g. Telegram & Email dispatches).</p>
-        </div>
+        <AdminSettingInput
+          v-model="config.siteUrl"
+          label="Website Base URL / Domain"
+          icon="i-heroicons-link"
+          placeholder="http://localhost:3000"
+          hint="Used for generating full article notification links (e.g. Telegram & Email dispatches)."
+        />
 
-        <div class="col-span-2 space-y-1">
-          <label class="block text-xs font-semibold text-gray-300">Global SEO Description</label>
-          <textarea
+        <div class="col-span-2">
+          <AdminSettingInput
             v-model="config.siteDescription"
-            rows="2"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+            label="Global SEO Description"
+            type="textarea"
+            :rows="2"
+            placeholder="Multi-role New Platform supporting Public browsing, Creator Studio, and Admin Control."
           />
         </div>
       </div>
@@ -71,28 +65,15 @@ const showPassword = ref(false)
       </div>
 
       <div class="mt-6 max-w-md space-y-2">
-        <label class="block text-xs font-semibold text-gray-300">Creator Deletion Security Password</label>
-        <div class="relative">
-          <input
-            v-model="securityConfig.creatorDeletionPassword"
-            :type="showPassword ? 'text' : 'password'"
-            placeholder="Enter deletion security password"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-3.5 pr-10 text-sm text-white focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 font-mono"
-          />
-          <button
-            type="button"
-            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-            @click="showPassword = !showPassword"
-          >
-            <UIcon :name="showPassword ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" class="h-4 w-4" />
-          </button>
-        </div>
-        <p class="text-[11px] text-amber-400/90 flex items-center gap-1.5">
-          <UIcon name="i-heroicons-exclamation-triangle" class="h-3.5 w-3.5 shrink-0 text-amber-400" />
-          <span>Administrators must enter this exact password on <code>/admin/approvals</code> to delete any creator account.</span>
-        </p>
+        <AdminSettingInput
+          v-model="securityConfig.creatorDeletionPassword"
+          label="Creator Deletion Security Password"
+          type="password"
+          icon="i-heroicons-key"
+          placeholder="Enter deletion security password"
+          hint="Administrators must enter this exact password on /admin/approvals to delete any creator account."
+        />
       </div>
     </div>
   </div>
 </template>
-

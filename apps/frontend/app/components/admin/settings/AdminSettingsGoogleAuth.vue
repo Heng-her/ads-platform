@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useAppToast } from '~/composables/useAppToast'
+import AdminSettingInput from './AdminSettingInput.vue'
 
 export interface GoogleAuthConfig {
   googleClientId: string
@@ -10,7 +10,6 @@ export interface GoogleAuthConfig {
 
 const config = defineModel<GoogleAuthConfig>({ required: true })
 const toast = useAppToast()
-const showClientSecret = ref(false)
 
 function copyCallbackUrl() {
   if (import.meta.client && navigator?.clipboard) {
@@ -52,41 +51,25 @@ function copyCallbackUrl() {
       </div>
 
       <div class="grid gap-6 md:grid-cols-2">
-        <!-- Google Client ID -->
-        <div class="space-y-1.5 md:col-span-2">
-          <label class="block text-xs font-semibold text-gray-300">Google OAuth Client ID (GOOGLE_CLIENT_ID)</label>
-          <input
+        <div class="md:col-span-2">
+          <AdminSettingInput
             v-model="config.googleClientId"
-            type="text"
+            label="Google OAuth Client ID (GOOGLE_CLIENT_ID)"
+            icon="i-heroicons-shield-check"
             placeholder="123456789012-abc123def456.apps.googleusercontent.com"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2.5 text-sm text-white focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 font-mono"
+            hint="Obtained from Google Cloud Console > APIs & Services > Credentials."
           />
-          <p class="text-[11px] text-gray-400">
-            Obtained from <strong>Google Cloud Console &gt; APIs &amp; Services &gt; Credentials</strong>.
-          </p>
         </div>
 
-        <!-- Google Client Secret -->
-        <div class="space-y-1.5 md:col-span-2">
-          <label class="block text-xs font-semibold text-gray-300">Google OAuth Client Secret (GOOGLE_CLIENT_SECRET)</label>
-          <div class="relative">
-            <input
-              v-model="config.googleClientSecret"
-              :type="showClientSecret ? 'text' : 'password'"
-              placeholder="GOCSPX-abc123xyz4567890"
-              class="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-3.5 pr-10 text-sm text-white focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 font-mono"
-            />
-            <button
-              type="button"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-              @click="showClientSecret = !showClientSecret"
-            >
-              <UIcon :name="showClientSecret ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" class="h-4 w-4" />
-            </button>
-          </div>
-          <p class="text-[11px] text-gray-400">
-            Keep this secret key secure. Never share your Client Secret in client-side code.
-          </p>
+        <div class="md:col-span-2">
+          <AdminSettingInput
+            v-model="config.googleClientSecret"
+            label="Google OAuth Client Secret (GOOGLE_CLIENT_SECRET)"
+            type="password"
+            icon="i-heroicons-lock-closed"
+            placeholder="GOCSPX-abc123xyz4567890"
+            hint="Keep this secret key secure. Never share your Client Secret in client-side code."
+          />
         </div>
       </div>
 

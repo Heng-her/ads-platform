@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AdminSettingInput from './AdminSettingInput.vue'
+
 export interface PostConfig {
   maxPostPerDay: number
   maxUploadImage: number
@@ -14,9 +16,9 @@ const config = defineModel<PostConfig>({ required: true })
     <div class="rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-sm">
       <div class="flex items-center justify-between border-b border-gray-800 pb-4">
         <div>
-          <h2 class="text-lg font-semibold text-white">Post & Registration Limits</h2>
+          <h2 class="text-lg font-semibold text-white">Post &amp; Registration Limits</h2>
           <p class="mt-1 text-sm text-gray-400">
-            Configure global publishing & registration limits per IP address and attachment boundaries for campaign
+            Configure global publishing &amp; registration limits per IP address and attachment boundaries for campaign
             posts.
           </p>
         </div>
@@ -29,75 +31,71 @@ const config = defineModel<PostConfig>({ required: true })
 
       <div class="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <!-- Max Registrations Per Day / IP -->
-        <div class="space-y-2 rounded-lg border border-gray-800 bg-gray-900/60 p-4 transition hover:border-gray-700">
+        <div class="space-y-2 rounded-xl border border-gray-800 bg-gray-950/60 p-4 transition hover:border-gray-700">
           <div class="flex items-center justify-between">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300">
-              Limit Register / IP
-            </label>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-300">Register / IP</span>
             <UIcon name="i-heroicons-user-plus" class="h-4 w-4 text-indigo-400" />
           </div>
           <p class="text-xs text-gray-400">
-            Maximum new user registrations allowed per 24 hours from a single IP address.
+            Max registrations per 24h from single IP.
           </p>
-          <div class="relative pt-1">
-            <input v-model.number="config.maxRegisterPerDay" type="number" min="1" max="50"
-              class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 font-mono" />
-            <div class="mt-1.5 text-right text-[11px] text-gray-500">Default: 5 registers/day</div>
-          </div>
+          <AdminSettingInput
+            v-model="config.maxRegisterPerDay"
+            type="number"
+            suffix="req/day"
+            hint="Default: 5 registers/day"
+          />
         </div>
 
         <!-- Max Posts Per Day -->
-        <div class="space-y-2 rounded-lg border border-gray-800 bg-gray-900/60 p-4 transition hover:border-gray-700">
+        <div class="space-y-2 rounded-xl border border-gray-800 bg-gray-950/60 p-4 transition hover:border-gray-700">
           <div class="flex items-center justify-between">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300">
-              Max Posts Per Day / IP
-            </label>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-300">Max Posts / IP</span>
             <UIcon name="i-heroicons-paper-airplane" class="h-4 w-4 text-primary-400" />
           </div>
           <p class="text-xs text-gray-400">
-            Maximum number of campaign posts allowed per 24 hours from a single IP address.
+            Max campaign posts per 24h from single IP.
           </p>
-          <div class="relative pt-1">
-            <input v-model.number="config.maxPostPerDay" type="number" min="1" max="100"
-              class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 font-mono" />
-            <div class="mt-1.5 text-right text-[11px] text-gray-500">Default: 5 posts/day</div>
-          </div>
+          <AdminSettingInput
+            v-model="config.maxPostPerDay"
+            type="number"
+            suffix="posts/day"
+            hint="Default: 5 posts/day"
+          />
         </div>
 
         <!-- Max Upload Images -->
-        <div class="space-y-2 rounded-lg border border-gray-800 bg-gray-900/60 p-4 transition hover:border-gray-700">
+        <div class="space-y-2 rounded-xl border border-gray-800 bg-gray-950/60 p-4 transition hover:border-gray-700">
           <div class="flex items-center justify-between">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300">
-              Max Upload Images
-            </label>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-300">Upload Images</span>
             <UIcon name="i-heroicons-photo" class="h-4 w-4 text-emerald-400" />
           </div>
           <p class="text-xs text-gray-400">
-            Maximum gallery / attachment images allowed per single campaign post.
+            Max images per campaign post.
           </p>
-          <div class="relative pt-1">
-            <input v-model.number="config.maxUploadImage" type="number" min="1" max="50"
-              class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 font-mono" />
-            <div class="mt-1.5 text-right text-[11px] text-gray-500">Default: 10 images/post</div>
-          </div>
+          <AdminSettingInput
+            v-model="config.maxUploadImage"
+            type="number"
+            suffix="imgs/post"
+            hint="Default: 10 images/post"
+          />
         </div>
 
         <!-- Max Upload Videos -->
-        <div class="space-y-2 rounded-lg border border-gray-800 bg-gray-900/60 p-4 transition hover:border-gray-700">
+        <div class="space-y-2 rounded-xl border border-gray-800 bg-gray-950/60 p-4 transition hover:border-gray-700">
           <div class="flex items-center justify-between">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300">
-              Max Upload Videos
-            </label>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-300">Upload Videos</span>
             <UIcon name="i-heroicons-video-camera" class="h-4 w-4 text-amber-400" />
           </div>
           <p class="text-xs text-gray-400">
-            Maximum video URLs / file uploads allowed per campaign for non-admin creators.
+            Max videos per campaign post.
           </p>
-          <div class="relative pt-1">
-            <input v-model.number="config.maxUploadVideo" type="number" min="0" max="20"
-              class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2 text-sm text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 font-mono" />
-            <div class="mt-1.5 text-right text-[11px] text-gray-500">Default: 2 videos/post</div>
-          </div>
+          <AdminSettingInput
+            v-model="config.maxUploadVideo"
+            type="number"
+            suffix="vids/post"
+            hint="Default: 2 videos/post"
+          />
         </div>
       </div>
     </div>

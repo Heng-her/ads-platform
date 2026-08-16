@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
+import AdminSettingInput from './AdminSettingInput.vue'
 
 export interface UploadConfig {
   uploadApiBaseUrl: string
@@ -13,8 +14,6 @@ const config = defineModel<UploadConfig>({ required: true })
 const api = useApi()
 const toast = useAppToast()
 
-const showApiKey = ref(false)
-const showBypassSecret = ref(false)
 const isTesting = ref(false)
 const testResult = ref<{ success: boolean; message: string } | null>(null)
 
@@ -98,47 +97,39 @@ async function testConnection() {
 
       <div class="grid gap-6 md:grid-cols-2">
         <!-- Base URL -->
-        <div class="space-y-1.5 md:col-span-2">
-          <label class="block text-xs font-semibold text-gray-300">Upload API Base URL (UPLOAD_API_BASE_URL)</label>
-          <input v-model="config.uploadApiBaseUrl" type="url" placeholder="https://api-upload-image-8ym9.onrender.com"
-            class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3.5 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-mono" />
-          <p class="text-[11px] text-gray-400">
-            The base URL of your deployed image upload microservice (e.g. Render / Express app).
-          </p>
+        <div class="md:col-span-2">
+          <AdminSettingInput
+            v-model="config.uploadApiBaseUrl"
+            label="Upload API Base URL (UPLOAD_API_BASE_URL)"
+            type="url"
+            icon="i-heroicons-link"
+            placeholder="https://api-upload-image-8ym9.onrender.com"
+            hint="The base URL of your deployed image upload microservice (e.g. Render / Express app)."
+          />
         </div>
 
         <!-- API Key -->
-        <div class="space-y-1.5">
-          <label class="block text-xs font-semibold text-gray-300">Upload API Key (UPLOAD_API_KEY)</label>
-          <div class="relative">
-            <input v-model="config.uploadApiKey" :type="showApiKey ? 'text' : 'password'" placeholder="crypten-api-key"
-              class="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-3.5 pr-10 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-mono" />
-            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-              @click="showApiKey = !showApiKey">
-              <UIcon :name="showApiKey ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" class="h-4 w-4" />
-            </button>
-          </div>
-          <p class="text-[11px] text-gray-400">
-            Passed as <code>x-api-key</code> HTTP header during image upload requests.
-          </p>
+        <div>
+          <AdminSettingInput
+            v-model="config.uploadApiKey"
+            label="Upload API Key (UPLOAD_API_KEY)"
+            type="password"
+            icon="i-heroicons-key"
+            placeholder="crypten-api-key"
+            hint="Passed as x-api-key HTTP header during image upload requests."
+          />
         </div>
 
         <!-- Bypass Secret -->
-        <div class="space-y-1.5">
-          <label class="block text-xs font-semibold text-gray-300">Upload API Bypass Secret
-            (UPLOAD_API_BYPASS_SECRET)</label>
-          <div class="relative">
-            <input v-model="config.uploadApiBypassSecret" :type="showBypassSecret ? 'text' : 'password'"
-              placeholder="crypten-bypass-secret"
-              class="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-3.5 pr-10 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-mono" />
-            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-              @click="showBypassSecret = !showBypassSecret">
-              <UIcon :name="showBypassSecret ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" class="h-4 w-4" />
-            </button>
-          </div>
-          <p class="text-[11px] text-gray-400">
-            Passed as <code>x-api-bypass</code> HTTP header to bypass rate limits / auth checks.
-          </p>
+        <div>
+          <AdminSettingInput
+            v-model="config.uploadApiBypassSecret"
+            label="Upload API Bypass Secret (UPLOAD_API_BYPASS_SECRET)"
+            type="password"
+            icon="i-heroicons-shield-exclamation"
+            placeholder="crypten-bypass-secret"
+            hint="Passed as x-api-bypass HTTP header to bypass rate limits / auth checks."
+          />
         </div>
       </div>
 
