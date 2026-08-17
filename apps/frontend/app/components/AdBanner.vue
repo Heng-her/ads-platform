@@ -55,9 +55,9 @@ const adsterraTrackingUrl = computed(() => {
 const isSidebar = computed(() => props.slotType === 'sidebar' || props.slotType === 'articleSidebar')
 
 const headerTitle = computed(() => {
-  if (props.provider === 'google') return 'Google AdSense Monetization'
-  if (props.provider === 'adsterra') return 'Adsterra High-CPM Sponsor'
-  return isSidebar.value ? 'Sponsored Ads' : 'Dual Ad Network Monetization (Google AdSense + Adsterra Smartlink)'
+  if (props.provider === 'google') return 'Featured Display Partner'
+  if (props.provider === 'adsterra') return 'Featured Sponsor Offer'
+  return isSidebar.value ? 'Sponsored Content' : 'Featured Partners & Official Sponsors'
 })
 
 const activeSlotId = computed(() => {
