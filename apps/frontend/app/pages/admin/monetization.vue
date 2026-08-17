@@ -520,6 +520,7 @@ async function fetchMonetizationDashboard() {
       json: {
         action: 'monetization/get-dashboard',
         data: {
+          timeRange: monetizationTimeRange.value,
           adNetworkConfig: adNetworkConfig.value
         }
       }
@@ -534,6 +535,12 @@ async function fetchMonetizationDashboard() {
     isLoadingMonetizationStats.value = false
   }
 }
+
+watch(monetizationTimeRange, () => {
+  if (activeMonetizationTab.value === 'revenue_strategy') {
+    fetchMonetizationDashboard()
+  }
+})
 
 async function testAdProviderConnection(provider: 'GOOGLE_ADSENSE' | 'ADSTERRA') {
   isTestingProviderApi.value = provider

@@ -87,7 +87,7 @@ function formatAddress(addr: string) {
           <UButton color="success" variant="solid" class="font-bold gap-2" :loading="isProcessing"
             @click="emit('confirm')">
             <UIcon name="i-heroicons-bolt" class="w-4 h-4" />
-            <span>Pay {{ selectedRequest.cryptoAmount }} ETH from Admin Wallet</span>
+            <span>Pay {{ selectedRequest.cryptoAmount }} ETH</span>
           </UButton>
         </div>
       </div>

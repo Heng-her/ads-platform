@@ -95,7 +95,8 @@ function formatCurrency(val: number) {
         <!-- Recipient Web3 Wallet Address -->
         <div class="space-y-1">
           <div class="flex items-center justify-between">
-            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Withdraw to Wallet Address</label>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Withdraw to Wallet
+              Address</label>
             <button v-if="!isConnected" class="text-xs text-emerald-500 font-semibold hover:underline"
               @click="emit('connect-wallet')">
               Connect MetaMask
@@ -166,7 +167,7 @@ function formatCurrency(val: number) {
           <UButton color="primary" variant="solid" size="md" class="font-bold px-6" :loading="isSubmittingWithdrawal"
             :disabled="!withdrawAmount || withdrawAmount <= 0 || withdrawAmount > stats.availableBalance"
             @click="emit('submit')">
-            Confirm ETH Payout (${{ withdrawAmount || 0 }} / {{ estimatedEth }} ETH)
+            Confirm (${{ withdrawAmount || 0 }} / {{ estimatedEth }} ETH)
           </UButton>
         </div>
       </div>

@@ -20,14 +20,16 @@ export async function handleMonetizationAction({
   const monetizationService = new MonetizationService({ db });
 
   if (action === "monetization/get-dashboard") {
-    const startDate = data?.startDate || "2026-08-01";
-    const endDate = data?.endDate || "2026-08-11";
+    const timeRange = data?.timeRange || "30d";
+    const startDate = data?.startDate;
+    const endDate = data?.endDate;
     const adNetworkConfig = data?.adNetworkConfig;
 
     const stats = await monetizationService.getAggregatedDashboardStats(
+      timeRange,
+      adNetworkConfig,
       startDate,
-      endDate,
-      adNetworkConfig
+      endDate
     );
 
     return {
