@@ -1,5 +1,6 @@
 import { onMounted } from "vue";
 import { useApi } from "~/composables/useApi";
+import { useAuthStore } from "~/stores/auth";
 
 export type CategoryItem = {
   id: number;
@@ -116,6 +117,10 @@ export function useCategories() {
   }
 
   async function fetchMyCategories(force = false) {
+    const authStore = useAuthStore();
+    if (!authStore.isAuthenticated && !authStore.token) {
+      return;
+    }
     if (
       (myCategories.value.length > 0 && !force) ||
       isLoadingMyCategories.value
@@ -216,10 +221,14 @@ export function useCategories() {
   // guard above, leaving one request per refresh.
   if (import.meta.client) {
     onMounted(() => {
+      const authStore = useAuthStore();
       if (categories.value.length === 0) {
         fetchCategories();
       }
-      if (myCategories.value.length === 0) {
+      if (
+        (authStore.isAuthenticated || authStore.token) &&
+        myCategories.value.length === 0
+      ) {
         fetchMyCategories();
       }
     });
