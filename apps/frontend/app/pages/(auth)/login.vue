@@ -149,9 +149,9 @@ onUnmounted(() => {
       <div class="relative z-10">
         <div class="flex items-center gap-3">
           <UIcon name="i-lucide-sparkles" class="text-blue-400 h-8 w-8 fill-blue-400 shrink-0" />
-          <NuxtLink to="/" class="text-2xl font-bold tracking-wide text-white">
+          <a href="/" class="text-2xl font-bold tracking-wide text-white">
             NEW PLATFORM
-          </NuxtLink>
+          </a>
         </div>
       </div>
 

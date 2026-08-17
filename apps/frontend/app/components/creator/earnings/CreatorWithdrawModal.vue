@@ -95,7 +95,7 @@ function formatCurrency(val: number) {
         <!-- Recipient Web3 Wallet Address -->
         <div class="space-y-1">
           <div class="flex items-center justify-between">
-            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Target Wallet Address</label>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Withdraw to Wallet Address</label>
             <button v-if="!isConnected" class="text-xs text-emerald-500 font-semibold hover:underline"
               @click="emit('connect-wallet')">
               Connect MetaMask
