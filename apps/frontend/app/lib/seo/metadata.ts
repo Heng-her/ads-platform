@@ -7,19 +7,21 @@ interface MetadataOptions {
   description?: string;
   path?: string;
   image?: string;
+  imageAlt?: string;
   type?: "website" | "article";
   noIndex?: boolean;
 }
 
 /**
  * Applies SEO meta tags using Nuxt SEO composable functions (useSeoMeta, useHead & useSiteConfig).
- * Resolves absolute Open Graph, Twitter card, Google SERP thumbnail images, canonical tags, and structured data.
+ * Resolves absolute Open Graph, Twitter card, Google SERP thumbnail images, alt titles, canonical tags, and structured data.
  */
 export function useCustomSeoMeta({
   title,
   description = seoConfig.defaultDescription,
   path = "",
   image = seoConfig.defaultImage,
+  imageAlt,
   type = "website",
   noIndex = false,
 }: MetadataOptions = {}) {
@@ -38,6 +40,8 @@ export function useCustomSeoMeta({
     ? image
     : `${siteUrl}${image.startsWith("/") ? image : `/${image}`}`;
 
+  const resolvedImageAlt = imageAlt || title || siteName;
+
   useSeoMeta({
     title: fullTitle,
     description,
@@ -47,11 +51,14 @@ export function useCustomSeoMeta({
     ogSiteName: siteName,
     ogType: type,
     ogImage: absoluteImageUrl,
-    ogImageAlt: title || siteName,
+    ogImageAlt: resolvedImageAlt,
+    ogImageWidth: 1200,
+    ogImageHeight: 630,
     twitterCard: "summary_large_image",
     twitterTitle: fullTitle,
     twitterDescription: description,
     twitterImage: absoluteImageUrl,
+    twitterImageAlt: resolvedImageAlt,
     robots: noIndex ? "noindex, nofollow" : "index, follow",
   });
 
@@ -62,10 +69,15 @@ export function useCustomSeoMeta({
     "name": fullTitle,
     "description": description,
     "url": canonicalUrl,
-    "image": absoluteImageUrl,
+    "image": {
+      "@type": "ImageObject",
+      "url": absoluteImageUrl,
+      "caption": resolvedImageAlt,
+    },
     "primaryImageOfPage": {
       "@type": "ImageObject",
       "url": absoluteImageUrl,
+      "caption": resolvedImageAlt,
     },
     "isPartOf": {
       "@type": "WebSite",
@@ -90,6 +102,14 @@ export function useCustomSeoMeta({
         property: "image",
         content: absoluteImageUrl,
       },
+      {
+        property: "og:image:alt",
+        content: resolvedImageAlt,
+      },
+      {
+        name: "twitter:image:alt",
+        content: resolvedImageAlt,
+      },
     ],
     script: [
       {
@@ -102,7 +122,7 @@ export function useCustomSeoMeta({
 
 /**
  * Reusable SEO composable specifically for Article detail pages.
- * Sets Meta Tags (OG, Twitter, Google Thumbnail) and Schema.org JSON-LD (Article & Breadcrumbs).
+ * Sets Meta Tags (OG, Twitter, Google Thumbnail, Alt tags) and Schema.org JSON-LD (Article & Breadcrumbs).
  */
 export function useArticleSeo(item: {
   id: string;
@@ -125,6 +145,7 @@ export function useArticleSeo(item: {
     description: cleanExcerpt,
     path: canonicalPath,
     image: item.imageUrl || seoConfig.defaultImage,
+    imageAlt: item.title,
     type: "article",
   });
 

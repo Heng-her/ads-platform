@@ -10,6 +10,7 @@ export interface RouteSeoOptions {
   description?: string
   path?: string
   image?: string
+  imageAlt?: string
   noIndex?: boolean
 }
 
@@ -27,6 +28,7 @@ export function useRouteSeo(routeKey: RouteSeoKey, defaultOptions: RouteSeoOptio
     description: defaultOptions.description,
     path: defaultOptions.path || '',
     image: defaultOptions.image,
+    imageAlt: defaultOptions.imageAlt || defaultOptions.title,
     noIndex: defaultOptions.noIndex,
   })
 
@@ -36,15 +38,15 @@ export function useRouteSeo(routeKey: RouteSeoKey, defaultOptions: RouteSeoOptio
 
     const routeSeo = dataPayload.platform.seo[routeKey]
     const globalOgImage = dataPayload.platform.ogImage
-    const globalSiteName = dataPayload.platform.siteName
-    const globalSiteUrl = dataPayload.platform.siteUrl
 
     if (routeSeo) {
+      const resolvedTitle = routeSeo.title?.trim() || defaultOptions.title
       useCustomSeoMeta({
-        title: routeSeo.title?.trim() || defaultOptions.title,
+        title: resolvedTitle,
         description: routeSeo.description?.trim() || defaultOptions.description,
         path: defaultOptions.path || '',
         image: routeSeo.image?.trim() || globalOgImage || defaultOptions.image,
+        imageAlt: resolvedTitle,
         noIndex: defaultOptions.noIndex,
       })
     }
