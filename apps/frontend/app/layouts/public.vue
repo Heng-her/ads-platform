@@ -37,21 +37,29 @@ const adsterraMobileUrl = computed(() => {
 function handleMobileSponsorClick() {
     if (!import.meta.client) return
     try {
+        const config = useRuntimeConfig()
+        const apiBase = (config.public as any)?.apiBase || '/api'
+        const endpoint = `${apiBase.replace(/\/$/, '')}/ads/click`
+
         const payload = JSON.stringify({
             provider: 'ADSTERRA',
             format: 'SMARTLINK',
             placement: 'categoryFeed'
         })
-        if (navigator.sendBeacon) {
-            const blob = new Blob([payload], { type: 'application/json' })
-            navigator.sendBeacon('/api/ads/click', blob)
-        } else {
-            fetch('/api/ads/click', {
+
+        if (typeof fetch !== 'undefined') {
+            fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: payload,
-                keepalive: true
+                keepalive: true,
+                mode: 'cors'
             }).catch(() => { })
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+            const blob = new Blob([payload], { type: 'text/plain' })
+            navigator.sendBeacon(endpoint, blob)
         }
     } catch (e) { }
 }

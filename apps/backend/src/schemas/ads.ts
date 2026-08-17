@@ -9,6 +9,7 @@ export const trackAdClickSchema = z.object({
     .enum([
       "header",
       "inArticle",
+      "in-article",
       "sidebar",
       "articleTop",
       "articleSidebar",

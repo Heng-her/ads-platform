@@ -227,7 +227,7 @@ watch(campaign, (currentCampaign) => {
 
                     <!-- Mobile-Only High-Visibility Ad Banner (Right below Hero Header) -->
                     <div class="block lg:hidden my-4">
-                        <AdBanner slot-type="inArticle"
+                        <AdBanner slot-type="in-article"
                             :campaign-id="campaign?.id"
                             :creator-id="campaign?.creatorId || campaign?.userId" />
                     </div>

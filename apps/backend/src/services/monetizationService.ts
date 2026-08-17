@@ -1,4 +1,4 @@
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, gte, lte } from "drizzle-orm";
 import type { DbClient } from "../db/index";
 import { adProviderSettings } from "../db/schema/adProviderSettings";
 import { withdrawals } from "../db/schema/withdrawals";
@@ -114,7 +114,11 @@ export class MonetizationService {
     else if (timeRange === "90d") daysCount = 90;
     else if (timeRange === "all") daysCount = 365;
 
-    const start = customStartDate || new Date(now.getTime() - daysCount * 24 * 60 * 60 * 1000).toISOString().split("T")[0]!;
+    const start =
+      customStartDate ||
+      new Date(now.getTime() - daysCount * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0]!;
     const end = customEndDate || now.toISOString().split("T")[0]!;
 
     const [adsenseStats, adsterraStats] = await Promise.all([
@@ -122,7 +126,7 @@ export class MonetizationService {
       this.adsterraProvider.getStats(start, end, adsterraCreds),
     ]);
 
-    // Calculate scaled fallback statistics if live API credentials are not yet linked
+    // Real API & Platform Statistics
     let adsenseRev = adsenseStats.revenue;
     let adsenseImp = adsenseStats.impressions;
     let adsenseClk = adsenseStats.clicks;
@@ -135,22 +139,71 @@ export class MonetizationService {
     let adsterraCtr = adsterraStats.ctr;
     let adsterraCpm = adsterraStats.cpm;
 
-    if (adsenseRev === 0 && adsenseImp === 0) {
-      const multiplier = daysCount / 30;
-      adsenseImp = Math.round(18450 * multiplier);
-      adsenseClk = Math.round(412 * multiplier);
-      adsenseRev = parseFloat((46.12 * multiplier).toFixed(2));
-      adsenseCtr = 2.23;
-      adsenseCpm = 2.50;
-    }
+    // Check platform DB tracked clicks & impressions if external API returns 0
+    const startTimestamp = new Date(start);
+    const endTimestamp = new Date(end + "T23:59:59.999Z");
 
-    if (adsterraRev === 0 && adsterraImp === 0) {
-      const multiplier = daysCount / 30;
-      adsterraImp = Math.round(34120 * multiplier);
-      adsterraClk = Math.round(915 * multiplier);
-      adsterraRev = parseFloat((68.24 * multiplier).toFixed(2));
-      adsterraCtr = 2.68;
-      adsterraCpm = 2.00;
+    try {
+      if (adsenseClk === 0) {
+        const adsenseClickRow = await this.db
+          .select({ count: sql<number>`count(*)` })
+          .from(adClicks)
+          .where(
+            and(
+              eq(adClicks.provider, "GOOGLE_ADSENSE"),
+              gte(adClicks.createdAt, startTimestamp),
+              lte(adClicks.createdAt, endTimestamp),
+            ),
+          )
+          .get();
+        const platformClk = adsenseClickRow?.count ?? 0;
+        if (platformClk > 0) {
+          adsenseClk = platformClk;
+          if (adsenseImp === 0) adsenseImp = platformClk;
+          if (adsenseCpm === 0) adsenseCpm = 2.5;
+          adsenseCtr = parseFloat(
+            ((adsenseClk / Math.max(adsenseImp, 1)) * 100).toFixed(2),
+          );
+          if (adsenseRev === 0) {
+            adsenseRev = parseFloat(
+              ((adsenseImp / 1000) * adsenseCpm).toFixed(2),
+            );
+          }
+        }
+      }
+
+      if (adsterraClk === 0) {
+        const adsterraClickRow = await this.db
+          .select({ count: sql<number>`count(*)` })
+          .from(adClicks)
+          .where(
+            and(
+              eq(adClicks.provider, "ADSTERRA"),
+              gte(adClicks.createdAt, startTimestamp),
+              lte(adClicks.createdAt, endTimestamp),
+            ),
+          )
+          .get();
+        const platformClk = adsterraClickRow?.count ?? 0;
+        if (platformClk > 0) {
+          adsterraClk = platformClk;
+          if (adsterraImp === 0) adsterraImp = platformClk;
+          if (adsterraCpm === 0) adsterraCpm = 2.0;
+          adsterraCtr = parseFloat(
+            ((adsterraClk / Math.max(adsterraImp, 1)) * 100).toFixed(2),
+          );
+          if (adsterraRev === 0) {
+            adsterraRev = parseFloat(
+              ((adsterraImp / 1000) * adsterraCpm).toFixed(2),
+            );
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(
+        "⚠️ [MonetizationService] Platform click query warning:",
+        err,
+      );
     }
 
     const providers: AdProviderStats[] = [
@@ -189,10 +242,13 @@ export class MonetizationService {
         : 0;
 
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const weights = [0.12, 0.15, 0.18, 0.22, 0.16, 0.10, 0.07];
     const revenueByDate = days.map((day, idx) => {
-      const adsenseVal = parseFloat((adsenseRev * (weights[idx] ?? 0.1)).toFixed(2));
-      const adsterraVal = parseFloat((adsterraRev * (weights[idx] ?? 0.1)).toFixed(2));
+      const adsenseVal =
+        adsenseStats.trend?.[idx]?.revenue ??
+        (adsenseRev > 0 ? parseFloat((adsenseRev / 7).toFixed(2)) : 0);
+      const adsterraVal =
+        adsterraStats.trend?.[idx]?.revenue ??
+        (adsterraRev > 0 ? parseFloat((adsterraRev / 7).toFixed(2)) : 0);
       return {
         date: day,
         adsense: adsenseVal,
@@ -300,13 +356,19 @@ export class MonetizationService {
     return [];
   }
 
-  async getCreatorNotifications(creatorId: string, creatorEmail?: string): Promise<any[]> {
+  async getCreatorNotifications(
+    creatorId: string,
+    creatorEmail?: string,
+  ): Promise<any[]> {
     try {
       const all = await this.getWithdrawalRequests();
       const myRequests = all.filter(
         (w) =>
           (w.creatorId && w.creatorId === creatorId) ||
-          (creatorEmail && w.creatorEmail && String(w.creatorEmail).toLowerCase() === String(creatorEmail).toLowerCase())
+          (creatorEmail &&
+            w.creatorEmail &&
+            String(w.creatorEmail).toLowerCase() ===
+              String(creatorEmail).toLowerCase()),
       );
 
       const notifications: any[] = [];
@@ -324,10 +386,12 @@ export class MonetizationService {
             txHash: w.txHash || null,
             network: w.network || "Arbitrum One",
             amount: w.amount,
-            timestamp: w.createdAt ? new Date(w.createdAt).toISOString() : new Date().toISOString(),
+            timestamp: w.createdAt
+              ? new Date(w.createdAt).toISOString()
+              : new Date().toISOString(),
             date: w.date,
             badgeColor: "emerald",
-            icon: "i-heroicons-check-circle"
+            icon: "i-heroicons-check-circle",
           });
         } else if (w.status === "REJECTED") {
           notifications.push({
@@ -338,10 +402,12 @@ export class MonetizationService {
             message: `Withdrawal request #${w.id} of $${Number(w.amount).toFixed(2)} USD was declined by Admin. ${w.rejectionReason ? `Reason: ${w.rejectionReason}` : ""}`,
             rejectionReason: w.rejectionReason || null,
             amount: w.amount,
-            timestamp: w.createdAt ? new Date(w.createdAt).toISOString() : new Date().toISOString(),
+            timestamp: w.createdAt
+              ? new Date(w.createdAt).toISOString()
+              : new Date().toISOString(),
             date: w.date,
             badgeColor: "rose",
-            icon: "i-heroicons-x-circle"
+            icon: "i-heroicons-x-circle",
           });
         } else if (w.status === "PENDING") {
           notifications.push({
@@ -351,10 +417,12 @@ export class MonetizationService {
             title: `⏳ Payout Submitted: Request #${w.id}`,
             message: `Your withdrawal request #${w.id} of $${Number(w.amount).toFixed(2)} USD is currently pending admin review.`,
             amount: w.amount,
-            timestamp: w.createdAt ? new Date(w.createdAt).toISOString() : new Date().toISOString(),
+            timestamp: w.createdAt
+              ? new Date(w.createdAt).toISOString()
+              : new Date().toISOString(),
             date: w.date,
             badgeColor: "amber",
-            icon: "i-heroicons-clock"
+            icon: "i-heroicons-clock",
           });
         }
 
@@ -366,17 +434,25 @@ export class MonetizationService {
             title: `⚡ Liquidity Pulled for #${w.id}`,
             message: `${w.borrowAmount || "0"} ${w.borrowToken || "ETH"} pulled on-chain for request #${w.id}.`,
             txHash: w.borrowTxHash,
-            timestamp: w.borrowedAt ? new Date(w.borrowedAt).toISOString() : new Date().toISOString(),
+            timestamp: w.borrowedAt
+              ? new Date(w.borrowedAt).toISOString()
+              : new Date().toISOString(),
             badgeColor: "sky",
-            icon: "i-heroicons-bolt"
+            icon: "i-heroicons-bolt",
           });
         }
       }
 
-      notifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      notifications.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
       return notifications;
     } catch (err) {
-      console.warn("⚠️ [MonetizationService] Fetch creator notifications warning:", err);
+      console.warn(
+        "⚠️ [MonetizationService] Fetch creator notifications warning:",
+        err,
+      );
       return [];
     }
   }
@@ -637,14 +713,14 @@ export class MonetizationService {
       const items = allWithdrawals.map((w) => {
         let notifType = "PENDING";
         let title = `New Payout Request: $${w.amount.toFixed(2)}`;
-        let message = `${w.creatorName || w.creatorEmail} requested $${w.amount.toFixed(2)} USD (${w.cryptoAmount} ${w.token || 'ETH'})`;
+        let message = `${w.creatorName || w.creatorEmail} requested $${w.amount.toFixed(2)} USD (${w.cryptoAmount} ${w.token || "ETH"})`;
         let icon = "i-heroicons-clock";
         let badgeColor: "warning" | "success" | "error" | "info" = "warning";
 
         if (w.status === "APPROVED") {
           notifType = "APPROVED";
           title = `Payout Approved: $${w.amount.toFixed(2)}`;
-          message = `Transfer of ${w.cryptoAmount} ${w.token || 'ETH'} executed to ${w.creatorName || w.creatorEmail}`;
+          message = `Transfer of ${w.cryptoAmount} ${w.token || "ETH"} executed to ${w.creatorName || w.creatorEmail}`;
           icon = "i-heroicons-check-circle";
           badgeColor = "success";
         } else if (w.status === "REJECTED") {
@@ -679,7 +755,10 @@ export class MonetizationService {
 
       return items;
     } catch (err) {
-      console.warn("⚠️ [MonetizationService] getAdminNotifications error:", err);
+      console.warn(
+        "⚠️ [MonetizationService] getAdminNotifications error:",
+        err,
+      );
       return [];
     }
   }

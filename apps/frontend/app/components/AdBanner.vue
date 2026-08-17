@@ -22,6 +22,10 @@ function handleSmartlinkClick() {
   if (!import.meta.client) return
 
   try {
+    const config = useRuntimeConfig()
+    const apiBase = (config.public as any)?.apiBase || '/api'
+    const endpoint = `${apiBase.replace(/\/$/, '')}/ads/click`
+
     const payload = JSON.stringify({
       campaignId: props.campaignId || undefined,
       creatorId: props.creatorId || undefined,
@@ -30,18 +34,56 @@ function handleSmartlinkClick() {
       placement: props.slotType || 'header'
     })
 
-    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-      navigator.sendBeacon('/api/ads/click', new Blob([payload], { type: 'application/json' }))
-    } else {
-      $fetch('/api/ads/click', {
+    if (typeof fetch !== 'undefined') {
+      fetch(endpoint, {
         method: 'POST',
-        body: JSON.parse(payload),
-        keepalive: true
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true,
+        mode: 'cors'
       }).catch(() => { })
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: 'text/plain' })
+      navigator.sendBeacon(endpoint, blob)
     }
   } catch (e) {
     // Non-blocking error handler — user navigation will proceed seamlessly
   }
+}
+
+function handleGoogleAdClick() {
+  if (!import.meta.client) return
+
+  try {
+    const config = useRuntimeConfig()
+    const apiBase = (config.public as any)?.apiBase || '/api'
+    const endpoint = `${apiBase.replace(/\/$/, '')}/ads/click`
+
+    const payload = JSON.stringify({
+      campaignId: props.campaignId || undefined,
+      creatorId: props.creatorId || undefined,
+      provider: 'GOOGLE_ADSENSE',
+      format: 'BANNER',
+      placement: props.slotType || 'header'
+    })
+
+    if (typeof fetch !== 'undefined') {
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true,
+        mode: 'cors'
+      }).catch(() => { })
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: 'text/plain' })
+      navigator.sendBeacon(endpoint, blob)
+    }
+  } catch (e) { }
 }
 
 const adsterraTrackingUrl = computed(() => {
@@ -68,17 +110,18 @@ const activeSlotId = computed(() => {
   return slots[props.slotType] || slots.header || slots.articleTop || ''
 })
 
-const showGoogle = computed(() => {
+const hasValidGooglePubId = computed(() => {
   const pubId = adConfig.value?.googleAdsense?.publisherId
-  const isValidPublisherId =
-    Boolean(pubId) &&
+  return Boolean(
+    pubId &&
     pubId.startsWith('ca-pub-') &&
     pubId !== 'ca-pub-9876543210987654'
+  )
+})
 
+const showGoogle = computed(() => {
   return Boolean(
     adConfig.value?.googleAdsense?.enabled &&
-    isValidPublisherId &&
-    activeSlotId.value &&
     (props.provider === 'all' || props.provider === 'google')
   )
 })
@@ -93,7 +136,7 @@ const showAdsterra = computed(() => {
 })
 
 function initAdSense() {
-  if (!import.meta.client || !showGoogle.value || adPushed.value) return
+  if (!import.meta.client || !showGoogle.value || !hasValidGooglePubId.value || adPushed.value) return
 
   try {
     const pubId = adConfig.value.googleAdsense.publisherId
@@ -115,6 +158,15 @@ function initAdSense() {
 
 onMounted(() => {
   initAdSense()
+
+  if (import.meta.client) {
+    window.addEventListener('blur', () => {
+      const activeElement = document.activeElement
+      if (activeElement && (activeElement.tagName === 'IFRAME' || activeElement.closest?.('.adsbygoogle'))) {
+        handleGoogleAdClick()
+      }
+    })
+  }
 })
 
 watch([showGoogle, activeSlotId], () => {
@@ -137,8 +189,8 @@ watch([showGoogle, activeSlotId], () => {
       :class="(isSidebar || provider !== 'all') ? 'grid grid-cols-1 gap-3' : 'grid grid-cols-1 md:grid-cols-2 gap-4'">
 
       <!-- AD NETWORK 1: Real Google AdSense Display Ads -->
-      <div v-if="showGoogle"
-        class="rounded-2xl border border-blue-500/30 bg-blue-500/5 dark:bg-blue-950/20 p-4 relative overflow-hidden flex flex-col justify-between">
+      <div v-if="showGoogle" @click="handleGoogleAdClick"
+        class="group relative overflow-hidden rounded-2xl border border-blue-500/30 bg-blue-500/5 dark:bg-blue-950/20 p-4 flex flex-col justify-between cursor-pointer hover:border-blue-500/60 transition-all">
         <div class="flex items-center justify-between mb-3 border-b border-blue-500/20 pb-2">
           <div class="flex items-center gap-2">
             <div class="p-1.5 rounded-lg bg-blue-500/20 text-blue-400">
@@ -150,16 +202,29 @@ watch([showGoogle, activeSlotId], () => {
             </div>
           </div>
           <UBadge color="info" variant="soft" size="xs" class="font-mono text-[10px]">
-            Slot {{ activeSlotId }}
+            Slot {{ activeSlotId || 'Display' }}
           </UBadge>
         </div>
 
-        <!-- Real Google AdSense Tag Container -->
-        <div
+        <!-- Real Google AdSense Tag Container or Display Banner -->
+        <div v-if="hasValidGooglePubId && activeSlotId"
           class="my-2 p-2 rounded-xl bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-900/50 text-center min-h-[90px] flex items-center justify-center overflow-hidden">
           <ins class="adsbygoogle" style="display:block; width:100%;"
             :data-ad-client="adConfig.googleAdsense.publisherId" :data-ad-slot="activeSlotId" data-ad-format="auto"
             data-full-width-responsive="true" :data-ad-channel="creatorId || undefined"></ins>
+        </div>
+        <div v-else
+          class="my-2 p-3.5 rounded-xl bg-white/90 dark:bg-gray-900/90 border border-blue-200 dark:border-blue-900/50 text-center flex flex-col items-center justify-center gap-1.5 backdrop-blur-sm group-hover:border-blue-400 dark:group-hover:border-blue-500/60">
+          <p class="text-xs font-bold text-gray-900 dark:text-white group-hover:text-blue-500">
+            Google AdSense Partner Display Unit
+          </p>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">
+            Targeted responsive ad banner & auto-ad placement. Click to view partner details.
+          </p>
+          <div class="mt-1 flex items-center gap-1 text-[11px] font-bold text-blue-500">
+            <span>View Partner Offer</span>
+            <UIcon name="i-heroicons-arrow-right" class="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+          </div>
         </div>
       </div>
 

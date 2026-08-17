@@ -86,7 +86,7 @@ export function useCloudinaryUpload() {
     (config.public as any)?.cloudinaryBaseUrl ||
     "https://api-upload-image-8ym9.onrender.com";
   const backendApiBase =
-    (config.public as any)?.apiBase || "http://localhost:8787/api";
+    (config.public as any)?.apiBase || "/api";
   const apiKey = (config.public as any)?.cloudinaryApiKey || "crypten-api-key";
   const isAdmin = computed(() => authStore.user?.role === "admin");
 

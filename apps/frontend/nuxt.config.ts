@@ -13,7 +13,7 @@ export default defineNuxtConfig({
 
     // public config (available in browser and server)
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:8787/api",
+      apiBase: process.env.NUXT_PUBLIC_API_BASE,
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID,
     },
   },

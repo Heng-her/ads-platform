@@ -80,11 +80,9 @@ describe("Bug 1.5 — GET /api/auth/google/callback route is missing", async () 
 //
 describe("Bug 1.6 — passwordHash column has NOT NULL constraint", () => {
   it("Bug 1.6 is documented in schema file — passwordHash.notNull() prevents OAuth users", async () => {
-    // Read the schema file to confirm the bug exists
     const fs = await import("node:fs/promises");
-    const path = await import("node:path");
-
-    const schemaPath = path.resolve(__dirname, "../src/db/schema/users.ts");
+    const { fileURLToPath } = await import("node:url");
+    const schemaPath = fileURLToPath(new URL("../src/db/schema/users.ts", import.meta.url));
     const schemaContent = await fs.readFile(schemaPath, "utf-8");
 
     // Confirm the schema file contains .notNull() on passwordHash

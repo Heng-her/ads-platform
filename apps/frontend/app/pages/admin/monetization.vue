@@ -147,21 +147,21 @@ const tempEcpmRate = ref<number>(2.50)
 
 // Google AdSense & Adsterra Monetization Config State
 const adNetworkConfig = ref<AdNetworkConfig>({
-  enableGoogleAdsense: true,
-  googlePublisherId: 'ca-pub-9876543210987654',
-  googleAutoAds: true,
-  googleBannerSlotId: '1234567890',
-  googleInArticleSlotId: '9876543210',
+  enableGoogleAdsense: false,
+  googlePublisherId: '',
+  googleAutoAds: false,
+  googleBannerSlotId: '',
+  googleInArticleSlotId: '',
 
-  enableAdsterra: true,
-  adsterraPublisherKey: 'adsterra_pub_889214',
-  adsterraDirectLinkUrl: 'https://www.highperformancecpmgate.com/direct-link-hash',
-  adsterraBanner728x90Key: '10928374',
-  adsterraNativeBannerKey: '56473829',
-  adsterraPopunderEnabled: true,
+  enableAdsterra: false,
+  adsterraPublisherKey: '',
+  adsterraDirectLinkUrl: '',
+  adsterraBanner728x90Key: '',
+  adsterraNativeBannerKey: '',
+  adsterraPopunderEnabled: false,
 
-  customHeaderScript: '<!-- Google AdSense Auto Ads Script -->\n<' + 'script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9876543210987654" crossorigin="anonymous"></' + 'script>',
-  customArticleAdScript: '<!-- Adsterra Banner Script -->\n<' + 'script type="text/javascript" src="https://www.highperformancecpmgate.com/10928374/invoke.js"></' + 'script>'
+  customHeaderScript: '',
+  customArticleAdScript: ''
 })
 
 // Multi-Ad Network Revenue Dashboard State

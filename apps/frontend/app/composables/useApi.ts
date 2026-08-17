@@ -22,7 +22,7 @@ export interface UseApiOptions {
 export function useApi(options?: UseApiOptions) {
   const config = useRuntimeConfig();
   const defaultBaseUrl =
-    (config.public as any)?.apiBase || "http://localhost:8787/api";
+    (config.public as any)?.apiBase || "/api";
 
   const targetBaseUrl = options?.baseUrl || defaultBaseUrl;
 
