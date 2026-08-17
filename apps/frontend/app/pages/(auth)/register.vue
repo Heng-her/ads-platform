@@ -50,7 +50,7 @@ async function finishLogin(data: AuthSessionPayload) {
   showToast.value = true
 
   await new Promise(resolve => setTimeout(resolve, 900))
-  await navigateTo(authStore.getDashboardPath(authStore.user?.role))
+  await navigateTo('/creator/earnings')
 }
 
 async function handleGoogleCredential(idToken: string) {

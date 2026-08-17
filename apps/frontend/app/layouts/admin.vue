@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useSidebar } from '~/composables/useSidebar'
+import AdminNotificationMenu from '~/components/admin/AdminNotificationMenu.vue'
 
 const adminNav = [
   { label: 'Overview', icon: 'i-heroicons-chart-pie', to: '/admin' },
@@ -36,6 +37,7 @@ const { isMobileOpen } = useSidebar()
         <template #right>
           <div class="flex items-center gap-1.5 sm:gap-3">
             <LanguageSwitcher />
+            <AdminNotificationMenu />
             <UButton to="/creator" color="neutral" variant="subtle" size="xs" class="hidden sm:inline-flex">
               Switch to Creator
             </UButton>

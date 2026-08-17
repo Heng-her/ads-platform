@@ -107,6 +107,18 @@ export async function handleMonetizationAction({
     };
   }
 
+  if (action === "monetization/get-admin-notifications") {
+    if (!currentUser || currentUser.role !== "ADMIN") {
+      return { code: 0, msg: "Unauthorized: Admin privileges required." };
+    }
+    const notifs = await monetizationService.getAdminNotifications();
+    return {
+      code: 1,
+      msg: "Admin notifications fetched successfully.",
+      data: notifs,
+    };
+  }
+
   if (action === "monetization/approve-payout") {
     if (!currentUser || currentUser.role !== "ADMIN") {
       return { code: 0, msg: "Unauthorized: Admin privileges required." };

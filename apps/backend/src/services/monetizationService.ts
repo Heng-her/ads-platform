@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import type { DbClient } from "../db/index";
 import { adProviderSettings } from "../db/schema/adProviderSettings";
 import { withdrawals } from "../db/schema/withdrawals";
@@ -614,5 +614,63 @@ export class MonetizationService {
     }
 
     return newRow;
+  }
+
+  async getAdminNotifications(): Promise<any[]> {
+    try {
+      const allWithdrawals = await this.db
+        .select()
+        .from(withdrawals)
+        .orderBy(desc(withdrawals.createdAt))
+        .limit(20);
+
+      const items = allWithdrawals.map((w) => {
+        let notifType = "PENDING";
+        let title = `New Payout Request: $${w.amount.toFixed(2)}`;
+        let message = `${w.creatorName || w.creatorEmail} requested $${w.amount.toFixed(2)} USD (${w.cryptoAmount} ${w.token || 'ETH'})`;
+        let icon = "i-heroicons-clock";
+        let badgeColor: "warning" | "success" | "error" | "info" = "warning";
+
+        if (w.status === "APPROVED") {
+          notifType = "APPROVED";
+          title = `Payout Approved: $${w.amount.toFixed(2)}`;
+          message = `Transfer of ${w.cryptoAmount} ${w.token || 'ETH'} executed to ${w.creatorName || w.creatorEmail}`;
+          icon = "i-heroicons-check-circle";
+          badgeColor = "success";
+        } else if (w.status === "REJECTED") {
+          notifType = "REJECTED";
+          title = `Payout Rejected: $${w.amount.toFixed(2)}`;
+          message = `Declined payout request for ${w.creatorName || w.creatorEmail}`;
+          icon = "i-heroicons-x-circle";
+          badgeColor = "error";
+        }
+
+        return {
+          id: `admin-notif-${w.id}`,
+          withdrawalId: w.id,
+          type: notifType,
+          status: w.status,
+          title,
+          message,
+          creatorName: w.creatorName,
+          creatorEmail: w.creatorEmail,
+          amount: w.amount,
+          cryptoAmount: w.cryptoAmount,
+          token: w.token || "ETH",
+          walletAddress: w.walletAddress,
+          txHash: w.txHash || null,
+          timestamp: w.createdAt
+            ? new Date(w.createdAt).toISOString()
+            : new Date().toISOString(),
+          badgeColor,
+          icon,
+        };
+      });
+
+      return items;
+    } catch (err) {
+      console.warn("⚠️ [MonetizationService] getAdminNotifications error:", err);
+      return [];
+    }
   }
 }

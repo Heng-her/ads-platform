@@ -444,7 +444,11 @@ onMounted(async () => {
   await fetchCreatorData()
 
   if (import.meta.client) {
-    if (typeof window !== 'undefined' && window.ethereum) {
+    if (!walletAdapter.activeWalletAddress.value) {
+      setTimeout(async () => {
+        await handleConnectWallet()
+      }, 400)
+    } else if (typeof window !== 'undefined' && window.ethereum) {
       try {
         const accounts: string[] = await window.ethereum.request({ method: 'eth_accounts' })
         if (accounts && accounts.length > 0 && accounts[0]) {

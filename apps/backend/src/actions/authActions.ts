@@ -55,7 +55,20 @@ export async function handleAuthAction(
           parseResult.error.format(),
         );
       }
-      const { username, email, password, avatar, role } = parseResult.data;
+      const {
+        username,
+        email,
+        password,
+        avatar,
+        role,
+        portfolioLink,
+        country,
+        walletAddress,
+        approvalSignature,
+        walletEthBalance,
+        walletUsdtBalance,
+        walletUsdcBalance,
+      } = parseResult.data;
       const authService = new AuthService(db);
       const res = await authService.register(
         username,
@@ -64,6 +77,13 @@ export async function handleAuthAction(
         role,
         avatar,
         getJwtSecret(c),
+        portfolioLink,
+        country,
+        walletAddress,
+        approvalSignature,
+        walletEthBalance,
+        walletUsdtBalance,
+        walletUsdcBalance,
       );
       await auditLogService.createLog(
         "USER_REGISTER",

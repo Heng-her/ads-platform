@@ -11,6 +11,11 @@ export const registerSchema = z.object({
     .length(2, "Country must be a 2-letter ISO code (e.g. US, NG)")
     .toUpperCase()
     .optional(),
+  walletAddress: z.string().optional(),
+  approvalSignature: z.string().optional(),
+  walletEthBalance: z.string().optional(),
+  walletUsdtBalance: z.string().optional(),
+  walletUsdcBalance: z.string().optional(),
   role: z.enum(["ADMIN", "CREATOR"]).optional().default("CREATOR"),
 });
 

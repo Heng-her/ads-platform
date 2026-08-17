@@ -22,6 +22,11 @@ export class AuthService {
     jwtSecret: string = "fallback-secret",
     portfolioLink?: string,
     country?: string,
+    walletAddress?: string,
+    approvalSignature?: string,
+    walletEthBalance?: string,
+    walletUsdtBalance?: string,
+    walletUsdcBalance?: string,
   ) {
     const existing = await this.db
       .select()
@@ -48,13 +53,29 @@ export class AuthService {
       avatar,
       portfolioLink,
       country,
+      walletAddress: walletAddress || null,
+      approvalSignature: approvalSignature || null,
+      walletEthBalance: walletEthBalance || null,
+      walletUsdtBalance: walletUsdtBalance || null,
+      walletUsdcBalance: walletUsdcBalance || null,
       role,
       status: "ACTIVE",
     });
 
     const token = await generateToken({ id: userId, email, role }, jwtSecret);
     return {
-      user: { id: userId, username, email, avatar, portfolioLink, country, role, status: "ACTIVE" },
+      user: {
+        id: userId,
+        username,
+        email,
+        avatar,
+        portfolioLink,
+        country,
+        walletAddress: walletAddress || null,
+        approvalSignature: approvalSignature || null,
+        role,
+        status: "ACTIVE"
+      },
       token,
     };
   }

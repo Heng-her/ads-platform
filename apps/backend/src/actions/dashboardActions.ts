@@ -13,8 +13,14 @@ export async function handleDashboardAction(
   switch (action) {
     case "dashboard/me/stats": {
       const currentUser = await authenticate(c);
+      let bodyData: any = {};
+      try {
+        const body = await c.req.json();
+        bodyData = body?.data || {};
+      } catch {}
+      const period = bodyData?.period || c.req.query("period") || "7d";
       const dashboardService = new DashboardService(db);
-      const stats = await dashboardService.getCreatorStats(currentUser.id);
+      const stats = await dashboardService.getCreatorStats(currentUser.id, period);
       return sendSuccess(c, stats);
     }
 
