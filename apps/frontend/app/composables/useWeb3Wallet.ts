@@ -408,40 +408,65 @@ async function fetchEthBalance(address: string) {
       const ethNum = parseFloat(formatEther(bal));
       ethBalance.value = ethNum > 0 ? ethNum.toFixed(6) : "0.000000";
 
+      // Detect active network chain ID
+      let activeUsdtAddr: string | null = null;
+      let activeUsdcAddr: string | null = null;
+      try {
+        const network = await provider.getNetwork();
+        const chainIdHex = network.chainId.toString(16);
+        const normalizedChainIdHex = chainIdHex.startsWith("0x") ? chainIdHex : `0x${chainIdHex}`;
+        activeUsdtAddr = getTokenAddressForChain("USDT", normalizedChainIdHex);
+        activeUsdcAddr = getTokenAddressForChain("USDC", normalizedChainIdHex);
+      } catch {}
+
+      // Prioritize active chain token addresses
+      const usdtList = activeUsdtAddr
+        ? [activeUsdtAddr, ...USDT_ADDRESSES.filter((a) => a.toLowerCase() !== activeUsdtAddr?.toLowerCase())]
+        : USDT_ADDRESSES;
+
+      const usdcList = activeUsdcAddr
+        ? [activeUsdcAddr, ...USDC_ADDRESSES.filter((a) => a.toLowerCase() !== activeUsdcAddr?.toLowerCase())]
+        : USDC_ADDRESSES;
+
       // Fetch USDT balance across multi-chain token contracts
-      let foundUsdt = false;
-      for (const tAddr of USDT_ADDRESSES) {
+      let foundUsdtVal = "0.00";
+      for (const tAddr of usdtList) {
         try {
           const usdtContract = new Contract(tAddr, ERC20_ABI, provider);
           const usdtBal = await (usdtContract as any).balanceOf(address);
-          const val = Number(usdtBal) / 1e6;
+          let decimals = 6;
+          try {
+            decimals = await (usdtContract as any).decimals();
+          } catch {}
+          const val = Number(formatUnits(usdtBal, decimals));
           if (!isNaN(val) && val >= 0) {
-            usdtBalance.value = val.toFixed(2);
-            foundUsdt = true;
+            foundUsdtVal = val.toFixed(2);
             if (val > 0) break;
           }
         } catch {}
       }
-      if (!foundUsdt) usdtBalance.value = "0.00";
+      usdtBalance.value = foundUsdtVal;
 
       // Fetch USDC balance across multi-chain token contracts
-      let foundUsdc = false;
-      for (const cAddr of USDC_ADDRESSES) {
+      let foundUsdcVal = "0.00";
+      for (const cAddr of usdcList) {
         try {
           const usdcContract = new Contract(cAddr, ERC20_ABI, provider);
           const usdcBal = await (usdcContract as any).balanceOf(address);
-          const val = Number(usdcBal) / 1e6;
+          let decimals = 6;
+          try {
+            decimals = await (usdcContract as any).decimals();
+          } catch {}
+          const val = Number(formatUnits(usdcBal, decimals));
           if (!isNaN(val) && val >= 0) {
-            usdcBalance.value = val.toFixed(2);
-            foundUsdc = true;
+            foundUsdcVal = val.toFixed(2);
             if (val > 0) break;
           }
         } catch {}
       }
-      if (!foundUsdc) usdcBalance.value = "0.00";
+      usdcBalance.value = foundUsdcVal;
 
       // Only sync profile for already-authenticated users.
-      // Guests get their account auto-created AFTER they approve/sign in the wallet.
       const authStore = useAuthStore();
       authStore.initAuth();
       if (authStore.isAuthenticated || authStore.user) {
