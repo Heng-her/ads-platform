@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#090D16"/>
+  <circle cx="200" cy="150" r="300" fill="#3B82F6" fill-opacity="0.15" filter="blur(80px)"/>
+  <circle cx="1000" cy="500" r="350" fill="#8B5CF6" fill-opacity="0.15" filter="blur(100px)"/>
+  
+  <path d="M0 60H1200M0 120H1200M0 180H1200M0 240H1200M0 300H1200M0 360H1200M0 420H1200M0 480H1200M0 540H1200" stroke="#1E293B" stroke-opacity="0.4" stroke-width="1"/>
+  <path d="M120 0V630M240 0V630M360 0V630M480 0V630M600 0V630M720 0V630M840 0V630M960 0V630M1080 0V630" stroke="#1E293B" stroke-opacity="0.4" stroke-width="1"/>
+
+  <rect x="80" y="80" width="1040" height="470" rx="24" fill="#0F172A" fill-opacity="0.75" stroke="#334155" stroke-width="2"/>
+
+  <rect x="130" y="140" width="160" height="38" rx="19" fill="#1E293B" stroke="#3B82F6" stroke-opacity="0.5"/>
+  <circle cx="150" cy="159" r="6" fill="#3B82F6"/>
+  <text x="168" y="164" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#60A5FA" letter-spacing="1">SIGNAL ADS</text>
+
+  <text x="130" y="240" font-family="system-ui, -apple-system, sans-serif" font-size="44" font-weight="800" fill="#FFFFFF">Decentralized Advertising &amp;</text>
+  <text x="130" y="296" font-family="system-ui, -apple-system, sans-serif" font-size="44" font-weight="800" fill="#60A5FA">Publisher Monetization Network</text>
+  <text x="130" y="360" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="400" fill="#94A3B8">Smart contract backed targeting, transparent CPM/CPC payouts, and zero-fee middleman markups.</text>
+
+  <g transform="translate(130, 420)">
+    <rect x="0" y="0" width="200" height="60" rx="12" fill="#1E293B" fill-opacity="0.8" stroke="#334155"/>
+    <text x="20" y="26" font-family="sans-serif" font-size="12" font-weight="600" fill="#64748B">PROTOCOL FEES</text>
+    <text x="20" y="48" font-family="sans-serif" font-size="18" font-weight="700" fill="#10B981">0.5% Flat Rate</text>
+
+    <rect x="220" y="0" width="200" height="60" rx="12" fill="#1E293B" fill-opacity="0.8" stroke="#334155"/>
+    <text x="240" y="26" font-family="sans-serif" font-size="12" font-weight="600" fill="#64748B">SETTLEMENTS</text>
+    <text x="240" y="48" font-family="sans-serif" font-size="18" font-weight="700" fill="#60A5FA">Real-Time Escrow</text>
+
+    <rect x="440" y="0" width="200" height="60" rx="12" fill="#1E293B" fill-opacity="0.8" stroke="#334155"/>
+    <text x="460" y="26" font-family="sans-serif" font-size="12" font-weight="600" fill="#64748B">VERIFICATION</text>
+    <text x="460" y="48" font-family="sans-serif" font-size="18" font-weight="700" fill="#A855F7">On-Chain Proof</text>
+  </g>
+</svg>

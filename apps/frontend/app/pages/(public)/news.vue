@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { useCustomSeoMeta } from '~/lib/seo/metadata'
+import { useRouteSeo } from '~/composables/useRouteSeo'
 
-useCustomSeoMeta({
-  title: 'News Hub',
-  description: 'Stay updated with the latest trends and announcements on NewPlatform.',
-  path: '/news'
+useRouteSeo('news', {
+  title: 'News & Trends — Platform Updates & Ad Insights',
+  description: 'Stay updated with product updates, AI ad targeting features, and digital marketing insights on Signal Ads Platform.',
+  path: '/news',
+  image: '/images/seo/og-news.svg'
 })
 
 const articles = [

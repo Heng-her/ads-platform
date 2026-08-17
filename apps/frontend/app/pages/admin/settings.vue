@@ -29,11 +29,39 @@ const isLoading = ref(true)
 
 // Platform Configuration State
 const platformConfig = ref<PlatformConfig>({
-  siteName: 'New Platform',
-  siteDescription: 'Multi-role New Platform supporting Public browsing, Creator Studio, and Admin Control.',
+  siteName: 'Signal — Ads Platform',
+  siteDescription: 'Signal is a modern advertising & publisher network connecting creators, advertisers, and audiences with smart targeting, AI discovery, and real-time impression analytics.',
   siteUrl: 'http://localhost:3000',
   defaultLanguage: 'en',
-  allowRegistrations: true
+  allowRegistrations: true,
+  ogImage: '/images/seo/og-default.svg',
+  seo: {
+    home: {
+      title: 'Decentralized Crypto Advertising & Publisher Network',
+      description: 'Transparent, escrow-backed advertising infrastructure powered by smart contracts. Programmatic payouts, 0.5% protocol fees, zero middleman markups.',
+      image: '/images/seo/og-home.svg'
+    },
+    explore: {
+      title: 'Explore Feed — Discover Verified Campaigns & Channels',
+      description: 'Browse real-time ad placements, publisher analytics, and top-tier Web3 promotional opportunities.',
+      image: '/images/seo/og-explore.svg'
+    },
+    trending: {
+      title: 'Trending Posts — Top Performing Campaigns & Articles',
+      description: 'Track top converting ad streams, engagement rates, and viral community posts on Signal Ads Platform.',
+      image: '/images/seo/og-trending.svg'
+    },
+    pricing: {
+      title: 'Monetization & Pricing — Publisher Earnings Calculator',
+      description: 'Calculate your advertising CPC cost and publisher monetization payouts with transparent CPM rates.',
+      image: '/images/seo/og-pricing.svg'
+    },
+    news: {
+      title: 'News & Trends — Platform Updates & Ad Insights',
+      description: 'Stay updated with product updates, AI ad targeting features, and digital marketing insights.',
+      image: '/images/seo/og-news.svg'
+    }
+  }
 })
 
 // Creator Deletion Security Config State

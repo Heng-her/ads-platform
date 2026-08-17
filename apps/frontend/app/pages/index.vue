@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useCustomSeoMeta } from '~/lib/seo/metadata'
+import { useRouteSeo } from '~/composables/useRouteSeo'
 import HomeHero from '~/components/home/HomeHero.vue'
 import HomePartners from '~/components/home/HomePartners.vue'
 import HomePillars from '~/components/home/HomePillars.vue'
@@ -11,11 +11,11 @@ import HomeRoadmap from '~/components/home/HomeRoadmap.vue'
 import HomeFaq from '~/components/home/HomeFaq.vue'
 import HomeCta from '~/components/home/HomeCta.vue'
 
-useCustomSeoMeta({
+useRouteSeo('home', {
   title: 'Decentralized Crypto Advertising Platform',
   description: 'Transparent, escrow-backed advertising infrastructure powered by smart contracts. Programmatic payouts, 0.5% protocol fees, zero middleman markups.',
   path: '/',
-  image: '/images/home.png',
+  image: '/images/seo/og-home.svg',
 })
 </script>
 

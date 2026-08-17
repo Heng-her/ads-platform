@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useCustomSeoMeta } from '~/lib/seo/metadata'
+import { useRouteSeo } from '~/composables/useRouteSeo'
 
-useCustomSeoMeta({
-  title: 'Pricing & Earnings Calculator',
-  description: 'Calculate your advertising CPC cost and publisher monetization payouts on NewPlatform.',
-  path: '/pricing'
+useRouteSeo('pricing', {
+  title: 'Monetization & Pricing — Publisher Earnings Calculator',
+  description: 'Calculate your advertising CPC cost and publisher monetization payouts with transparent CPM rates on Signal.',
+  path: '/pricing',
+  image: '/images/seo/og-pricing.svg'
 })
 
 // Calculator state

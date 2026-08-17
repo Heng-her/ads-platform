@@ -15,6 +15,7 @@ const allowedFolders = new Set([
   "users",
   "logos",
   "system",
+  "seo",
   "campaigns",
   "campaigns/covers",
   "campaigns/gallery",

@@ -2,12 +2,27 @@ import { eq } from "drizzle-orm";
 import type { DbClient } from "../db/index";
 import { systemSettings } from "../db/schema/systemSettings";
 
+export interface RouteSeoConfig {
+  title: string;
+  description: string;
+  image: string;
+}
+
 export interface PlatformConfig {
   siteName: string;
   siteDescription: string;
   siteUrl: string;
   defaultLanguage: string;
   allowRegistrations: boolean;
+  ogImage?: string;
+  keywords?: string[];
+  seo?: {
+    home?: RouteSeoConfig;
+    explore?: RouteSeoConfig;
+    trending?: RouteSeoConfig;
+    pricing?: RouteSeoConfig;
+    news?: RouteSeoConfig;
+  };
 }
 
 export interface ChannelConfig {
@@ -53,12 +68,48 @@ export interface UploadConfig {
 }
 
 export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
-  siteName: "New Platform",
+  siteName: "Signal — Ads Platform",
   siteDescription:
-    "Multi-role New Platform supporting Public browsing, Creator Studio, and Admin Control.",
+    "Signal is a modern advertising & publisher network connecting creators, advertisers, and audiences with smart targeting, AI discovery, and real-time impression analytics.",
   siteUrl: "http://localhost:3000",
   defaultLanguage: "en",
   allowRegistrations: true,
+  ogImage: "/images/seo/og-default.svg",
+  keywords: [
+    "signal ads",
+    "ads platform",
+    "advertising network",
+    "publisher monetization",
+    "ad targeting",
+    "real-time analytics"
+  ],
+  seo: {
+    home: {
+      title: "Decentralized Crypto Advertising & Publisher Network",
+      description: "Transparent, escrow-backed advertising infrastructure powered by smart contracts. Programmatic payouts, 0.5% protocol fees, zero middleman markups.",
+      image: "/images/seo/og-home.svg"
+    },
+    explore: {
+      title: "Explore Feed — Discover Verified Campaigns & Channels",
+      description: "Browse real-time ad placements, publisher analytics, and top-tier Web3 promotional opportunities.",
+      image: "/images/seo/og-explore.svg"
+    },
+    trending: {
+      title: "Trending Posts — Top Performing Campaigns & Articles",
+      description: "Track top converting ad streams, engagement rates, and viral community posts on Signal Ads Platform.",
+      image: "/images/seo/og-trending.svg"
+    },
+    pricing: {
+      title: "Monetization & Pricing — Publisher Earnings Calculator",
+      description: "Calculate your advertising CPC cost and publisher monetization payouts with transparent CPM rates.",
+      image: "/images/seo/og-pricing.svg"
+    },
+    news: {
+      title: "News & Trends — Platform Updates & Ad Insights",
+      description: "Stay updated with product updates, AI ad targeting features, and digital marketing insights.",
+      image: "/images/seo/og-news.svg"
+    }
+  }
 };
 
 export const DEFAULT_DISPATCH_CONFIG: ChannelConfig = {

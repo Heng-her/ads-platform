@@ -7,46 +7,102 @@ interface MetadataOptions {
   description?: string;
   path?: string;
   image?: string;
+  type?: "website" | "article";
   noIndex?: boolean;
 }
 
 /**
- * Applies SEO meta tags using Nuxt SEO composable functions (useSeoMeta & useSiteConfig).
- * Integrates directly with @nuxtjs/seo and @nuxtjs/robots modules.
+ * Applies SEO meta tags using Nuxt SEO composable functions (useSeoMeta, useHead & useSiteConfig).
+ * Resolves absolute Open Graph, Twitter card, Google SERP thumbnail images, canonical tags, and structured data.
  */
 export function useCustomSeoMeta({
   title,
   description = seoConfig.defaultDescription,
   path = "",
   image = seoConfig.defaultImage,
+  type = "website",
   noIndex = false,
 }: MetadataOptions = {}) {
   const site = useSiteConfig();
   const siteName = site.name || seoConfig.siteName;
-  const siteUrl = site.url || seoConfig.siteUrl;
+  const siteUrl = (site.url || seoConfig.siteUrl).replace(/\/$/, "");
 
-  const fullTitle = title ? `${title} | ${siteName}` : seoConfig.defaultTitle;
-  const url = `${siteUrl}${path}`;
+  const fullTitle = title
+    ? title.includes(siteName) ? title : `${title} | ${siteName}`
+    : seoConfig.defaultTitle;
+  
+  const canonicalUrl = `${siteUrl}${path.startsWith("/") ? path : `/${path}`}`;
+
+  // Resolve absolute image URL if relative path is provided
+  const absoluteImageUrl = image.startsWith("http://") || image.startsWith("https://")
+    ? image
+    : `${siteUrl}${image.startsWith("/") ? image : `/${image}`}`;
 
   useSeoMeta({
     title: fullTitle,
     description,
     ogTitle: fullTitle,
     ogDescription: description,
-    ogUrl: url,
+    ogUrl: canonicalUrl,
     ogSiteName: siteName,
-    ogImage: image,
+    ogType: type,
+    ogImage: absoluteImageUrl,
+    ogImageAlt: title || siteName,
     twitterCard: "summary_large_image",
     twitterTitle: fullTitle,
     twitterDescription: description,
-    twitterImage: image,
+    twitterImage: absoluteImageUrl,
     robots: noIndex ? "noindex, nofollow" : "index, follow",
+  });
+
+  // Attach Canonical URL, Google SERP thumbnail meta, & WebSite/WebPage Schema.org JSON-LD
+  const pageSchema = {
+    "@context": "https://schema.org",
+    "@type": type === "article" ? "Article" : "WebPage",
+    "name": fullTitle,
+    "description": description,
+    "url": canonicalUrl,
+    "image": absoluteImageUrl,
+    "primaryImageOfPage": {
+      "@type": "ImageObject",
+      "url": absoluteImageUrl,
+    },
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": siteName,
+      "url": siteUrl
+    }
+  };
+
+  useHead({
+    link: [
+      {
+        rel: "canonical",
+        href: canonicalUrl,
+      },
+    ],
+    meta: [
+      {
+        name: "thumbnail",
+        content: absoluteImageUrl,
+      },
+      {
+        property: "image",
+        content: absoluteImageUrl,
+      },
+    ],
+    script: [
+      {
+        type: "application/ld+json" as any,
+        innerHTML: JSON.stringify(pageSchema),
+      },
+    ],
   });
 }
 
 /**
  * Reusable SEO composable specifically for Article detail pages.
- * Sets Meta Tags (OG, Twitter) and Schema.org JSON-LD (Article & Breadcrumbs).
+ * Sets Meta Tags (OG, Twitter, Google Thumbnail) and Schema.org JSON-LD (Article & Breadcrumbs).
  */
 export function useArticleSeo(item: {
   id: string;
@@ -68,7 +124,8 @@ export function useArticleSeo(item: {
     title: item.title,
     description: cleanExcerpt,
     path: canonicalPath,
-    image: item.imageUrl || undefined,
+    image: item.imageUrl || seoConfig.defaultImage,
+    type: "article",
   });
 
   const articleSchema = generateArticleJsonLd({
