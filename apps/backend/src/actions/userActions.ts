@@ -12,6 +12,7 @@ import {
   SystemSettingsService,
   DEFAULT_SECURITY_CONFIG,
 } from "../services/systemSettingsService";
+import { sendUserManagementTelegramAlert } from "../utils/userAlerts";
 import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
 
@@ -125,7 +126,13 @@ export async function handleUserAction(
       }
       const userId = payloadData?.id;
       if (!userId) return sendError(c, "User ID is required");
+      if (userId === currentUser.id) {
+        return sendError(c, "You cannot modify or suspend your own account.", null, 400);
+      }
       const userService = new UserService(db);
+      const existingUser = await userService.getUserById(userId);
+      if (!existingUser) return sendError(c, "User not found", null, 404);
+
       const updated = await userService.updateUserStatus(
         userId,
         parseResult.data.status,
@@ -139,6 +146,19 @@ export async function handleUserAction(
           newStatus: parseResult.data.status,
         }),
       );
+
+      if (
+        parseResult.data.status === "SUSPENDED" &&
+        existingUser.status !== "SUSPENDED"
+      ) {
+        await sendUserManagementTelegramAlert(
+          db,
+          "SUSPEND",
+          existingUser,
+          currentUser.id,
+        );
+      }
+
       return sendSuccess(c, updated);
     }
 
@@ -158,6 +178,19 @@ export async function handleUserAction(
         );
       }
 
+      if (
+        userId === currentUser.id &&
+        ((parseResult.data.role && parseResult.data.role !== "ADMIN") ||
+          parseResult.data.status === "SUSPENDED")
+      ) {
+        return sendError(
+          c,
+          "You cannot demote or suspend your own admin account.",
+          null,
+          400,
+        );
+      }
+
       const userService = new UserService(db);
       const existingUser = await userService.getUserById(userId);
       if (!existingUser) return sendError(c, "User not found", null, 404);
@@ -172,6 +205,39 @@ export async function handleUserAction(
           updatedFields: Object.keys(parseResult.data),
         }),
       );
+
+      const oldRole = existingUser.role;
+      const newRole = parseResult.data.role;
+      const oldStatus = existingUser.status;
+      const newStatus = parseResult.data.status;
+
+      if (newRole === "CREATOR" && oldRole === "ADMIN") {
+        await sendUserManagementTelegramAlert(
+          db,
+          "DEMOTE",
+          existingUser,
+          currentUser.id,
+          oldRole,
+        );
+      } else if (newRole === "ADMIN" && oldRole !== "ADMIN") {
+        await sendUserManagementTelegramAlert(
+          db,
+          "PROMOTE",
+          existingUser,
+          currentUser.id,
+          oldRole,
+        );
+      }
+
+      if (newStatus === "SUSPENDED" && oldStatus !== "SUSPENDED") {
+        await sendUserManagementTelegramAlert(
+          db,
+          "SUSPEND",
+          existingUser,
+          currentUser.id,
+        );
+      }
+
       return sendSuccess(c, updated);
     }
 
@@ -251,6 +317,10 @@ export async function handleUserAction(
 
       const { id: targetUserId, password: enteredPassword } = parseResult.data;
 
+      if (targetUserId === currentUser.id) {
+        return sendError(c, "You cannot delete your own admin account.", null, 400);
+      }
+
       // 1. Verify configured creator deletion password from SystemSettingsService
       const settingsService = new SystemSettingsService({ db });
       const securityConfig = await settingsService.getSetting(
@@ -296,6 +366,14 @@ export async function handleUserAction(
           targetUsername: targetUser.username,
           targetEmail: targetUser.email,
         }),
+      );
+
+      // 5. Send Telegram Admin Alert
+      await sendUserManagementTelegramAlert(
+        db,
+        "DELETE",
+        targetUser,
+        currentUser.id,
       );
 
       return sendSuccess(

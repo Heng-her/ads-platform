@@ -10,12 +10,15 @@ import type { UserRecord } from '~/components/admin/approvals/ApprovalsUserCard.
 import ApprovalsUserDetailModal from '~/components/admin/approvals/ApprovalsUserDetailModal.vue'
 import ApprovalsDeleteCreatorModal from '~/components/admin/approvals/ApprovalsDeleteCreatorModal.vue'
 
+import { useAuthStore } from '~/stores/auth'
+
 definePageMeta({
   layout: 'admin'
 })
 
 const api = useApi()
 const toast = useAppToast()
+const authStore = useAuthStore()
 
 const isLoading = ref(true)
 const searchQuery = ref('')
@@ -50,9 +53,14 @@ onMounted(() => {
   fetchData()
 })
 
-// Filtered Users List
+// Filtered Users List (Excludes the currently logged-in Admin user)
 const filteredUsers = computed(() => {
   return allUsers.value.filter(user => {
+    // Hide current logged-in user
+    if (authStore.user?.id && user.id === authStore.user.id) {
+      return false
+    }
+
     const q = searchQuery.value.toLowerCase()
     return q === '' ||
       user.username?.toLowerCase().includes(q) ||

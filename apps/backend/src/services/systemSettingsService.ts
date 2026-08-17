@@ -313,7 +313,7 @@ export class SystemSettingsService {
 
 
 
-  private async sendTelegramMessage(
+  public async sendTelegramMessage(
     botToken: string,
     rawChatId: string,
     text: string,
@@ -537,5 +537,29 @@ export class SystemSettingsService {
       success: false,
       message: `Unknown dispatch channel type: ${channelType}`,
     };
+  }
+
+  async sendAdminAlert(
+    text: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const config = await this.getSetting<ChannelConfig>(
+      "dispatch",
+      DEFAULT_DISPATCH_CONFIG,
+    );
+    if (
+      !config.enableAdminGroupAlerts ||
+      !config.telegramBotToken ||
+      !config.telegramAdminGroupId
+    ) {
+      return {
+        success: false,
+        message: "Admin group alerts are disabled or unconfigured.",
+      };
+    }
+    return await this.sendTelegramMessage(
+      config.telegramBotToken,
+      config.telegramAdminGroupId,
+      text,
+    );
   }
 }

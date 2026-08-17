@@ -593,11 +593,7 @@ export class MonetizationService {
             `<b>Wallet Address:</b> <code>${data.walletAddress}</code>\n` +
             `<b>Network:</b> Arbitrum One\n\n` +
             `⚡ <a href="http://localhost:3000/admin/monetization?tab=payouts">Open Admin Payout Queue</a>`;
-          await this.settingsService.testDispatchChannel("admin_group", {
-            telegramBotToken: dispatchConfig.telegramBotToken,
-            telegramAdminGroupId: dispatchConfig.telegramAdminGroupId,
-            customMessage: alertMsg,
-          } as any);
+          await this.settingsService.sendAdminAlert(alertMsg);
         }
       } catch (alertErr) {
         console.warn(

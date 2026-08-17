@@ -9,6 +9,7 @@ import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
 import { zodErrorHandler } from "../utils/validation";
 import { updateUserStatusSchema, updateUserSchema } from "../schemas/user";
+import { sendUserManagementTelegramAlert } from "../utils/userAlerts";
 
 // Re-export schema consumed by actionRoutes.ts
 export { updateUserStatusSchema, updateUserSchema } from "../schemas/user";
@@ -59,6 +60,9 @@ export const userRoutes = new Hono<HonoEnv>()
       const userService = new UserService(db);
       const auditLogService = new AuditLogService(db);
 
+      const existingUser = await userService.getUserById(id);
+      if (!existingUser) return sendError(c, "User not found", null, 404);
+
       const updatedUser = await userService.updateUserStatus(id, status);
       await auditLogService.createLog(
         "USER_UPDATE_STATUS",
@@ -66,6 +70,16 @@ export const userRoutes = new Hono<HonoEnv>()
         getClientIp(c),
         JSON.stringify({ targetUserId: id, newStatus: status }),
       );
+
+      if (status === "SUSPENDED" && existingUser.status !== "SUSPENDED") {
+        await sendUserManagementTelegramAlert(
+          db,
+          "SUSPEND",
+          existingUser,
+          userPayload.id,
+        );
+      }
+
       return sendSuccess(c, updatedUser);
     },
   )
@@ -98,6 +112,39 @@ export const userRoutes = new Hono<HonoEnv>()
           updatedFields: Object.keys(updateData),
         }),
       );
+
+      const oldRole = existingUser.role;
+      const newRole = updateData.role;
+      const oldStatus = existingUser.status;
+      const newStatus = updateData.status;
+
+      if (newRole === "CREATOR" && oldRole === "ADMIN") {
+        await sendUserManagementTelegramAlert(
+          db,
+          "DEMOTE",
+          existingUser,
+          userPayload.id,
+          oldRole,
+        );
+      } else if (newRole === "ADMIN" && oldRole !== "ADMIN") {
+        await sendUserManagementTelegramAlert(
+          db,
+          "PROMOTE",
+          existingUser,
+          userPayload.id,
+          oldRole,
+        );
+      }
+
+      if (newStatus === "SUSPENDED" && oldStatus !== "SUSPENDED") {
+        await sendUserManagementTelegramAlert(
+          db,
+          "SUSPEND",
+          existingUser,
+          userPayload.id,
+        );
+      }
+
       return sendSuccess(c, updatedUser);
     },
   );
