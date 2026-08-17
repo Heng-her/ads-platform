@@ -204,12 +204,12 @@ const handleSubmit = async () => {
       class="w-full md:w-1/2 lg:w-2/5 flex items-center justify-center p-6 md:p-8 lg:p-10 bg-slate-50 dark:bg-slate-900 h-full overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       <div class="w-full max-w-md my-auto py-4">
         <!-- Mobile Branding -->
-        <div class="md:hidden flex items-center gap-2 mb-6">
+        <NuxtLink to="/" class="md:hidden flex items-center gap-2 mb-6 hover:opacity-80 transition-opacity">
           <UIcon name="i-lucide-sparkles" class="text-blue-600 h-6 w-6 fill-blue-600 shrink-0" />
           <h1 class="text-xl font-bold tracking-tighter text-slate-900 dark:text-white">
             NEW PLATFORM
           </h1>
-        </div>
+        </NuxtLink>
 
         <header class="mb-4">
           <h2 class="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white mb-1.5">

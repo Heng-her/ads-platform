@@ -149,9 +149,9 @@ onUnmounted(() => {
       <div class="relative z-10">
         <div class="flex items-center gap-3">
           <UIcon name="i-lucide-sparkles" class="text-blue-400 h-8 w-8 fill-blue-400 shrink-0" />
-          <a href="/" class="text-2xl font-bold tracking-wide text-white">
+          <NuxtLink to="/" class="text-2xl font-bold tracking-wide text-white">
             NEW PLATFORM
-          </a>
+          </NuxtLink>
         </div>
       </div>
 
@@ -199,12 +199,12 @@ onUnmounted(() => {
       class="w-full md:w-1/2 lg:w-2/5 flex items-center justify-center p-6 md:p-8 lg:p-10 bg-slate-50 dark:bg-slate-900 h-full overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       <div class="w-full max-w-md my-auto py-4">
         <!-- Mobile Branding -->
-        <div class="md:hidden flex items-center gap-2 mb-6">
+        <NuxtLink to="/" class="md:hidden flex items-center gap-2 mb-6 hover:opacity-80 transition-opacity">
           <UIcon name="i-lucide-sparkles" class="text-blue-600 h-6 w-6 fill-blue-600 shrink-0" />
           <h1 class="text-xl font-bold tracking-tighter text-slate-900 dark:text-white">
             NEW PLATFORM
           </h1>
-        </div>
+        </NuxtLink>
 
         <header class="mb-6">
           <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">
