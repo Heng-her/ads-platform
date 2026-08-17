@@ -213,8 +213,11 @@ function onKeyDown(e: KeyboardEvent) {
     }
 }
 
+const showScrollTop = ref(false)
+
 function onWindowScroll() {
     const currentScrollY = window.scrollY
+    showScrollTop.value = currentScrollY > 350
 
     if (currentScrollY <= 12) {
         isHeaderHidden.value = false
@@ -225,6 +228,29 @@ function onWindowScroll() {
     }
 
     lastScrollY = currentScrollY
+}
+
+function scrollToTop() {
+    if (typeof window === 'undefined') return
+
+    const duration = 200 // Fast 200ms scroll duration
+    const startY = window.scrollY
+    if (startY === 0) return
+    const startTime = performance.now()
+
+    function step(currentTime: number) {
+        const elapsed = currentTime - startTime
+        const progress = Math.min(elapsed / duration, 1)
+        const easeOutProgress = 1 - Math.pow(1 - progress, 2)
+
+        window.scrollTo(0, startY * (1 - easeOutProgress))
+
+        if (progress < 1) {
+            requestAnimationFrame(step)
+        }
+    }
+
+    requestAnimationFrame(step)
 }
 
 onMounted(() => {
@@ -520,6 +546,19 @@ onUnmounted(() => {
                 © {{ new Date().getFullYear() }} Signal Ads Platform. All rights reserved.
             </div>
         </footer>
+
+        <!-- Floating Scroll to Top Button (Icon Only) -->
+        <transition name="fade-slide">
+            <button
+                v-if="showScrollTop"
+                @click="scrollToTop"
+                aria-label="Scroll to top"
+                title="Scroll to top"
+                class="fixed bottom-20 right-4 z-40 h-11 w-11 rounded-full bg-white/90 dark:bg-gray-900/90 border border-gray-200/80 dark:border-gray-800/80 shadow-xl flex items-center justify-center text-primary hover:scale-110 active:scale-95 transition-all duration-300 backdrop-blur-md hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-gray-950 group"
+            >
+                <UIcon name="i-heroicons-arrow-up" class="w-5 h-5 transition-transform group-hover:-translate-y-0.5" />
+            </button>
+        </transition>
 
         <!-- Newsletter Subscriber Modal -->
         <NewsletterModal />

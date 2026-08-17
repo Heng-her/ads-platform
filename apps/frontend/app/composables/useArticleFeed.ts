@@ -38,7 +38,7 @@ export function useArticleFeed(options: UseArticleFeedOptions) {
   // State
   const sortBy = ref<CampaignSort>('newest')
   const campaigns = ref<CampaignItem[]>([])
-  const isLoading = ref(false)
+  const isLoading = ref(true)
   const isLoadingMore = ref(false)
   const hasMore = ref(true)
   const totalCount = ref(0)
@@ -121,6 +121,7 @@ export function useArticleFeed(options: UseArticleFeedOptions) {
       snapshotAt.value = state.snapshotAt
       hasMore.value = Boolean(state.hasMore)
       totalCount.value = campaigns.value.length
+      isLoading.value = false
       return true
     } catch {
       window.sessionStorage.removeItem(storageKey.value)

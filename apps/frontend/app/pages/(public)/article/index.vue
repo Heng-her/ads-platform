@@ -116,7 +116,7 @@ function giveFeedback(value: boolean) {
                 </div>
 
                 <!-- Initial Loading Skeletons -->
-                <ArticleFeedSkeleton v-else-if="isLoading && !campaigns.length" :count="3" />
+                <ArticleFeedSkeleton v-else-if="isLoading" :count="3" />
 
                 <!-- Empty State -->
                 <ArticleEmptyFeed v-else-if="!campaigns.length" @clear-all="clearAllFilters" />

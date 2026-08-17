@@ -17,21 +17,25 @@ const emit = defineEmits<{
 
 <template>
   <div class="space-y-3">
-    <!-- Mobile Filter Chips (Horizontal Scroll on Mobile) -->
-    <div class="lg:hidden flex gap-2 overflow-x-auto pb-3 mb-3 no-scrollbar -mx-1 px-1">
-      <button class="shrink-0 text-xs px-3.5 py-1.5 rounded-full transition-all"
-        :class="!selectedCategory
-          ? 'bg-primary text-white dark:text-gray-950 font-bold'
-          : 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'" @click="emit('set-query', { category: undefined })">
-        All Categories
-      </button>
-      <button v-for="cat in categories" :key="cat.name"
-        class="shrink-0 text-xs px-3.5 py-1.5 rounded-full transition-all"
-        :class="selectedCategory === cat.name
-          ? 'bg-primary text-white dark:text-gray-950 font-bold'
-          : 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'" @click="emit('set-query', { category: cat.name })">
-        {{ cat.name }}
-      </button>
+    <!-- Mobile Filter Chips (Sticky Glassmorphic Bar on Mobile) -->
+    <div
+      class="lg:hidden sticky top-0 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200/80 dark:border-gray-800/80 py-2.5 -mx-4 px-4 shadow-sm transition-all duration-300 mb-3">
+      <div class="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+        <button class="shrink-0 text-xs px-3.5 py-1.5 rounded-full transition-all active:scale-95 shadow-sm"
+          :class="!selectedCategory
+            ? 'bg-primary text-white dark:text-gray-950 font-bold shadow-primary/20'
+            : 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'" @click="emit('set-query', { category: undefined })">
+          All Categories
+        </button>
+        <button v-for="cat in categories" :key="cat.name"
+          class="shrink-0 text-xs px-3.5 py-1.5 rounded-full transition-all active:scale-95 shadow-sm uppercase font-semibold"
+          :class="selectedCategory === cat.name
+            ? 'bg-primary text-white dark:text-gray-950 font-bold shadow-primary/20'
+            : 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'"
+          @click="emit('set-query', { category: cat.name })">
+          {{ cat.name }}
+        </button>
+      </div>
     </div>
 
     <!-- Active Filter Tags Bar -->
@@ -47,7 +51,8 @@ const emit = defineEmits<{
         </button>
       </UBadge>
 
-      <UBadge v-if="selectedCategory" color="neutral" variant="outline" size="sm" class="gap-1.5 px-3 py-1 font-semibold">
+      <UBadge v-if="selectedCategory" color="neutral" variant="outline" size="sm"
+        class="gap-1.5 px-3 py-1 font-semibold">
         Category: {{ selectedCategory }}
         <button @click="emit('set-query', { category: undefined })"
           class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer">
@@ -55,7 +60,8 @@ const emit = defineEmits<{
         </button>
       </UBadge>
 
-      <UBadge v-if="selectedContentType" color="neutral" variant="outline" size="sm" class="gap-1.5 px-3 py-1 font-semibold">
+      <UBadge v-if="selectedContentType" color="neutral" variant="outline" size="sm"
+        class="gap-1.5 px-3 py-1 font-semibold">
         Type: {{ selectedContentType }}
         <button @click="emit('set-query', { contentType: undefined })"
           class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer">
