@@ -122,7 +122,7 @@ export function useCustomSeoMeta({
 
 /**
  * Reusable SEO composable specifically for Article detail pages.
- * Sets Meta Tags (OG, Twitter, Google Thumbnail, Alt tags) and Schema.org JSON-LD (Article & Breadcrumbs).
+ * Sets Meta Tags (OG, Twitter, Google Thumbnail, OpenGraph Article attributes) and Schema.org JSON-LD (NewsArticle & Breadcrumbs).
  */
 export function useArticleSeo(item: {
   id: string;
@@ -131,6 +131,8 @@ export function useArticleSeo(item: {
   content?: string | null;
   imageUrl?: string | null;
   createdAt: string;
+  updatedAt?: string;
+  category?: string | null;
   creator?: { username?: string; avatar?: string | null } | null;
 }) {
   const cleanExcerpt = (item.description || item.content || item.title || "")
@@ -156,6 +158,7 @@ export function useArticleSeo(item: {
     coverImage: item.imageUrl || "",
     author: item.creator?.username || "Verified Creator",
     publishedAt: item.createdAt,
+    updatedAt: item.updatedAt || item.createdAt,
   });
 
   const breadcrumbsSchema = generateBreadcrumbsJsonLd([
@@ -165,6 +168,12 @@ export function useArticleSeo(item: {
   ]);
 
   useHead({
+    meta: [
+      { property: "article:published_time", content: item.createdAt },
+      { property: "article:modified_time", content: item.updatedAt || item.createdAt },
+      { property: "article:author", content: item.creator?.username || "Verified Creator" },
+      { property: "article:section", content: item.category || "General" },
+    ],
     script: [
       {
         type: "application/ld+json" as any,

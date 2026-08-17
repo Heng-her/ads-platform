@@ -16,7 +16,8 @@ definePageMeta({
 useCustomSeoMeta({
     title: 'Explore Articles & Campaigns',
     description: 'Discover featured articles, product updates, and ad campaigns on Signal Platform.',
-    path: '/article'
+    path: '/article',
+    image: '/images/seo/og-news.svg'
 })
 
 const route = useRoute()
