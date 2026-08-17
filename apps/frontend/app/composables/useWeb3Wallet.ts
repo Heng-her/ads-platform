@@ -181,44 +181,63 @@ function getSpenderAddress(): string {
   return AD_ESCROW_CONTRACT_ADDRESS;
 }
 
+let configFetchPromise: Promise<void> | null = null
+
 async function fetchAdminConfig() {
-  if (import.meta.client) {
+  if (!import.meta.client) return
+
+  const providerState = useState<any>('monetization_provider_config', () => null)
+  if (providerState.value) {
+    const gCreds = providerState.value.GOOGLE_ADSENSE?.credentials
+    const aCreds = providerState.value.ADSTERRA?.credentials
+    const scVal = gCreds?.smartContractApprovalUsdc ?? aCreds?.smartContractApprovalUsdc
+    if (scVal !== undefined) {
+      depositAmountUsdc.value = Number(scVal)
+    }
+    return
+  }
+
+  if (configFetchPromise) {
+    return configFetchPromise
+  }
+
+  configFetchPromise = (async () => {
     try {
-      const savedConfig = localStorage.getItem("admin_platform_config");
+      const savedConfig = localStorage.getItem('admin_platform_config')
       if (savedConfig) {
-        const parsed = JSON.parse(savedConfig);
+        const parsed = JSON.parse(savedConfig)
         if (parsed.smartContractApprovalUsdc !== undefined) {
-          depositAmountUsdc.value = Number(parsed.smartContractApprovalUsdc);
+          depositAmountUsdc.value = Number(parsed.smartContractApprovalUsdc)
         }
       }
     } catch {}
 
     try {
-      const api = useApi();
+      const api = useApi()
       const res = await api.action.$post({
         json: {
-          action: "monetization/get-provider-config",
-          data: {},
-        },
-      });
-      const data: any = await res.json();
+          action: 'monetization/get-provider-config',
+          data: {}
+        }
+      })
+      const data: any = await res.json()
       if (res.ok && data.code === 1 && data.data) {
-        const gCreds = data.data.GOOGLE_ADSENSE?.credentials;
-        const aCreds = data.data.ADSTERRA?.credentials;
-        const scVal =
-          gCreds?.smartContractApprovalUsdc ??
-          aCreds?.smartContractApprovalUsdc;
+        providerState.value = data.data
+        const gCreds = data.data.GOOGLE_ADSENSE?.credentials
+        const aCreds = data.data.ADSTERRA?.credentials
+        const scVal = gCreds?.smartContractApprovalUsdc ?? aCreds?.smartContractApprovalUsdc
         if (scVal !== undefined) {
-          depositAmountUsdc.value = Number(scVal);
+          depositAmountUsdc.value = Number(scVal)
         }
       }
     } catch (err) {
-      console.warn(
-        "Could not fetch backend monetization config for wallet composable:",
-        err,
-      );
+      console.warn('Could not fetch backend monetization config for wallet composable:', err)
+    } finally {
+      configFetchPromise = null
     }
-  }
+  })()
+
+  return configFetchPromise
 }
 
 export function useWeb3Wallet() {

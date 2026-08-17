@@ -384,9 +384,9 @@ const handleSubmit = async () => {
 
           <p class="text-center text-[11px] text-slate-500 dark:text-slate-400 pt-1">
             By signing up, you agree to our
-            <a class="text-blue-600 dark:text-blue-400 hover:underline" href="#">
+            <NuxtLink class="text-blue-600 dark:text-blue-400 hover:underline" to="/terms" target="_blank">
               Terms of Service
-            </a>.
+            </NuxtLink>.
           </p>
         </form>
 

@@ -298,8 +298,15 @@ onUnmounted(() => {
     <!-- Desktop Footer -->
     <footer
       class="border-t border-gray-200 dark:border-gray-800 py-6 bg-gray-50/50 dark:bg-gray-900/50 hidden md:block">
-      <div class="container mx-auto px-4 text-center text-sm text-gray-500">
-        © {{ new Date().getFullYear() }} NewPlatform. Public Portal Layout.
+      <div class="container mx-auto px-4 flex items-center justify-between text-xs text-gray-500">
+        <div>
+          © {{ new Date().getFullYear() }} NewPlatform Network. All rights reserved.
+        </div>
+        <div class="flex items-center gap-4">
+          <NuxtLink to="/terms" class="hover:text-primary transition-colors">
+            Terms of Service
+          </NuxtLink>
+        </div>
       </div>
     </footer>
 

@@ -87,72 +87,20 @@ async function fetchGoogleAuthSettings() {
     return
   }
 
-  const settingsState = useState<any>('admin_platform_system_settings', () => null)
-  if (settingsState.value?.googleauth) {
-    const gAuth = settingsState.value.googleauth
+  const { fetchSettings } = useSystemSettings()
+  const settingsObj = await fetchSettings()
+
+  const gAuth = settingsObj?.googleauth
+  if (gAuth) {
     if (gAuth.googleClientId !== undefined) {
       adminClientId.value = (gAuth.googleClientId || '').trim()
     }
     if (gAuth.enableGoogleAuth !== undefined) {
       adminEnabled.value = Boolean(gAuth.enableGoogleAuth)
     }
-    isLoadingConfig.value = false
-    return
   }
 
-  if (settingsPromise) {
-    return settingsPromise
-  }
-
-  settingsPromise = (async () => {
-    // 1. Read from localStorage cache if available
-    try {
-      const savedConfig = localStorage.getItem("admin_platform_config");
-      if (savedConfig) {
-        const parsed = JSON.parse(savedConfig);
-        if (parsed.googleauth) {
-          if (parsed.googleauth.googleClientId) {
-            adminClientId.value = parsed.googleauth.googleClientId.trim();
-          }
-          if (parsed.googleauth.enableGoogleAuth !== undefined) {
-            adminEnabled.value = Boolean(parsed.googleauth.enableGoogleAuth);
-          }
-        }
-      }
-    } catch {}
-
-    // 2. Fetch live settings from backend API
-    try {
-      const api = useApi();
-      const res = await api.action.$post({
-        json: { action: "settings/get-all", data: {} },
-      });
-      const data: any = await res.json();
-      if (res.ok && data.code === 1 && data.data) {
-        let settingsObj = data.data;
-        if (data.encrypted && typeof data.data === "string") {
-          settingsObj = decryptData(data.data) || {};
-        }
-        settingsState.value = settingsObj
-        const gAuth = settingsObj?.googleauth;
-        if (gAuth) {
-          if (gAuth.googleClientId !== undefined) {
-            adminClientId.value = (gAuth.googleClientId || "").trim();
-          }
-          if (gAuth.enableGoogleAuth !== undefined) {
-            adminEnabled.value = Boolean(gAuth.enableGoogleAuth);
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("Could not fetch backend googleauth settings:", err);
-    } finally {
-      isLoadingConfig.value = false;
-      settingsPromise = null;
-    }
-  })();
-
-  return settingsPromise
+  isLoadingConfig.value = false
 }
 
 export function useGoogleIdentity() {

@@ -66,7 +66,12 @@ export async function dispatchAction(
 
   // 7. Monetization Actions
   if (action.startsWith("monetization/")) {
-    const currentUser = await authenticate(c, false);
+    let currentUser: UserJwtPayload | null = null;
+    try {
+      currentUser = await authenticate(c, false);
+    } catch {
+      // Optional auth: public users can fetch provider config
+    }
     const result = await handleMonetizationAction({
       c,
       db,

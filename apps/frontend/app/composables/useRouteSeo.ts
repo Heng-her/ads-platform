@@ -19,8 +19,7 @@ export interface RouteSeoOptions {
  * from backend settings (/api/action settings/get-all) and falls back to route defaults.
  */
 export function useRouteSeo(routeKey: RouteSeoKey, defaultOptions: RouteSeoOptions = {}) {
-  const settingsState = useState<any>('admin_platform_system_settings', () => null)
-  const api = useApi()
+  const { fetchSettings } = useSystemSettings()
 
   // Apply default options first for immediate SSR rendering
   useCustomSeoMeta({
@@ -54,41 +53,9 @@ export function useRouteSeo(routeKey: RouteSeoKey, defaultOptions: RouteSeoOptio
 
   // Fetch settings from API on mount or use cached state
   onMounted(async () => {
-    // If state is already loaded
-    if (settingsState.value) {
-      applySettings(settingsState.value)
-      return
-    }
-
-    // Try offline cache from localStorage
-    if (import.meta.client) {
-      const savedConfig = localStorage.getItem('admin_platform_config')
-      if (savedConfig) {
-        try {
-          const parsed = JSON.parse(savedConfig)
-          if (parsed) {
-            settingsState.value = parsed
-            applySettings(parsed)
-          }
-        } catch {}
-      }
-    }
-
-    try {
-      const res = await api.action.$post({
-        json: { action: 'settings/get-all' }
-      })
-      const result: any = await res.json()
-      if (res.ok && result.code === 1 && result.data) {
-        let dataPayload = result.data
-        if (result.encrypted && typeof result.data === 'string') {
-          dataPayload = decryptData(result.data) || {}
-        }
-        settingsState.value = dataPayload
-        applySettings(dataPayload)
-      }
-    } catch (err) {
-      // Silently fall back to default options on error
+    const data = await fetchSettings()
+    if (data) {
+      applySettings(data)
     }
   })
 }
