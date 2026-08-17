@@ -1,8 +1,9 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import type { DbClient } from "../db/index";
 import { adProviderSettings } from "../db/schema/adProviderSettings";
 import { withdrawals } from "../db/schema/withdrawals";
 import { users } from "../db/schema/users";
+import { adClicks } from "../db/schema/adClicks";
 import { GoogleAdsenseProvider } from "./adProviders/googleAdsenseProvider";
 import { AdsterraProvider } from "./adProviders/adsterraProvider";
 import type { AdProviderStats } from "./adProviders/adProviderInterface";
@@ -89,6 +90,7 @@ export class MonetizationService {
     totalRevenue: number;
     totalImpressions: number;
     totalClicks: number;
+    outboundClicks: number;
     averageCtr: number;
     averageCpm: number;
     providers: AdProviderStats[];
@@ -199,10 +201,22 @@ export class MonetizationService {
       };
     });
 
+    let outboundClicks = 0;
+    try {
+      const clickCountRow = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(adClicks)
+        .get();
+      outboundClicks = clickCountRow?.count ?? 0;
+    } catch {
+      outboundClicks = 0;
+    }
+
     return {
       totalRevenue,
       totalImpressions,
       totalClicks,
+      outboundClicks,
       averageCtr,
       averageCpm,
       providers,

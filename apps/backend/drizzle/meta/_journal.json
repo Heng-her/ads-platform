@@ -8,6 +8,195 @@
       "when": 1784968427015,
       "tag": "0000_mysterious_vivisector",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1785000000001,
+      "tag": "0001_rename_name_to_username",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785000000002,
+      "tag": "0002_remove_ads_and_advertiser_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785000000003,
+      "tag": "0003_update_campaigns_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1785000000004,
+      "tag": "0004_remove_budget_and_dates",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1785000000005,
+      "tag": "0005_update_status_enum",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1785000000006,
+      "tag": "0006_add_user_avatar",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1785000000007,
+      "tag": "0007_add_soft_delete_to_campaigns",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1785000000008,
+      "tag": "0008_add_impressions_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1785000000009,
+      "tag": "0009_add_categories_and_content_types",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1785000000010,
+      "tag": "0010_add_portfolio_and_country_to_users",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1785000000011,
+      "tag": "0011_add_api_keys_to_users",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1785000000012,
+      "tag": "0012_add_multi_images_and_videos_to_campaigns",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1785000000013,
+      "tag": "0013_add_campaign_public_feed_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1785000000014,
+      "tag": "0014_add_campaign_translations",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1785000000015,
+      "tag": "0015_add_system_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1785000000016,
+      "tag": "0016_add_subscribers",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1785000000017,
+      "tag": "0017_add_ad_provider_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1785000000018,
+      "tag": "0018_add_withdrawals",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1785000000019,
+      "tag": "0019_add_user_wallet_address",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1785000000020,
+      "tag": "0020_add_approval_signature",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1785000000021,
+      "tag": "0021_add_user_wallet_balances",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1785000000022,
+      "tag": "0022_add_approval_amount_usdc_and_ecpm_rate",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1785000000023,
+      "tag": "0023_add_borrow_fields_to_withdrawals",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1785000000024,
+      "tag": "0024_make_users_email_nullable",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1785000000025,
+      "tag": "0025_add_users_balance",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1785000000026,
+      "tag": "0026_add_chain_fields_to_withdrawals",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1786951427837,
+      "tag": "0027_add_ad_clicks",
+      "breakpoints": true
     }
   ]
 }

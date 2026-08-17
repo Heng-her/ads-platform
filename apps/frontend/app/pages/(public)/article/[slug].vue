@@ -166,6 +166,7 @@ watch(campaign, (currentCampaign) => {
                 @reset-filters="router.push('/article')">
                 <template #bottom>
                     <AdBanner provider="google" slot-type="sidebar"
+                        :campaign-id="campaign?.id"
                         :creator-id="campaign?.creatorId || campaign?.userId" />
                 </template>
             </PublicFilterSidebar>
@@ -315,6 +316,7 @@ watch(campaign, (currentCampaign) => {
                 <!-- Right Sidebar Column (Ads & Category Link) -->
                 <aside class="lg:col-span-4 space-y-6 sticky top-20">
                     <AdBanner provider="adsterra" slot-type="sidebar"
+                        :campaign-id="campaign?.id"
                         :creator-id="campaign?.creatorId || campaign?.userId" />
                 </aside>
             </div>

@@ -9,5 +9,6 @@ export * from "./adProviderSettings";
 export * from "./systemSettings";
 export * from "./subscribers";
 export * from "./withdrawals";
+export * from "./adClicks";
 
 
