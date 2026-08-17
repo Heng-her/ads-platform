@@ -139,18 +139,6 @@ async function triggerHomeApproval() {
         </div>
       </div> -->
 
-      <div v-if="depositSuccess"
-        class="max-w-lg mx-auto p-4 bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs text-left space-y-1">
-        <div class="font-bold text-sm flex items-center gap-1.5 text-emerald-400">
-          <UIcon name="i-heroicons-check-badge" class="w-5 h-5" />
-          <span>{{ depositAmountUsdc }} USDC Ad Escrow Deposit Approved!</span>
-        </div>
-        <div>Transaction submitted on-chain. Ad budget is locked in smart contract.</div>
-        <div v-if="txHash" class="font-mono text-[10px] text-gray-400 break-all pt-1">
-          Tx Hash: <span class="text-emerald-400">{{ txHash }}</span>
-        </div>
-      </div>
-
       <!-- Hero Smart Escrow Live State Mockup Card -->
       <div class="pt-8 max-w-4xl mx-auto">
         <div

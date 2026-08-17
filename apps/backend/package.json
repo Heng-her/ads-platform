@@ -11,6 +11,8 @@
     "db:migrate:prod": "wrangler d1 migrations apply ads_platform_db --remote",
     "db:seed:local": "wrangler d1 execute ads_platform_db --local --file=seeds/seed.sql",
     "db:seed:prod": "wrangler d1 execute ads_platform_db --remote --file=seeds/seed.sql",
+    "db:reset:prod": "wrangler d1 execute ads_platform_db --remote --command=\"PRAGMA foreign_keys = OFF; DROP TABLE IF EXISTS d1_migrations; DROP TABLE IF EXISTS ad_clicks; DROP TABLE IF EXISTS ad_provider_settings; DROP TABLE IF EXISTS ads; DROP TABLE IF EXISTS audit_logs; DROP TABLE IF EXISTS campaign_translations; DROP TABLE IF EXISTS campaigns; DROP TABLE IF EXISTS content_types; DROP TABLE IF EXISTS custom_categories; DROP TABLE IF EXISTS impressions; DROP TABLE IF EXISTS subscribers; DROP TABLE IF EXISTS system_categories; DROP TABLE IF EXISTS system_settings; DROP TABLE IF EXISTS users; DROP TABLE IF EXISTS withdrawals; DROP TABLE IF EXISTS __impressions_detach; DROP TABLE IF EXISTS __campaign_translations_detach; DROP TABLE IF EXISTS __campaigns_detach; DROP TABLE IF EXISTS __custom_categories_detach; DROP TABLE IF EXISTS __users_new; DROP TABLE IF EXISTS __custom_categories_reattach; DROP TABLE IF EXISTS __campaigns_reattach; DROP TABLE IF EXISTS __impressions_reattach; DROP TABLE IF EXISTS __campaign_translations_reattach; PRAGMA foreign_keys = ON;\"",
+    "db:reset-all:prod": "pnpm db:reset:prod && pnpm db:migrate:prod && pnpm db:seed:prod",
     "test": "vitest run",
     "test:watch": "vitest"
   },
