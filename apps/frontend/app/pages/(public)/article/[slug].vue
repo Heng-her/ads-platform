@@ -261,6 +261,9 @@ watch(campaign, (currentCampaign) => {
                         </div>
                     </section>
 
+                    <!-- Top Category Hero Sponsor Banner -->
+                    <CategoryHeroAdBanner :category="campaign?.category" :campaign-id="campaign?.id" :creator-id="campaign?.creatorId || campaign?.userId" />
+
                     <!-- Main Content Body -->
                     <div
                         class="rounded-2xl p-6 sm:p-8 border leading-relaxed text-gray-800 dark:text-gray-200 font-body space-y-4 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">

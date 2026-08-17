@@ -7,6 +7,8 @@ export const createSystemCategorySchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(50, "Name must be at most 50 characters")
     .transform((v) => v.trim().toUpperCase()),
+  adsterraSmartlinkUrl: z.string().optional().nullable(),
+  adsterraBannerKey: z.string().optional().nullable(),
 });
 
 export const updateSystemCategorySchema = z.object({
@@ -15,6 +17,8 @@ export const updateSystemCategorySchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(50, "Name must be at most 50 characters")
     .transform((v) => v.trim().toUpperCase()),
+  adsterraSmartlinkUrl: z.string().optional().nullable(),
+  adsterraBannerKey: z.string().optional().nullable(),
 });
 
 // ── Custom Category ───────────────────────────────────────────────────────────
@@ -24,6 +28,8 @@ export const createCustomCategorySchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(50, "Name must be at most 50 characters")
     .transform((v) => v.trim()),
+  adsterraSmartlinkUrl: z.string().optional().nullable(),
+  adsterraBannerKey: z.string().optional().nullable(),
 });
 
 export const updateCustomCategorySchema = z.object({
@@ -32,6 +38,8 @@ export const updateCustomCategorySchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(50, "Name must be at most 50 characters")
     .transform((v) => v.trim()),
+  adsterraSmartlinkUrl: z.string().optional().nullable(),
+  adsterraBannerKey: z.string().optional().nullable(),
 });
 
 // ── Content Type ──────────────────────────────────────────────────────────────

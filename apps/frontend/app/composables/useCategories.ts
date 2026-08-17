@@ -5,6 +5,8 @@ import { useAuthStore } from "~/stores/auth";
 export type CategoryItem = {
   id: number;
   name: string;
+  adsterraSmartlinkUrl?: string | null;
+  adsterraBannerKey?: string | null;
   createdAt: string | null;
 };
 
@@ -72,10 +74,17 @@ export function useCategories() {
     }
   }
 
-  async function createCategory(name: string) {
+  async function createCategory(
+    name: string,
+    adsterraSmartlinkUrl?: string | null,
+    adsterraBannerKey?: string | null,
+  ) {
     const api = useApi();
     const res = await api.action.$post({
-      json: { action: "categories/create", data: { name } },
+      json: {
+        action: "categories/create",
+        data: { name, adsterraSmartlinkUrl, adsterraBannerKey },
+      },
     });
     const json = (await res.json()) as {
       code: number;
@@ -88,10 +97,18 @@ export function useCategories() {
     return json;
   }
 
-  async function updateCategory(id: number, name: string) {
+  async function updateCategory(
+    id: number,
+    name: string,
+    adsterraSmartlinkUrl?: string | null,
+    adsterraBannerKey?: string | null,
+  ) {
     const api = useApi();
     const res = await api.action.$post({
-      json: { action: "categories/update", data: { id, name } },
+      json: {
+        action: "categories/update",
+        data: { id, name, adsterraSmartlinkUrl, adsterraBannerKey },
+      },
     });
     const json = (await res.json()) as {
       code: number;
@@ -147,10 +164,17 @@ export function useCategories() {
     }
   }
 
-  async function createMyCategory(name: string) {
+  async function createMyCategory(
+    name: string,
+    adsterraSmartlinkUrl?: string | null,
+    adsterraBannerKey?: string | null,
+  ) {
     const api = useApi();
     const res = await api.action.$post({
-      json: { action: "my/categories/create", data: { name } },
+      json: {
+        action: "my/categories/create",
+        data: { name, adsterraSmartlinkUrl, adsterraBannerKey },
+      },
     });
     const json = (await res.json()) as {
       code: number;
@@ -163,10 +187,18 @@ export function useCategories() {
     return json;
   }
 
-  async function updateMyCategory(id: number, name: string) {
+  async function updateMyCategory(
+    id: number,
+    name: string,
+    adsterraSmartlinkUrl?: string | null,
+    adsterraBannerKey?: string | null,
+  ) {
     const api = useApi();
     const res = await api.action.$post({
-      json: { action: "my/categories/update", data: { id, name } },
+      json: {
+        action: "my/categories/update",
+        data: { id, name, adsterraSmartlinkUrl, adsterraBannerKey },
+      },
     });
     const json = (await res.json()) as {
       code: number;

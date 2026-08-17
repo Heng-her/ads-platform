@@ -39,8 +39,14 @@ const isDeleteModalOpen = ref(false)
 const isDeleteCustomModalOpen = ref(false)
 
 const newCategoryName = ref('')
+const newAdsterraSmartlinkUrl = ref('')
+const newAdsterraBannerKey = ref('')
+
 const editingCategory = ref<CategoryItem | null>(null)
 const editingName = ref('')
+const editingAdsterraSmartlinkUrl = ref('')
+const editingAdsterraBannerKey = ref('')
+
 const deletingCategory = ref<CategoryItem | null>(null)
 const deletingCustomCategory = ref<CustomCategoryItem | null>(null)
 
@@ -71,6 +77,8 @@ const filteredCreatorCategories = computed(() => {
 // System Category Actions
 function openAddModal() {
   newCategoryName.value = ''
+  newAdsterraSmartlinkUrl.value = ''
+  newAdsterraBannerKey.value = ''
   isAddModalOpen.value = true
 }
 
@@ -83,11 +91,13 @@ async function handleAddCategory() {
 
   isSubmitting.value = true
   try {
-    const res = await createCategory(name)
+    const res = await createCategory(name, newAdsterraSmartlinkUrl.value.trim() || null, newAdsterraBannerKey.value.trim() || null)
     if (res?.code === 1) {
       toast.success('Category Created', `System category "${name}" was created successfully.`)
       isAddModalOpen.value = false
       newCategoryName.value = ''
+      newAdsterraSmartlinkUrl.value = ''
+      newAdsterraBannerKey.value = ''
     } else {
       toast.error('Create Failed', res?.msg || 'Could not create system category.')
     }
@@ -101,6 +111,8 @@ async function handleAddCategory() {
 function openEditModal(category: CategoryItem) {
   editingCategory.value = category
   editingName.value = category.name
+  editingAdsterraSmartlinkUrl.value = category.adsterraSmartlinkUrl || ''
+  editingAdsterraBannerKey.value = category.adsterraBannerKey || ''
   isEditModalOpen.value = true
 }
 
@@ -114,12 +126,19 @@ async function handleUpdateCategory() {
 
   isSubmitting.value = true
   try {
-    const res = await updateCategory(editingCategory.value.id, name)
+    const res = await updateCategory(
+      editingCategory.value.id,
+      name,
+      editingAdsterraSmartlinkUrl.value.trim() || null,
+      editingAdsterraBannerKey.value.trim() || null
+    )
     if (res?.code === 1) {
       toast.success('Category Updated', `Category updated to "${name}".`)
       isEditModalOpen.value = false
       editingCategory.value = null
       editingName.value = ''
+      editingAdsterraSmartlinkUrl.value = ''
+      editingAdsterraBannerKey.value = ''
     } else {
       toast.error('Update Failed', res?.msg || 'Could not update category.')
     }
@@ -214,6 +233,10 @@ async function handleDeleteCustomCategory() {
       v-model:is-edit-open="isEditModalOpen"
       v-model:new-category-name="newCategoryName"
       v-model:editing-name="editingName"
+      v-model:new-adsterra-smartlink-url="newAdsterraSmartlinkUrl"
+      v-model:editing-adsterra-smartlink-url="editingAdsterraSmartlinkUrl"
+      v-model:new-adsterra-banner-key="newAdsterraBannerKey"
+      v-model:editing-adsterra-banner-key="editingAdsterraBannerKey"
       :is-submitting="isSubmitting"
       @submit-add="handleAddCategory"
       @submit-edit="handleUpdateCategory"

@@ -82,6 +82,7 @@ function formatDate(dateStr?: string | null) {
             <th class="py-3 px-4 sm:px-6">ID</th>
             <th class="py-3 px-4 sm:px-6">Preview Badge</th>
             <th class="py-3 px-4 sm:px-6">Category Name</th>
+            <th class="py-3 px-4 sm:px-6">Adsterra Monetization</th>
             <th v-if="currentTab === 'creator'" class="py-3 px-4 sm:px-6">Created By</th>
             <th class="py-3 px-4 sm:px-6">Created Date</th>
             <th class="py-3 px-4 sm:px-6 text-right">Actions</th>
@@ -91,14 +92,14 @@ function formatDate(dateStr?: string | null) {
         <!-- System Categories Tab -->
         <tbody v-if="currentTab === 'system'" class="divide-y divide-gray-100 dark:divide-gray-800">
           <tr v-if="isLoadingCategories" class="text-center">
-            <td colspan="5" class="py-8 text-gray-500 dark:text-gray-400">
+            <td colspan="6" class="py-8 text-gray-500 dark:text-gray-400">
               <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin inline-block mr-2 text-primary" />
               Loading system categories...
             </td>
           </tr>
 
           <tr v-else-if="filteredSystemCategories.length === 0" class="text-center">
-            <td colspan="5" class="py-10 text-gray-400 dark:text-gray-500">
+            <td colspan="6" class="py-10 text-gray-400 dark:text-gray-500">
               <UIcon name="i-heroicons-tag" class="w-8 h-8 mx-auto mb-2 opacity-50" />
               No categories found matching your query.
             </td>
@@ -117,6 +118,17 @@ function formatDate(dateStr?: string | null) {
               <UBadge v-if="cat.id === 999" color="neutral" variant="soft" size="xs" class="ml-2">
                 System Virtual
               </UBadge>
+            </td>
+            <td class="py-3.5 px-4 sm:px-6 text-xs">
+              <div v-if="cat.adsterraSmartlinkUrl || cat.adsterraBannerKey" class="flex flex-col gap-1">
+                <UBadge v-if="cat.adsterraSmartlinkUrl" color="warning" variant="subtle" size="xs" class="w-fit">
+                  <UIcon name="i-heroicons-link" class="w-3 h-3 mr-1" /> Custom Smartlink
+                </UBadge>
+                <UBadge v-if="cat.adsterraBannerKey" color="info" variant="subtle" size="xs" class="w-fit font-mono">
+                  <UIcon name="i-heroicons-rectangle-group" class="w-3 h-3 mr-1" /> Key: {{ cat.adsterraBannerKey.slice(0, 8) }}…
+                </UBadge>
+              </div>
+              <span v-else class="text-gray-400 dark:text-gray-500 italic">Default Global Ad</span>
             </td>
             <td class="py-3.5 px-4 sm:px-6 text-xs text-gray-500 dark:text-gray-400">
               {{ formatDate(cat.createdAt) }}

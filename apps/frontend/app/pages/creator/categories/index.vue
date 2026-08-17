@@ -31,8 +31,14 @@ const isEditModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
 
 const newCategoryName = ref('')
+const newAdsterraSmartlinkUrl = ref('')
+const newAdsterraBannerKey = ref('')
+
 const editingCategory = ref<CategoryItem | null>(null)
 const editingName = ref('')
+const editingAdsterraSmartlinkUrl = ref('')
+const editingAdsterraBannerKey = ref('')
+
 const deletingCategory = ref<CategoryItem | null>(null)
 
 const isSubmitting = ref(false)
@@ -72,6 +78,8 @@ function formatDate(dateStr?: string | null) {
 // Actions
 function openAddModal() {
   newCategoryName.value = ''
+  newAdsterraSmartlinkUrl.value = ''
+  newAdsterraBannerKey.value = ''
   isAddModalOpen.value = true
 }
 
@@ -84,11 +92,13 @@ async function handleAddCategory() {
 
   isSubmitting.value = true
   try {
-    const res = await createMyCategory(name)
+    const res = await createMyCategory(name, newAdsterraSmartlinkUrl.value.trim() || null, newAdsterraBannerKey.value.trim() || null)
     if (res?.code === 1) {
       toast.success('Category Created', `Custom category "${name}" was created successfully.`)
       isAddModalOpen.value = false
       newCategoryName.value = ''
+      newAdsterraSmartlinkUrl.value = ''
+      newAdsterraBannerKey.value = ''
     } else {
       toast.error('Create Failed', res?.msg || 'Could not create custom category.')
     }
@@ -102,6 +112,8 @@ async function handleAddCategory() {
 function openEditModal(category: CategoryItem) {
   editingCategory.value = category
   editingName.value = category.name
+  editingAdsterraSmartlinkUrl.value = category.adsterraSmartlinkUrl || ''
+  editingAdsterraBannerKey.value = category.adsterraBannerKey || ''
   isEditModalOpen.value = true
 }
 
@@ -115,12 +127,19 @@ async function handleUpdateCategory() {
 
   isSubmitting.value = true
   try {
-    const res = await updateMyCategory(editingCategory.value.id, name)
+    const res = await updateMyCategory(
+      editingCategory.value.id,
+      name,
+      editingAdsterraSmartlinkUrl.value.trim() || null,
+      editingAdsterraBannerKey.value.trim() || null
+    )
     if (res?.code === 1) {
       toast.success('Category Updated', `Custom category updated to "${name}".`)
       isEditModalOpen.value = false
       editingCategory.value = null
       editingName.value = ''
+      editingAdsterraSmartlinkUrl.value = ''
+      editingAdsterraBannerKey.value = ''
     } else {
       toast.error('Update Failed', res?.msg || 'Could not update custom category.')
     }
@@ -345,9 +364,9 @@ async function handleDeleteCategory() {
     </div>
 
     <!-- Create Custom Category Modal -->
-    <UModal v-model:open="isAddModalOpen">
+    <UModal v-model:open="isAddModalOpen" :ui="{ content: 'sm:max-w-xl w-full' }">
       <template #content>
-        <div class="p-6 space-y-5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+        <div class="p-6 space-y-5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 w-full sm:max-w-xl">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <UIcon name="i-heroicons-plus-circle" class="w-5 h-5 text-amber-500" />
@@ -361,10 +380,28 @@ async function handleDeleteCategory() {
             Custom categories allow you to organize and group your campaigns with personalized labels.
           </p>
 
-          <div>
-            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Category Name</label>
-            <UInput v-model="newCategoryName" placeholder="e.g. Crypto Gaming, Tech Review" size="md" color="neutral"
-              variant="outline" @keyup.enter="handleAddCategory" />
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Category Name *</label>
+              <UInput v-model="newCategoryName" placeholder="e.g. Crypto Gaming, Tech Review" size="md" color="neutral" class="w-full"
+                variant="outline" @keyup.enter="handleAddCategory" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                Adsterra Smartlink URL (Optional)
+              </label>
+              <UInput v-model="newAdsterraSmartlinkUrl" placeholder="e.g. https://ironcomparable.com/gh6u2ftq6?key=..." size="md" color="neutral" class="w-full"
+                variant="outline" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                Adsterra Banner Key (Optional)
+              </label>
+              <UInput v-model="newAdsterraBannerKey" placeholder="e.g. a3904ecfe67c81deb37177a2588649a9" size="md" color="neutral" class="w-full"
+                variant="outline" />
+            </div>
           </div>
 
           <div class="flex items-center justify-end gap-2 pt-2">
@@ -380,9 +417,9 @@ async function handleDeleteCategory() {
     </UModal>
 
     <!-- Edit Custom Category Modal -->
-    <UModal v-model:open="isEditModalOpen">
+    <UModal v-model:open="isEditModalOpen" :ui="{ content: 'sm:max-w-xl w-full' }">
       <template #content>
-        <div class="p-6 space-y-5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+        <div class="p-6 space-y-5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 w-full sm:max-w-xl">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <UIcon name="i-heroicons-pencil-square" class="w-5 h-5 text-amber-500" />
@@ -392,10 +429,28 @@ async function handleDeleteCategory() {
               @click="isEditModalOpen = false" />
           </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Category Name</label>
-            <UInput v-model="editingName" placeholder="Enter category name..." size="md" color="neutral"
-              variant="outline" @keyup.enter="handleUpdateCategory" />
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Category Name *</label>
+              <UInput v-model="editingName" placeholder="Enter category name..." size="md" color="neutral" class="w-full"
+                variant="outline" @keyup.enter="handleUpdateCategory" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                Adsterra Smartlink URL (Optional)
+              </label>
+              <UInput v-model="editingAdsterraSmartlinkUrl" placeholder="e.g. https://ironcomparable.com/gh6u2ftq6?key=..." size="md" color="neutral" class="w-full"
+                variant="outline" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                Adsterra Banner Key (Optional)
+              </label>
+              <UInput v-model="editingAdsterraBannerKey" placeholder="e.g. a3904ecfe67c81deb37177a2588649a9" size="md" color="neutral" class="w-full"
+                variant="outline" />
+            </div>
           </div>
 
           <div class="flex items-center justify-end gap-2 pt-2">

@@ -30,7 +30,11 @@ export class CategoryService {
     );
   }
 
-  async createSystemCategory(name: string): Promise<{ error: string } | { id: number; name: string; createdAt: Date | null }> {
+  async createSystemCategory(
+    name: string,
+    adsterraSmartlinkUrl?: string | null,
+    adsterraBannerKey?: string | null,
+  ) {
     const existing = await this.db
       .select()
       .from(systemCategories)
@@ -39,7 +43,12 @@ export class CategoryService {
 
     if (existing) return { error: "A system category with this name already exists." };
 
-    await this.db.insert(systemCategories).values({ name, createdAt: new Date() });
+    await this.db.insert(systemCategories).values({
+      name,
+      adsterraSmartlinkUrl: adsterraSmartlinkUrl || null,
+      adsterraBannerKey: adsterraBannerKey || null,
+      createdAt: new Date(),
+    });
 
     const created = await this.db
       .select()
@@ -50,7 +59,12 @@ export class CategoryService {
     return created!;
   }
 
-  async updateSystemCategory(id: number, name: string): Promise<null | { error: string } | { id: number; name: string; createdAt: Date | null }> {
+  async updateSystemCategory(
+    id: number,
+    name: string,
+    adsterraSmartlinkUrl?: string | null,
+    adsterraBannerKey?: string | null,
+  ) {
     const existing = await this.getSystemCategoryById(id);
     if (!existing) return null;
 
@@ -66,7 +80,11 @@ export class CategoryService {
 
     await this.db
       .update(systemCategories)
-      .set({ name })
+      .set({
+        name,
+        adsterraSmartlinkUrl: adsterraSmartlinkUrl !== undefined ? adsterraSmartlinkUrl : existing.adsterraSmartlinkUrl,
+        adsterraBannerKey: adsterraBannerKey !== undefined ? adsterraBannerKey : existing.adsterraBannerKey,
+      })
       .where(eq(systemCategories.id, id));
 
     return (await this.getSystemCategoryById(id))!;
@@ -86,6 +104,8 @@ export class CategoryService {
       .select({
         id: customCategories.id,
         name: customCategories.name,
+        adsterraSmartlinkUrl: customCategories.adsterraSmartlinkUrl,
+        adsterraBannerKey: customCategories.adsterraBannerKey,
         userId: customCategories.userId,
         userEmail: users.email,
         username: users.username,
@@ -129,7 +149,12 @@ export class CategoryService {
     );
   }
 
-  async createCustomCategory(userId: string, name: string): Promise<{ error: string } | { id: number; userId: string; name: string; createdAt: Date | null }> {
+  async createCustomCategory(
+    userId: string,
+    name: string,
+    adsterraSmartlinkUrl?: string | null,
+    adsterraBannerKey?: string | null,
+  ) {
     const existing = await this.db
       .select()
       .from(customCategories)
@@ -140,7 +165,13 @@ export class CategoryService {
 
     if (existing) return { error: "You already have a custom category with this name." };
 
-    await this.db.insert(customCategories).values({ userId, name, createdAt: new Date() });
+    await this.db.insert(customCategories).values({
+      userId,
+      name,
+      adsterraSmartlinkUrl: adsterraSmartlinkUrl || null,
+      adsterraBannerKey: adsterraBannerKey || null,
+      createdAt: new Date(),
+    });
 
     const created = await this.db
       .select()
@@ -153,7 +184,13 @@ export class CategoryService {
     return created!;
   }
 
-  async updateCustomCategory(id: number, userId: string, name: string): Promise<null | { error: string } | { id: number; userId: string; name: string; createdAt: Date | null }> {
+  async updateCustomCategory(
+    id: number,
+    userId: string,
+    name: string,
+    adsterraSmartlinkUrl?: string | null,
+    adsterraBannerKey?: string | null,
+  ) {
     const existing = await this.getCustomCategoryById(id, userId);
     if (!existing) return null;
 
@@ -171,7 +208,11 @@ export class CategoryService {
 
     await this.db
       .update(customCategories)
-      .set({ name })
+      .set({
+        name,
+        adsterraSmartlinkUrl: adsterraSmartlinkUrl !== undefined ? adsterraSmartlinkUrl : existing.adsterraSmartlinkUrl,
+        adsterraBannerKey: adsterraBannerKey !== undefined ? adsterraBannerKey : existing.adsterraBannerKey,
+      })
       .where(and(eq(customCategories.id, id), eq(customCategories.userId, userId)));
 
     return (await this.getCustomCategoryById(id, userId))!;

@@ -106,6 +106,9 @@ function giveFeedback(value: boolean) {
                 <!-- New Campaign Feed Notification Banner -->
                 <ArticleRefreshBanner :count="newCampaignCount" @refresh="startNewFeed" />
 
+                <!-- ================= TOP CATEGORY HERO SPONSOR BANNER ================= -->
+                <CategoryHeroAdBanner :category="selectedCategory" />
+
                 <!-- Error State -->
                 <div v-if="errorMessage && !campaigns.length"
                     class="rounded-2xl p-8 flex flex-col items-center text-center gap-3 border shadow-xl bg-white dark:bg-gray-900 border-red-200 dark:border-red-900/50">
@@ -152,7 +155,7 @@ function giveFeedback(value: boolean) {
 
             <!-- ================= RIGHT RAIL: ADS & SPONSORED CAMPAIGNS (Desktop Sticky) ================= -->
             <aside class="hidden lg:flex lg:flex-col lg:w-[350px] shrink-0 gap-5 sticky top-20">
-                <AdBanner provider="adsterra" slot-type="sidebar" />
+                <AdBanner provider="adsterra" slot-type="sidebar" :category="selectedCategory" />
 
                 <PublicTrendingWidget :item="trendingItem" />
                 <PublicRelatedTopics :topics="relatedTopics" @select-topic="(t) => setQuery({ category: t })" />

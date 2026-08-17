@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { usePublicAdConfig } from '~/composables/usePublicAdConfig'
+import { useCategories } from '~/composables/useCategories'
 
 const props = withDefaults(
   defineProps<{
     slotType?: 'header' | 'in-article' | 'sidebar' | 'articleTop' | 'articleSidebar' | 'categoryFeed'
     creatorId?: string
     campaignId?: string
+    category?: string
     provider?: 'all' | 'google' | 'adsterra'
   }>(),
   {
@@ -15,8 +18,25 @@ const props = withDefaults(
   }
 )
 
+const route = useRoute()
+const { categories, myCategories } = useCategories()
 const { adConfig } = usePublicAdConfig()
 const adPushed = ref(false)
+
+const activeCategoryName = computed(() => {
+  const cat = props.category || (route.query.category as string) || ''
+  return cat.trim()
+})
+
+const activeCategoryItem = computed(() => {
+  if (!activeCategoryName.value) return null
+  const nameLower = activeCategoryName.value.toLowerCase()
+  return (
+    categories.value.find(c => c.name?.toLowerCase() === nameLower) ||
+    myCategories.value.find(c => c.name?.toLowerCase() === nameLower) ||
+    null
+  )
+})
 
 function handleSmartlinkClick() {
   if (!import.meta.client) return
@@ -87,7 +107,8 @@ function handleGoogleAdClick() {
 }
 
 const adsterraTrackingUrl = computed(() => {
-  const baseUrl = adConfig.value?.adsterra?.smartlinkUrl
+  const categoryCustomUrl = activeCategoryItem.value?.adsterraSmartlinkUrl
+  const baseUrl = categoryCustomUrl || adConfig.value?.adsterra?.smartlinkUrl
   if (!baseUrl) return '#'
   if (!props.creatorId) return baseUrl
   const separator = baseUrl.includes('?') ? '&' : '?'

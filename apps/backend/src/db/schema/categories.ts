@@ -5,6 +5,8 @@ import { users } from "./users";
 export const systemCategories = sqliteTable("system_categories", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull().unique(),
+  adsterraSmartlinkUrl: text("adsterra_smartlink_url"),
+  adsterraBannerKey: text("adsterra_banner_key"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -17,6 +19,8 @@ export const customCategories = sqliteTable("custom_categories", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  adsterraSmartlinkUrl: text("adsterra_smartlink_url"),
+  adsterraBannerKey: text("adsterra_banner_key"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),

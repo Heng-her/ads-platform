@@ -45,7 +45,11 @@ export async function handleCategoryAction(
         );
       }
       const categoryService = new CategoryService(db);
-      const result = await categoryService.createSystemCategory(parseResult.data.name);
+      const result = await categoryService.createSystemCategory(
+        parseResult.data.name,
+        parseResult.data.adsterraSmartlinkUrl,
+        parseResult.data.adsterraBannerKey
+      );
       if (!result || "error" in result) {
         return sendError(c, "error" in result ? result.error : "Failed to create system category", null, 409);
       }
@@ -66,7 +70,12 @@ export async function handleCategoryAction(
         );
       }
       const categoryService = new CategoryService(db);
-      const result = await categoryService.updateSystemCategory(catId, parseResult.data.name);
+      const result = await categoryService.updateSystemCategory(
+        catId,
+        parseResult.data.name,
+        parseResult.data.adsterraSmartlinkUrl,
+        parseResult.data.adsterraBannerKey
+      );
       if (result === null) return sendError(c, "System category not found", null, 404);
       if ("error" in result) return sendError(c, result.error, null, 409);
       return sendSuccess(c, result, "System category updated successfully");
@@ -183,7 +192,12 @@ export async function handleCategoryAction(
         );
       }
       const categoryService = new CategoryService(db);
-      const result = await categoryService.createCustomCategory(currentUser.id, parseResult.data.name);
+      const result = await categoryService.createCustomCategory(
+        currentUser.id,
+        parseResult.data.name,
+        parseResult.data.adsterraSmartlinkUrl,
+        parseResult.data.adsterraBannerKey
+      );
       if ("error" in result) return sendError(c, result.error, null, 409);
       return sendSuccess(c, result, "Custom category created successfully");
     }
@@ -201,7 +215,13 @@ export async function handleCategoryAction(
         );
       }
       const categoryService = new CategoryService(db);
-      const result = await categoryService.updateCustomCategory(catId, currentUser.id, parseResult.data.name);
+      const result = await categoryService.updateCustomCategory(
+        catId,
+        currentUser.id,
+        parseResult.data.name,
+        parseResult.data.adsterraSmartlinkUrl,
+        parseResult.data.adsterraBannerKey
+      );
       if (result === null) return sendError(c, "Custom category not found", null, 404);
       if ("error" in result) return sendError(c, result.error, null, 409);
       return sendSuccess(c, result, "Custom category updated successfully");
