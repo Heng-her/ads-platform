@@ -30,12 +30,14 @@ export interface WithdrawalRequest {
 
 defineProps<{
   requests: WithdrawalRequest[]
+  isLoading?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'pay', req: WithdrawalRequest): void
   (e: 'borrow', req: WithdrawalRequest): void
   (e: 'reject', req: WithdrawalRequest): void
+  (e: 'refresh'): void
 }>()
 
 const toast = useAppToast()
@@ -71,9 +73,30 @@ function copyToClipboard(text: string, label: string) {
           borrow/pull requests.
         </p>
       </div>
+
+      <button
+        type="button"
+        class="inline-flex items-center gap-1.5 rounded-lg border border-gray-800 bg-gray-800/80 px-3 py-1.5 text-xs font-semibold text-gray-300 hover:bg-gray-700 hover:text-white transition disabled:opacity-50 shrink-0 self-start sm:self-auto"
+        :disabled="isLoading"
+        @click="emit('refresh')"
+      >
+        <UIcon
+          name="i-heroicons-arrow-path"
+          class="h-4 w-4 text-emerald-400"
+          :class="{ 'animate-spin': isLoading }"
+        />
+        <span>Refresh Queue</span>
+      </button>
     </div>
 
-    <div v-if="requests.length === 0" class="rounded-lg border border-gray-800 p-8 text-center space-y-2">
+    <!-- Loading State -->
+    <div v-if="isLoading && requests.length === 0" class="py-12 text-center text-sm text-gray-400">
+      <UIcon name="i-heroicons-arrow-path" class="h-6 w-6 animate-spin mx-auto text-emerald-400 mb-2" />
+      Loading payout queue requests...
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="requests.length === 0" class="rounded-lg border border-gray-800 p-8 text-center space-y-2">
       <div class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gray-800 text-gray-400">
         <UIcon name="i-heroicons-banknotes" class="h-5 w-5 text-emerald-400" />
       </div>

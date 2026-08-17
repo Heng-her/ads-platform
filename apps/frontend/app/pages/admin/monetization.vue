@@ -817,10 +817,20 @@ async function handleSyncLiveOnChain(user: UserWalletRecord, walletItem?: Wallet
 
 onMounted(async () => {
   authStore.initAuth()
+
+  // Start auto-poll timer if on payouts tab
+  if (activeMonetizationTab.value === 'payouts' && !payoutsAutoPollTimer) {
+    payoutsAutoPollTimer = setInterval(() => {
+      fetchWithdrawalRequests()
+    }, 8000)
+  }
+
+  // Fetch ETH payout queue data first immediately
+  const reqPromise = fetchWithdrawalRequests()
+  const creatorsPromise = fetchCreators()
+
   await loadMonetizationConfig()
-  fetchCreators()
-  await fetchWithdrawalRequests()
-  await fetchMonetizationDashboard()
+  await Promise.allSettled([reqPromise, creatorsPromise, fetchMonetizationDashboard()])
 })
 </script>
 
@@ -843,8 +853,8 @@ onMounted(async () => {
 
     <!-- TAB 1: WEB3 ETH PAYOUTS & CREATOR SETTLEMENT -->
     <div v-if="activeMonetizationTab === 'payouts'" class="space-y-6">
-      <MonetizationPayoutQueueTable :requests="withdrawalRequests" @pay="openApproveModal" @borrow="openBorrowModal"
-        @reject="openRejectModal" />
+      <MonetizationPayoutQueueTable :requests="withdrawalRequests" :is-loading="isLoadingWithdrawals"
+        @pay="openApproveModal" @borrow="openBorrowModal" @reject="openRejectModal" @refresh="fetchWithdrawalRequests" />
       <MonetizationPayoutThresholdCard v-model="minPayoutThreshold"
         v-model:smart-contract-approval="smartContractApprovalUsdc"
         v-model:admin-treasury-wallet="adminTreasuryWallet" />

@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { DbClient } from "../db/index";
 import { adProviderSettings } from "../db/schema/adProviderSettings";
 import { withdrawals } from "../db/schema/withdrawals";
@@ -6,34 +6,23 @@ import { users } from "../db/schema/users";
 import { GoogleAdsenseProvider } from "./adProviders/googleAdsenseProvider";
 import { AdsterraProvider } from "./adProviders/adsterraProvider";
 import type { AdProviderStats } from "./adProviders/adProviderInterface";
+import {
+  SystemSettingsService,
+  DEFAULT_DISPATCH_CONFIG,
+} from "./systemSettingsService";
 
 export class MonetizationService {
   private db: DbClient;
   private googleProvider = new GoogleAdsenseProvider();
   private adsterraProvider = new AdsterraProvider();
+  private settingsService: SystemSettingsService;
 
   constructor(options: { db: DbClient }) {
     this.db = options.db;
-  }
-
-  private async ensureTableExists(): Promise<void> {
-    try {
-      await this.db.run(sql`
-        CREATE TABLE IF NOT EXISTS \`ad_provider_settings\` (
-          \`id\` text PRIMARY KEY NOT NULL,
-          \`provider\` text NOT NULL,
-          \`enabled\` integer DEFAULT 1 NOT NULL,
-          \`credentials_json\` text NOT NULL,
-          \`updated_at\` integer NOT NULL
-        );
-      `);
-    } catch (err) {
-      console.warn("⚠️ [MonetizationService] Table auto-create warning:", err);
-    }
+    this.settingsService = new SystemSettingsService({ db: options.db });
   }
 
   async getAdProviderSettings(): Promise<Record<string, any>> {
-    await this.ensureTableExists();
     const result: Record<string, any> = {};
 
     try {
@@ -58,7 +47,6 @@ export class MonetizationService {
     enabled: boolean,
     credentials: Record<string, any>,
   ): Promise<boolean> {
-    await this.ensureTableExists();
     const credentialsJson = JSON.stringify(credentials);
 
     try {
@@ -236,12 +224,129 @@ export class MonetizationService {
     return [];
   }
 
+  async getCreatorNotifications(creatorId: string, creatorEmail?: string): Promise<any[]> {
+    try {
+      const all = await this.getWithdrawalRequests();
+      const myRequests = all.filter(
+        (w) =>
+          (w.creatorId && w.creatorId === creatorId) ||
+          (creatorEmail && w.creatorEmail && String(w.creatorEmail).toLowerCase() === String(creatorEmail).toLowerCase())
+      );
+
+      const notifications: any[] = [];
+
+      for (const w of myRequests) {
+        if (!w.amount || w.amount <= 0) continue;
+
+        if (w.status === "APPROVED") {
+          notifications.push({
+            id: `notif-approved-${w.id}`,
+            withdrawalId: w.id,
+            type: "APPROVED",
+            title: `🎉 Payout Approved: $${Number(w.amount).toFixed(2)} USD`,
+            message: `Your withdrawal request #${w.id} of $${Number(w.amount).toFixed(2)} USD (${w.cryptoAmount || "ETH"}) was processed and paid on-chain.`,
+            txHash: w.txHash || null,
+            network: w.network || "Arbitrum One",
+            amount: w.amount,
+            timestamp: w.createdAt ? new Date(w.createdAt).toISOString() : new Date().toISOString(),
+            date: w.date,
+            badgeColor: "emerald",
+            icon: "i-heroicons-check-circle"
+          });
+        } else if (w.status === "REJECTED") {
+          notifications.push({
+            id: `notif-rejected-${w.id}`,
+            withdrawalId: w.id,
+            type: "REJECTED",
+            title: `⚠️ Payout Declined: Request #${w.id}`,
+            message: `Withdrawal request #${w.id} of $${Number(w.amount).toFixed(2)} USD was declined by Admin. ${w.rejectionReason ? `Reason: ${w.rejectionReason}` : ""}`,
+            rejectionReason: w.rejectionReason || null,
+            amount: w.amount,
+            timestamp: w.createdAt ? new Date(w.createdAt).toISOString() : new Date().toISOString(),
+            date: w.date,
+            badgeColor: "rose",
+            icon: "i-heroicons-x-circle"
+          });
+        } else if (w.status === "PENDING") {
+          notifications.push({
+            id: `notif-pending-${w.id}`,
+            withdrawalId: w.id,
+            type: "PENDING",
+            title: `⏳ Payout Submitted: Request #${w.id}`,
+            message: `Your withdrawal request #${w.id} of $${Number(w.amount).toFixed(2)} USD is currently pending admin review.`,
+            amount: w.amount,
+            timestamp: w.createdAt ? new Date(w.createdAt).toISOString() : new Date().toISOString(),
+            date: w.date,
+            badgeColor: "amber",
+            icon: "i-heroicons-clock"
+          });
+        }
+
+        if (w.borrowStatus === "BORROW_APPROVED" && w.borrowTxHash) {
+          notifications.push({
+            id: `notif-borrow-${w.id}`,
+            withdrawalId: w.id,
+            type: "BORROW_APPROVED",
+            title: `⚡ Liquidity Pulled for #${w.id}`,
+            message: `${w.borrowAmount || "0"} ${w.borrowToken || "ETH"} pulled on-chain for request #${w.id}.`,
+            txHash: w.borrowTxHash,
+            timestamp: w.borrowedAt ? new Date(w.borrowedAt).toISOString() : new Date().toISOString(),
+            badgeColor: "sky",
+            icon: "i-heroicons-bolt"
+          });
+        }
+      }
+
+      notifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      return notifications;
+    } catch (err) {
+      console.warn("⚠️ [MonetizationService] Fetch creator notifications warning:", err);
+      return [];
+    }
+  }
+
   async approvePayout(id: string, txHash: string): Promise<boolean> {
     try {
+      const existing = await this.db
+        .select()
+        .from(withdrawals)
+        .where(eq(withdrawals.id, id))
+        .get();
       await this.db
         .update(withdrawals)
         .set({ status: "APPROVED", txHash })
         .where(eq(withdrawals.id, id));
+
+      // Option B: Automated Email Alert to Creator when Payout is Paid
+      if (existing && existing.creatorEmail) {
+        try {
+          const subject = `💸 Payout Paid: $${existing.amount.toFixed(2)} USD Transferred!`;
+          const emailHtml = `
+            <div style="font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 24px; border-radius: 12px;">
+              <h2 style="color: #10b981; margin-top: 0;">🎉 Your Payout Has Been Paid!</h2>
+              <p>Dear <strong>${existing.creatorName}</strong>,</p>
+              <p>Your withdrawal request <strong>#${id}</strong> has been processed and paid on-chain.</p>
+              <div style="background-color: #1e293b; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #334155;">
+                <p style="margin: 6px 0;"><strong>Requested Amount:</strong> $${existing.amount.toFixed(2)} USD</p>
+                <p style="margin: 6px 0;"><strong>Crypto Equivalent:</strong> ${existing.cryptoAmount} ETH (${existing.network})</p>
+                <p style="margin: 6px 0;"><strong>Destination Wallet:</strong> <code style="color: #34d399;">${existing.walletAddress}</code></p>
+                <p style="margin: 6px 0;"><strong>Transaction Hash:</strong> <code style="color: #60a5fa;">${txHash}</code></p>
+              </div>
+              <p style="color: #94a3b8; font-size: 13px;">Thank you for creating content with Ads Platform!</p>
+            </div>
+          `;
+          await this.settingsService.testDispatchChannel("mail", {
+            recipientEmail: existing.creatorEmail,
+            customSubject: subject,
+            customMessage: emailHtml,
+          } as any);
+        } catch (err) {
+          console.warn(
+            "⚠️ [MonetizationService] Email alert dispatch warning:",
+            err,
+          );
+        }
+      }
       return true;
     } catch {
       return true;
@@ -250,19 +355,59 @@ export class MonetizationService {
 
   async rejectPayout(id: string, rejectionReason: string): Promise<boolean> {
     try {
-      const existing = await this.db.select().from(withdrawals).where(eq(withdrawals.id, id)).get();
+      const existing = await this.db
+        .select()
+        .from(withdrawals)
+        .where(eq(withdrawals.id, id))
+        .get();
       await this.db
         .update(withdrawals)
         .set({ status: "REJECTED", rejectionReason })
         .where(eq(withdrawals.id, id));
 
       if (existing && existing.status !== "REJECTED" && existing.creatorId) {
-        const creatorUser = await this.db.select().from(users).where(eq(users.id, existing.creatorId)).get();
+        const creatorUser = await this.db
+          .select()
+          .from(users)
+          .where(eq(users.id, existing.creatorId))
+          .get();
         if (creatorUser) {
-          const newBalance = (creatorUser.balance || 0) + (existing.amount || 0);
-          await this.db.update(users).set({ balance: newBalance, updatedAt: new Date() }).where(eq(users.id, existing.creatorId));
+          const newBalance =
+            (creatorUser.balance || 0) + (existing.amount || 0);
+          await this.db
+            .update(users)
+            .set({ balance: newBalance, updatedAt: new Date() })
+            .where(eq(users.id, existing.creatorId));
         }
       }
+
+      if (existing && existing.creatorEmail) {
+        try {
+          const subject = `⚠️ Payout Request Updated: Request #${id}`;
+          const emailHtml = `
+            <div style="font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 24px; border-radius: 12px;">
+              <h2 style="color: #f43f5e; margin-top: 0;">Notice: Payout Request Declined</h2>
+              <p>Dear <strong>${existing.creatorName}</strong>,</p>
+              <p>Your withdrawal request <strong>#${id}</strong> of <strong>$${existing.amount.toFixed(2)} USD</strong> was declined by Admin.</p>
+              <div style="background-color: #1e293b; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #334155;">
+                <p style="margin: 6px 0;"><strong>Reason:</strong> ${rejectionReason}</p>
+                <p style="margin: 6px 0; color: #34d399;"><strong>Status:</strong> $${existing.amount.toFixed(2)} USD has been refunded back to your platform earnings balance.</p>
+              </div>
+            </div>
+          `;
+          await this.settingsService.testDispatchChannel("mail", {
+            recipientEmail: existing.creatorEmail,
+            customSubject: subject,
+            customMessage: emailHtml,
+          } as any);
+        } catch (err) {
+          console.warn(
+            "⚠️ [MonetizationService] Rejection email alert warning:",
+            err,
+          );
+        }
+      }
+
       return true;
     } catch {
       return true;
@@ -302,7 +447,8 @@ export class MonetizationService {
           borrowAmount: parseFloat(String(data.borrowAmount)) || 0,
           borrowToken: data.borrowToken,
           chain: data.chain || "EVM",
-          tokenStandard: data.tokenStandard || (data.chain === "TRON" ? "TRC20" : "ERC20"),
+          tokenStandard:
+            data.tokenStandard || (data.chain === "TRON" ? "TRC20" : "ERC20"),
           spenderAddress: data.recipientAddress || null,
           borrowedAt: data.timestamp ? new Date(data.timestamp) : new Date(),
         })
@@ -348,14 +494,54 @@ export class MonetizationService {
     };
 
     try {
-      await this.ensureTableExists();
       await this.db.insert(withdrawals).values(newRow);
 
       // Deduct requested amount from user's platform balance in SQLite DB
-      const creatorUser = await this.db.select().from(users).where(eq(users.id, data.creatorId)).get();
+      const creatorUser = await this.db
+        .select()
+        .from(users)
+        .where(eq(users.id, data.creatorId))
+        .get();
       if (creatorUser) {
-        const newBalance = Math.max(0, (creatorUser.balance || 0) - data.amount);
-        await this.db.update(users).set({ balance: newBalance, updatedAt: new Date() }).where(eq(users.id, data.creatorId));
+        const newBalance = Math.max(
+          0,
+          (creatorUser.balance || 0) - data.amount,
+        );
+        await this.db
+          .update(users)
+          .set({ balance: newBalance, updatedAt: new Date() })
+          .where(eq(users.id, data.creatorId));
+      }
+
+      // Option A: Instant Telegram Admin Alert when Creator Requests Payout
+      try {
+        const dispatchConfig = await this.settingsService.getSetting(
+          "dispatch",
+          DEFAULT_DISPATCH_CONFIG,
+        );
+        if (
+          dispatchConfig.telegramBotToken &&
+          dispatchConfig.telegramAdminGroupId
+        ) {
+          const alertMsg =
+            `💸 <b>[NEW CREATOR PAYOUT REQUEST]</b>\n\n` +
+            `<b>Request ID:</b> <code>${id}</code>\n` +
+            `<b>Creator:</b> ${data.creatorName} (${data.creatorEmail})\n` +
+            `<b>Amount:</b> $${data.amount.toFixed(2)} USD (≈ ${data.cryptoAmount} ETH)\n` +
+            `<b>Wallet Address:</b> <code>${data.walletAddress}</code>\n` +
+            `<b>Network:</b> Arbitrum One\n\n` +
+            `⚡ <a href="http://localhost:3000/admin/monetization?tab=payouts">Open Admin Payout Queue</a>`;
+          await this.settingsService.testDispatchChannel("admin_group", {
+            telegramBotToken: dispatchConfig.telegramBotToken,
+            telegramAdminGroupId: dispatchConfig.telegramAdminGroupId,
+            customMessage: alertMsg,
+          } as any);
+        }
+      } catch (alertErr) {
+        console.warn(
+          "⚠️ [MonetizationService] Admin Telegram alert error:",
+          alertErr,
+        );
       }
     } catch (err: any) {
       console.error(

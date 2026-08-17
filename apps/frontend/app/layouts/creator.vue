@@ -38,7 +38,7 @@ const { isMobileOpen } = useSidebar()
         <template #right>
           <div class="flex items-center gap-1.5 sm:gap-3">
             <LanguageSwitcher />
-            <UButton icon="i-heroicons-bell" color="neutral" variant="ghost" aria-label="Notifications" />
+            <CreatorNotificationMenu />
             <UButton v-if="authStore.user?.role === 'admin'" to="/admin" color="neutral" variant="subtle" size="xs"
               class="hidden sm:inline-flex">
               Switch to Admin

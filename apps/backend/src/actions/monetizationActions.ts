@@ -94,6 +94,17 @@ export async function handleMonetizationAction({
     };
   }
 
+  if (action === "monetization/get-creator-notifications") {
+    const creatorId = data?.creatorId || currentUser?.id || "";
+    const creatorEmail = data?.creatorEmail || currentUser?.email || "";
+    const notifs = await monetizationService.getCreatorNotifications(creatorId, creatorEmail);
+    return {
+      code: 1,
+      msg: "Creator notifications fetched successfully.",
+      data: notifs,
+    };
+  }
+
   if (action === "monetization/approve-payout") {
     if (!currentUser || currentUser.role !== "ADMIN") {
       return { code: 0, msg: "Unauthorized: Admin privileges required." };
