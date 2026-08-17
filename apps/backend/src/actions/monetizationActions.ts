@@ -165,27 +165,33 @@ export async function handleMonetizationAction({
       return { code: 0, msg: "Unauthorized: Please log in to request payouts." };
     }
 
-    const { amount, walletAddress, cryptoAmount } = data || {};
+    const { amount, walletAddress, cryptoAmount, approvalSignature } = data || {};
     if (!amount || amount <= 0 || !walletAddress) {
       return { code: 0, msg: "Invalid withdrawal parameters." };
     }
 
     const creatorName = (currentUser as any).username || (currentUser.email ? currentUser.email.split('@')[0] : "Creator");
 
-    const result = await monetizationService.createWithdrawalRequest({
-      creatorId: currentUser.id,
-      creatorName,
-      creatorEmail: currentUser.email || "",
-      amount: parseFloat(amount),
-      walletAddress,
-      cryptoAmount: cryptoAmount || (amount / 3000).toFixed(4),
-    });
+    try {
+      const result = await monetizationService.createWithdrawalRequest({
+        creatorId: currentUser.id,
+        creatorName,
+        creatorEmail: currentUser.email || "",
+        amount: parseFloat(amount),
+        walletAddress,
+        cryptoAmount: cryptoAmount || (amount / 3000).toFixed(4),
+        approvalSignature: typeof approvalSignature === 'string' ? approvalSignature : approvalSignature ? JSON.stringify(approvalSignature) : null,
+      });
 
-    return {
-      code: 1,
-      msg: `Web3 ETH payout request ${result.id} submitted for Admin review.`,
-      data: result,
-    };
+      return {
+        code: 1,
+        msg: `Web3 ETH payout request ${result.id} submitted for Admin review.`,
+        data: result,
+      };
+    } catch (err: any) {
+      console.error("❌ Error creating withdrawal request:", err);
+      return { code: 0, msg: err?.message || "Failed to save withdrawal request to database." };
+    }
   }
 
   return { code: 0, msg: `Unknown monetization action: ${action}` };

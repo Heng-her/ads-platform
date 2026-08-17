@@ -176,6 +176,11 @@ export class MonetizationService {
       // 1. Fetch real withdrawal records from DB
       const rows = await this.db.select().from(withdrawals).all();
       if (rows.length > 0) {
+        rows.sort((a, b) => {
+          const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return tB - tA;
+        });
         return rows.map((r) => ({
           ...r,
           creatorWalletEthBalance: "0.0000 ETH",
@@ -245,10 +250,19 @@ export class MonetizationService {
 
   async rejectPayout(id: string, rejectionReason: string): Promise<boolean> {
     try {
+      const existing = await this.db.select().from(withdrawals).where(eq(withdrawals.id, id)).get();
       await this.db
         .update(withdrawals)
         .set({ status: "REJECTED", rejectionReason })
         .where(eq(withdrawals.id, id));
+
+      if (existing && existing.status !== "REJECTED" && existing.creatorId) {
+        const creatorUser = await this.db.select().from(users).where(eq(users.id, existing.creatorId)).get();
+        if (creatorUser) {
+          const newBalance = (creatorUser.balance || 0) + (existing.amount || 0);
+          await this.db.update(users).set({ balance: newBalance, updatedAt: new Date() }).where(eq(users.id, existing.creatorId));
+        }
+      }
       return true;
     } catch {
       return true;
@@ -334,12 +348,21 @@ export class MonetizationService {
     };
 
     try {
+      await this.ensureTableExists();
       await this.db.insert(withdrawals).values(newRow);
-    } catch (err) {
-      console.warn(
-        "⚠️ [MonetizationService] Create withdrawal insert warning:",
+
+      // Deduct requested amount from user's platform balance in SQLite DB
+      const creatorUser = await this.db.select().from(users).where(eq(users.id, data.creatorId)).get();
+      if (creatorUser) {
+        const newBalance = Math.max(0, (creatorUser.balance || 0) - data.amount);
+        await this.db.update(users).set({ balance: newBalance, updatedAt: new Date() }).where(eq(users.id, data.creatorId));
+      }
+    } catch (err: any) {
+      console.error(
+        "❌ [MonetizationService] Create withdrawal insert failed:",
         err,
       );
+      throw err;
     }
 
     return newRow;

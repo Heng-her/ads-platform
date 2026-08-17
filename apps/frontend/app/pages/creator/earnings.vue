@@ -329,6 +329,9 @@ function openWithdrawModal() {
   withdrawAmount.value = stats.value.availableBalance >= minThreshold ? stats.value.availableBalance : minThreshold
   if (wallet.value) {
     recipientWalletInput.value = wallet.value
+  } else if (authStore.user?.walletAddress) {
+    const firstAddr = authStore.user.walletAddress.split(/[,;\n]+/)[0]?.trim()
+    if (firstAddr) recipientWalletInput.value = firstAddr
   }
   isWithdrawModalOpen.value = true
 }

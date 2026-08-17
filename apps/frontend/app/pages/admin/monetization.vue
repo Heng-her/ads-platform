@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
@@ -54,6 +54,8 @@ const isSaving = ref(false)
 // 4 Tab Navigation State (Synced with URL ?tab= query parameter)
 const activeMonetizationTab = ref<'payouts' | 'user_wallets' | 'ad_networks' | 'revenue_strategy'>('payouts')
 
+let payoutsAutoPollTimer: ReturnType<typeof setInterval> | null = null
+
 watch(
   () => route.query.tab,
   (newTab) => {
@@ -74,12 +76,26 @@ watch(activeMonetizationTab, (newTab) => {
   if (route.query.tab !== newTab) {
     router.replace({ query: { ...route.query, tab: newTab } })
   }
+  if (payoutsAutoPollTimer) {
+    clearInterval(payoutsAutoPollTimer)
+    payoutsAutoPollTimer = null
+  }
   if (newTab === 'user_wallets') {
     fetchCreators()
   } else if (newTab === 'payouts') {
     fetchWithdrawalRequests()
+    payoutsAutoPollTimer = setInterval(() => {
+      fetchWithdrawalRequests()
+    }, 8000)
   } else if (newTab === 'revenue_strategy') {
     fetchMonetizationDashboard()
+  }
+})
+
+onUnmounted(() => {
+  if (payoutsAutoPollTimer) {
+    clearInterval(payoutsAutoPollTimer)
+    payoutsAutoPollTimer = null
   }
 })
 
@@ -865,7 +881,8 @@ onMounted(async () => {
         :global-default-ecpm="globalDefaultEcpm" :average-cpm="monetizationStats.averageCpm"
         :creator-revenue-share-percent="creatorRevenueSharePercent" :monetization-engine="monetizationEngine"
         @set-all-auto="setAllCreatorsToAuto" @refresh="fetchCreators" @toggle-model="toggleCreatorModel"
-        @start-edit="startEditEcpm" @cancel-edit="cancelEditEcpm" @save-ecpm="saveCreatorEcpm" @save-balance="saveUserBalance" />
+        @start-edit="startEditEcpm" @cancel-edit="cancelEditEcpm" @save-ecpm="saveCreatorEcpm"
+        @save-balance="saveUserBalance" />
     </div>
 
     <!-- Modals -->
