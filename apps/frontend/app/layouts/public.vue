@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useCategories } from '~/composables/useCategories'
 import { useApi } from '~/composables/useApi'
 
+import { usePublicAdConfig } from '~/composables/usePublicAdConfig'
+
 useHead({
     title: 'Signal — Ads Platform Search & Discover',
     link: [
@@ -20,6 +22,39 @@ const route = useRoute()
 const router = useRouter()
 const api = useApi()
 const { categories } = useCategories()
+const { adConfig } = usePublicAdConfig()
+
+const isArticleRoute = computed(() => route.path.startsWith('/article'))
+const isMobileSponsorDismissed = ref(false)
+
+const adsterraMobileUrl = computed(() => {
+    const baseUrl = adConfig.value?.adsterra?.smartlinkUrl
+    if (!baseUrl) return '#'
+    const separator = baseUrl.includes('?') ? '&' : '?'
+    return `${baseUrl}${separator}subid=mobile_anchor`
+})
+
+function handleMobileSponsorClick() {
+    if (!import.meta.client) return
+    try {
+        const payload = JSON.stringify({
+            provider: 'ADSTERRA',
+            format: 'SMARTLINK',
+            placement: 'categoryFeed'
+        })
+        if (navigator.sendBeacon) {
+            const blob = new Blob([payload], { type: 'application/json' })
+            navigator.sendBeacon('/api/ads/click', blob)
+        } else {
+            fetch('/api/ads/click', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: payload,
+                keepalive: true
+            }).catch(() => { })
+        }
+    } catch (e) { }
+}
 
 // Mobile drawer & search overlay state
 const isMobileOpen = ref(false)
@@ -405,8 +440,46 @@ onUnmounted(() => {
             <slot />
         </main>
 
-        <!-- Glassmorphic Sticky Mobile Bottom Navigation Bar -->
-        <div class="md:hidden fixed bottom-3 left-3 right-3 z-40 rounded-2xl bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border border-gray-200/80 dark:border-gray-800/80 shadow-lg px-2 py-1.5 flex items-center justify-around">
+        <!-- Mobile Bottom Section: Adsterra High-CPM Sponsor Bar for Article pages OR Default Nav Dock for non-article pages -->
+        <div v-if="isArticleRoute" class="md:hidden">
+            <!-- Adsterra High-CPM Sponsor Mobile Floating Anchor Bar -->
+            <div v-if="!isMobileSponsorDismissed"
+                class="fixed bottom-2 left-2 right-2 z-50 h-14 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 p-2 shadow-2xl shadow-amber-500/30 backdrop-blur-md border border-amber-400/40 flex items-center justify-between transition-all duration-300 active:scale-[0.98]">
+                <a :href="adsterraMobileUrl" target="_blank" rel="noopener noreferrer" @click="handleMobileSponsorClick"
+                    class="flex-1 flex items-center gap-2.5 min-w-0 pr-2">
+                    <div class="h-9 w-9 rounded-xl bg-white/20 text-white flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+                        <UIcon name="i-heroicons-bolt" class="w-5 h-5 animate-pulse text-amber-200" />
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                        <div class="flex items-center gap-1.5 text-[11px] font-extrabold text-white leading-tight truncate">
+                            <span>Special Partner Offer</span>
+                            <span class="inline-flex items-center rounded-full bg-amber-400/30 px-1.5 py-0.2 text-[9px] font-bold text-amber-100 uppercase tracking-wider">
+                                Sponsor
+                            </span>
+                        </div>
+                        <span class="text-[10px] text-amber-100/90 font-medium truncate">
+                            Tap to view exclusive partner rewards & deals
+                        </span>
+                    </div>
+                </a>
+
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <a :href="adsterraMobileUrl" target="_blank" rel="noopener noreferrer" @click="handleMobileSponsorClick"
+                        class="rounded-xl bg-white px-3 py-1.5 text-xs font-extrabold text-amber-600 shadow-md flex items-center gap-1 hover:bg-amber-50 transition-colors">
+                        <span>View Deal</span>
+                        <UIcon name="i-heroicons-arrow-right" class="w-3.5 h-3.5" />
+                    </a>
+                    <button @click="isMobileSponsorDismissed = true"
+                        class="p-1 rounded-lg text-amber-100 hover:text-white hover:bg-white/20 transition-colors"
+                        title="Dismiss banner">
+                        <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Glassmorphic Sticky Mobile Bottom Navigation Bar (For Non-Article Pages) -->
+        <div v-else class="md:hidden fixed bottom-3 left-3 right-3 z-40 rounded-2xl bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border border-gray-200/80 dark:border-gray-800/80 shadow-lg px-2 py-1.5 flex items-center justify-around">
             <NuxtLink to="/article" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" active-class="text-primary font-bold">
                 <UIcon name="i-heroicons-newspaper" class="w-5 h-5" />
                 <span>Articles</span>

@@ -225,6 +225,13 @@ watch(campaign, (currentCampaign) => {
                         </div>
                     </header>
 
+                    <!-- Mobile-Only High-Visibility Ad Banner (Right below Hero Header) -->
+                    <div class="block lg:hidden my-4">
+                        <AdBanner slot-type="inArticle"
+                            :campaign-id="campaign?.id"
+                            :creator-id="campaign?.creatorId || campaign?.userId" />
+                    </div>
+
                     <!-- Full media gallery -->
                     <section v-if="galleryImages.length || campaign.videoUrls?.length" class="space-y-3">
                         <div v-if="galleryImages.length" class="grid gap-3"
