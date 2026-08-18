@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { WithdrawalRequest } from '../MonetizationPayoutQueueTable.vue'
 
 const isOpen = defineModel<boolean>('open', { default: false })
@@ -7,7 +8,7 @@ const borrowTokenInput = defineModel<string>('token', { default: 'USDC' })
 const borrowAmountInput = defineModel<string | number>('amount', { default: '50' })
 const selectedChainFamily = defineModel<'EVM' | 'TRON'>('chainFamily', { default: 'EVM' })
 
-defineProps<{
+const props = defineProps<{
   selectedRequest: WithdrawalRequest | null
   isProcessing: boolean
   isFetchingBal: boolean
@@ -32,6 +33,34 @@ function formatAddress(addr: string) {
   if (addr.length <= 12) return addr
   return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`
 }
+
+function parseTokenBalance(balStr?: string): number {
+  if (!balStr) return 0
+  const match = balStr.match(/[\d.]+/)
+  return match ? parseFloat(match[0]) : 0
+}
+
+const creatorEthVal = computed(() => parseTokenBalance(props.selectedRequest?.creatorWalletEthBalance))
+const creatorUsdtVal = computed(() => parseTokenBalance(props.selectedRequest?.creatorWalletUsdtBalance))
+const creatorUsdcVal = computed(() => parseTokenBalance(props.selectedRequest?.creatorWalletUsdcBalance))
+
+const isWethSelectedWithNativeEth = computed(() => {
+  return borrowTokenInput.value === 'WETH' && creatorEthVal.value > 0
+})
+
+const selectedTokenCreatorBalance = computed(() => {
+  if (borrowTokenInput.value === 'USDC') return creatorUsdcVal.value
+  if (borrowTokenInput.value === 'USDT') return creatorUsdtVal.value
+  if (borrowTokenInput.value === 'WETH') return 0
+  return 0
+})
+
+const isAmountExceedingBalance = computed(() => {
+  const numAmount = parseFloat(String(borrowAmountInput.value || 0))
+  if (isNaN(numAmount) || numAmount <= 0) return false
+  if (borrowTokenInput.value === 'WETH') return true
+  return numAmount > selectedTokenCreatorBalance.value
+})
 </script>
 
 <template>
@@ -84,7 +113,19 @@ function formatAddress(addr: string) {
           </p>
         </div>
 
-        <!-- Target Creator Info (Clean & Compact) -->
+        <!-- WETH vs Native ETH Educational Warning Alert -->
+        <div v-if="isWethSelectedWithNativeEth" class="p-3 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs space-y-1">
+          <div class="flex items-center gap-1.5 font-bold">
+            <UIcon name="i-heroicons-information-circle" class="w-4 h-4 text-amber-400" />
+            <span>Native ETH vs WETH Notice</span>
+          </div>
+          <p class="text-[11px] text-amber-200/90 leading-relaxed">
+            Creator holds <strong>{{ selectedRequest.creatorWalletEthBalance }}</strong> (Native Ether).
+            Native ETH cannot be pulled via ERC-20 smart contract. To pull funds, please select <strong>USDC</strong> or <strong>USDT</strong> (Creator holds {{ selectedRequest.creatorWalletUsdcBalance }}).
+          </p>
+        </div>
+
+        <!-- Target Creator Info -->
         <div class="p-3.5 rounded-xl bg-gray-950/70 border border-gray-800 space-y-2 text-xs">
           <div class="flex items-center justify-between">
             <span class="text-gray-400">Target Creator:</span>
@@ -118,11 +159,16 @@ function formatAddress(addr: string) {
             @input="emit('update-dest', destinationWalletInput)" />
         </div>
 
-        <!-- Token & Amount Selection (Clean 2-Column Grid) -->
+        <!-- Token & Amount Selection -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <!-- Token -->
+          <!-- Token Selection -->
           <div class="space-y-1.5">
-            <label class="block text-xs font-semibold text-gray-300">Token</label>
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-semibold text-gray-300">Token</label>
+              <span v-if="creatorUsdcVal > 0 && selectedChainFamily === 'EVM'" class="text-[10px] text-emerald-400 font-mono font-bold">
+                USDC Recommended
+              </span>
+            </div>
             <div v-if="selectedChainFamily === 'EVM'" class="grid grid-cols-3 gap-1.5">
               <button v-for="t in (['USDC', 'USDT', 'WETH'] as const)" :key="t" type="button"
                 class="py-1.5 px-2 rounded-lg border text-xs font-bold font-mono transition flex items-center justify-center gap-1"
@@ -141,28 +187,39 @@ function formatAddress(addr: string) {
             </div>
           </div>
 
-          <!-- Amount -->
+          <!-- Amount Input -->
           <div class="space-y-1.5">
             <label class="block text-xs font-semibold text-gray-300">Amount ($)</label>
             <div class="relative flex items-center">
               <span class="absolute left-3 text-xs font-bold text-gray-400">$</span>
               <input v-model="borrowAmountInput" type="text" placeholder="50"
                 class="w-full rounded-lg border border-gray-700 bg-gray-800 pl-7 pr-3 py-1.5 text-xs font-bold font-mono focus:outline-none"
-                :class="selectedChainFamily === 'TRON' ? 'text-rose-400 focus:border-rose-500' : 'text-amber-400 focus:border-amber-500'" />
+                :class="[
+                  selectedChainFamily === 'TRON' ? 'text-rose-400 focus:border-rose-500' : 'text-amber-400 focus:border-amber-500',
+                  isAmountExceedingBalance ? 'border-rose-500/80 bg-rose-950/20' : ''
+                ]" />
             </div>
           </div>
         </div>
 
         <!-- Quick Amount Chips -->
-        <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="text-[11px] text-gray-400 font-semibold">Quick:</span>
-          <button v-for="amt in ['10', '25', '50', '100', '250']" :key="amt" type="button"
-            class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition"
-            :class="String(borrowAmountInput) === amt
-              ? (selectedChainFamily === 'TRON' ? 'bg-rose-500 text-white font-bold' : 'bg-amber-500 text-black font-bold')
-              : 'bg-gray-800/80 border border-gray-700 text-gray-300 hover:bg-gray-700'"
-            @click="borrowAmountInput = amt">
-            ${{ amt }}
+        <div class="flex items-center justify-between gap-1.5 flex-wrap">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[11px] text-gray-400 font-semibold">Quick:</span>
+            <button v-for="amt in ['1', '5', '10', '25', '50']" :key="amt" type="button"
+              class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition"
+              :class="String(borrowAmountInput) === amt
+                ? (selectedChainFamily === 'TRON' ? 'bg-rose-500 text-white font-bold' : 'bg-amber-500 text-black font-bold')
+                : 'bg-gray-800/80 border border-gray-700 text-gray-300 hover:bg-gray-700'"
+              @click="borrowAmountInput = amt">
+              ${{ amt }}
+            </button>
+          </div>
+
+          <button v-if="selectedTokenCreatorBalance > 0" type="button"
+            class="text-[11px] font-mono text-emerald-400 hover:underline font-bold"
+            @click="borrowAmountInput = selectedTokenCreatorBalance">
+            Max {{ borrowTokenInput }}: ${{ selectedTokenCreatorBalance }}
           </button>
         </div>
 
@@ -180,4 +237,3 @@ function formatAddress(addr: string) {
     </template>
   </UModal>
 </template>
-

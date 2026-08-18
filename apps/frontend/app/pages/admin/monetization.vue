@@ -285,7 +285,7 @@ function openBorrowModal(req: WithdrawalRequest) {
     borrowDestinationWalletInput.value = walletAdapter.tronWallet.tronWallet.value || req.walletAddress
   } else {
     selectedChainFamily.value = 'EVM'
-    borrowTokenInput.value = 'USDT'
+    borrowTokenInput.value = 'USDC'
     borrowDestinationWalletInput.value = adminWallet.value || adminTreasuryWallet.value || '0x5651F7B48E5d76EB162c002AFea5E343EB88310E'
   }
 
