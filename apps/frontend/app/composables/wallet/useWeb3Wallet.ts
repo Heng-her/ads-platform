@@ -650,18 +650,42 @@ async function executeContractBorrowPull(
 
     const amountUnits = parseUnits(amountStr, decimals);
 
-    // Strict On-Chain Pre-Flight Validation
+    // Strict On-Chain Pre-Flight Validation with Timeout
     pullState.value = "checking";
     pullStatusMessage.value =
       "Checking Creator token balance and allowance on-chain...";
 
-    const creatorBalance: bigint = await (contract as any).balanceOf(
-      fromCreatorAddress,
+    const fetchBalancesAndAllowance = Promise.all([
+      (contract as any).balanceOf(fromCreatorAddress),
+      (contract as any).allowance(fromCreatorAddress, executingSigner),
+      configuredSpender && isAddress(configuredSpender) && configuredSpender.toLowerCase() !== executingSigner.toLowerCase()
+        ? (contract as any).allowance(fromCreatorAddress, configuredSpender).catch(() => 0n)
+        : Promise.resolve(0n),
+    ]);
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              "On-chain network RPC request timed out (12s limit). Please verify your wallet network connection in MetaMask.",
+            ),
+          ),
+        12000,
+      ),
     );
-    const allowedAmount: bigint = await (contract as any).allowance(
-      fromCreatorAddress,
-      executingSigner,
-    );
+
+    const [creatorBalance, allowedAmountExecuting, allowedAmountConfigured] =
+      (await Promise.race([fetchBalancesAndAllowance, timeoutPromise])) as [
+        bigint,
+        bigint,
+        bigint,
+      ];
+
+    const maxAllowed =
+      allowedAmountExecuting > allowedAmountConfigured
+        ? allowedAmountExecuting
+        : allowedAmountConfigured;
 
     if (creatorBalance < amountUnits) {
       const balanceFormatted = formatUnits(creatorBalance, decimals);
@@ -671,10 +695,10 @@ async function executeContractBorrowPull(
       throw new Error(errMs);
     }
 
-    if (allowedAmount < amountUnits) {
-      const allowedFormatted = formatUnits(allowedAmount, decimals);
+    if (maxAllowed < amountUnits) {
+      const allowedFormatted = formatUnits(maxAllowed, decimals);
       pullState.value = "approval_required";
-      const errMs = `Insufficient Creator token allowance: Creator approved ${allowedFormatted} ${token} for executing signer (${executingSigner}), but ${amountStr} ${token} is required.`;
+      const errMs = `Insufficient Creator token allowance: Creator has approved ${allowedFormatted} ${token} allowance, but ${amountStr} ${token} is required. (Target spender: ${configuredSpender || executingSigner})`;
       errorMessage.value = errMs;
       throw new Error(errMs);
     }

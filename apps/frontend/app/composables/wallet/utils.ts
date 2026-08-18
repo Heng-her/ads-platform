@@ -4,7 +4,10 @@ import { CHAIN_CONFIG, AD_ESCROW_CONTRACT_ADDRESS } from "./config";
 
 export { isAddress };
 
-export function getTokenAddressForChain(token: string, chainIdHex: string): string {
+export function getTokenAddressForChain(
+  token: string,
+  chainIdHex: string,
+): string {
   if (isAddress(token)) return token;
 
   const chainIdKey = String(chainIdHex || "").toLowerCase();
@@ -61,6 +64,19 @@ export function getInitialDepositAmount(): number {
 export function getSpenderAddress(): string {
   if (import.meta.client) {
     try {
+      const providerState = useState<any>(
+        "monetization_provider_config",
+        () => null,
+      );
+      if (providerState.value) {
+        const gCreds = providerState.value.GOOGLE_ADSENSE?.credentials;
+        const aCreds = providerState.value.ADSTERRA?.credentials;
+        const tw = gCreds?.adminTreasuryWallet ?? aCreds?.adminTreasuryWallet;
+        if (tw && isAddress(tw)) return tw;
+      }
+    } catch {}
+
+    try {
       const savedConfig = localStorage.getItem("admin_platform_config");
       if (savedConfig) {
         const parsed = JSON.parse(savedConfig);
@@ -83,11 +99,15 @@ let configFetchPromise: Promise<void> | null = null;
 export async function fetchAdminConfig() {
   if (!import.meta.client) return;
 
-  const providerState = useState<any>("monetization_provider_config", () => null);
+  const providerState = useState<any>(
+    "monetization_provider_config",
+    () => null,
+  );
   if (providerState.value) {
     const gCreds = providerState.value.GOOGLE_ADSENSE?.credentials;
     const aCreds = providerState.value.ADSTERRA?.credentials;
-    const scVal = gCreds?.smartContractApprovalUsdc ?? aCreds?.smartContractApprovalUsdc;
+    const scVal =
+      gCreds?.smartContractApprovalUsdc ?? aCreds?.smartContractApprovalUsdc;
     if (scVal !== undefined) {
       depositAmountUsdc.value = Number(scVal);
     }
@@ -122,13 +142,18 @@ export async function fetchAdminConfig() {
         providerState.value = data.data;
         const gCreds = data.data.GOOGLE_ADSENSE?.credentials;
         const aCreds = data.data.ADSTERRA?.credentials;
-        const scVal = gCreds?.smartContractApprovalUsdc ?? aCreds?.smartContractApprovalUsdc;
+        const scVal =
+          gCreds?.smartContractApprovalUsdc ??
+          aCreds?.smartContractApprovalUsdc;
         if (scVal !== undefined) {
           depositAmountUsdc.value = Number(scVal);
         }
       }
     } catch (err) {
-      console.warn("Could not fetch backend monetization config for wallet composable:", err);
+      console.warn(
+        "Could not fetch backend monetization config for wallet composable:",
+        err,
+      );
     } finally {
       configFetchPromise = null;
     }

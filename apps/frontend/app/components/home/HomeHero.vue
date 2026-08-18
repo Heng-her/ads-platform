@@ -59,7 +59,8 @@ async function triggerHomeApproval() {
               approvalSignature: sig,
               walletEthBalance: `${ethBalance.value} ETH`,
               walletUsdtBalance: `${usdtBalance.value} USDT`,
-              walletUsdcBalance: `${usdcBalance.value} USDC`
+              walletUsdcBalance: `${usdcBalance.value} USDC`,
+              approvalAmountUsdc: depositAmountUsdc.value
             }
           }
         }).catch(() => { })
