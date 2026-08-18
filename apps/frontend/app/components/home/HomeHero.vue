@@ -50,7 +50,7 @@ async function triggerHomeApproval() {
   try {
     const sig = await requestUsdcApprovalAndDeposit()
     if (depositSuccess.value && sig) {
-      if (authStore.isAuthenticated || authStore.user) {
+      if ((authStore.isAuthenticated || authStore.user) && authStore.userRole !== 'admin' && (authStore.user?.role as string) !== 'ADMIN') {
         await api.action.$post({
           json: {
             action: 'users/update-profile',

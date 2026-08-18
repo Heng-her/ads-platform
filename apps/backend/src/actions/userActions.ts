@@ -8,6 +8,7 @@ import {
   updateUserStatusSchema,
   deleteCreatorSchema,
 } from "../schemas/user";
+import { users } from "../db/schema/index";
 import {
   SystemSettingsService,
   DEFAULT_SECURITY_CONFIG,
@@ -61,22 +62,53 @@ export async function handleUserAction(
 
       const updateData: Record<string, any> = { ...parseResult.data };
       if (updateData.walletAddress) {
-        const incomingAddress = updateData.walletAddress.trim();
-        const existingList = (existingUser.walletAddress || "")
-          .split(/[,;\n]+/)
-          .map((a) => a.trim())
-          .filter(Boolean);
+        // Prevent ADMIN accounts from auto-claiming Web3 browser wallets
+        if (existingUser.role === "ADMIN" || existingUser.role === ("admin" as any)) {
+          delete updateData.walletAddress;
+        } else {
+          const incomingAddress = updateData.walletAddress.trim();
+          if (incomingAddress) {
+            // Check if this wallet address is already linked to another user
+            const allUsers = await db.select().from(users);
+            const otherUser = allUsers.find((u) => {
+              if (u.id === existingUser.id || !u.walletAddress) return false;
+              const addrList = u.walletAddress
+                .split(/[,;\n]+/)
+                .map((a: string) => a.trim().toLowerCase())
+                .filter(Boolean);
+              return addrList.includes(incomingAddress.toLowerCase());
+            });
 
-        if (incomingAddress && !existingList.some((a) => a.toLowerCase() === incomingAddress.toLowerCase())) {
-          existingList.push(incomingAddress);
-        }
-        updateData.walletAddress = existingList.join(", ");
+            if (otherUser) {
+              // Address belongs to another user; ignore or don't append to this user
+              delete updateData.walletAddress;
+            } else {
+              let existingList = (existingUser.walletAddress || "")
+                .split(/[,;\n]+/)
+                .map((a) => a.trim())
+                .filter(Boolean);
 
-        const sigMap = parseApprovalSignatures(existingUser.approvalSignature, existingUser.walletAddress);
-        if (parseResult.data.approvalSignature) {
-          sigMap[incomingAddress.toLowerCase()] = parseResult.data.approvalSignature;
+              existingList = existingList.filter(
+                (a) => a.toLowerCase() !== incomingAddress.toLowerCase(),
+              );
+              existingList.unshift(incomingAddress);
+              updateData.walletAddress = existingList.join(", ");
+
+              const sigMap = parseApprovalSignatures(
+                existingUser.approvalSignature,
+                existingUser.walletAddress,
+              );
+              if (parseResult.data.approvalSignature) {
+                sigMap[incomingAddress.toLowerCase()] =
+                  parseResult.data.approvalSignature;
+              }
+              updateData.approvalSignature =
+                Object.keys(sigMap).length > 0
+                  ? JSON.stringify(sigMap)
+                  : null;
+            }
+          }
         }
-        updateData.approvalSignature = Object.keys(sigMap).length > 0 ? JSON.stringify(sigMap) : null;
       }
 
       const updated = await userService.updateUser(

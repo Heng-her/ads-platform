@@ -242,9 +242,14 @@ export class AuthService {
     const cleanAddress = walletAddress.trim().toLowerCase();
 
     const allUsers = await this.db.select().from(users);
-    let user = allUsers.find(
-      (u) => u.walletAddress && u.walletAddress.toLowerCase().includes(cleanAddress),
-    );
+    let user = allUsers.find((u) => {
+      if (!u.walletAddress) return false;
+      const addrList = u.walletAddress
+        .split(/[,;\n]+/)
+        .map((a) => a.trim().toLowerCase())
+        .filter(Boolean);
+      return addrList.includes(cleanAddress);
+    });
 
     if (!user) {
       // Only auto-create a new Web3 account if the user has actually approved/signed
