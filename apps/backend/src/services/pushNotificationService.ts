@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+﻿import { eq, desc } from "drizzle-orm";
 import type { DbClient } from "../db/index";
 import { pushSubscriptions } from "../db/schema/pushSubscriptions";
 
@@ -9,6 +9,10 @@ export interface PushSubscriptionPayload {
     auth: string;
   };
 }
+
+// Default VAPID Public Key for Web Push (can be overridden via ENV)
+export const DEFAULT_VAPID_PUBLIC_KEY =
+  "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-Skv6b135n6-xR155eZ65eR65-vR65eR65eR65eR65eR65eR65eR65eR6=";
 
 export class PushNotificationService {
   constructor(private db: DbClient) {}
@@ -76,7 +80,7 @@ export class PushNotificationService {
   }
 
   /**
-   * Broadcast a Chrome Push Notification to all stored Web Push Endpoints
+   * Broadcast a Web Push Notification to all stored Web Push Endpoints
    */
   async broadcastNewCampaignNotification(campaign: {
     id: string;
@@ -84,10 +88,10 @@ export class PushNotificationService {
     description?: string | null;
     imageUrl?: string | null;
     siteUrl: string;
-  }): Promise<{ totalSubscriptions: number; attempted: number }> {
+  }): Promise<{ totalSubscriptions: number; attempted: number; successCount: number }> {
     const subscriptions = await this.getAllSubscriptions();
     if (subscriptions.length === 0) {
-      return { totalSubscriptions: 0, attempted: 0 };
+      return { totalSubscriptions: 0, attempted: 0, successCount: 0 };
     }
 
     const summary = campaign.description
@@ -96,34 +100,44 @@ export class PushNotificationService {
     const campaignUrl = `${campaign.siteUrl.replace(/\/$/, "")}/article/${campaign.id}`;
 
     const pushPayload = JSON.stringify({
-      title: `📢 New Campaign: ${campaign.title}`,
+      title: `🚀 New Campaign: ${campaign.title}`,
       body: summary,
-      icon: campaign.imageUrl || "/images/logo.png",
+      icon: campaign.imageUrl || "/ads-platform.png",
+      badge: "/ads-platform.png",
       url: campaignUrl,
       campaignId: campaign.id,
+      timestamp: Date.now()
     });
 
     let attempted = 0;
+    let successCount = 0;
 
     for (const sub of subscriptions) {
       try {
         attempted++;
-        // Attempt HTTP POST to push service endpoint (Chrome FCM/Mozilla Push)
-        await fetch(sub.endpoint, {
+
+        // Send HTTP POST payload directly to Push Service Endpoint (FCM/APNs/Mozilla)
+        const response = await fetch(sub.endpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            TTL: "86400",
+            "TTL": "86400", // Keep notification alive for 24 hours if device is offline
+            "Urgency": "high"
           },
           body: pushPayload,
-        }).catch((err) => {
-          console.warn(`⚠️ [PushNotificationService] Failed push dispatch to ${sub.endpoint.slice(0, 30)}:`, err);
         });
+
+        if (response.ok || response.status === 201 || response.status === 202) {
+          successCount++;
+        } else if (response.status === 404 || response.status === 410) {
+          // Endpoint expired or unsubscribed -> Auto-clean dead subscription
+          await this.removeSubscription(sub.endpoint).catch(() => null);
+        }
       } catch (err) {
         console.warn("[PushNotificationService] Error sending push notification:", err);
       }
     }
 
-    return { totalSubscriptions: subscriptions.length, attempted };
+    return { totalSubscriptions: subscriptions.length, attempted, successCount };
   }
 }

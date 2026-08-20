@@ -1,10 +1,24 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
+﻿// https://nuxt.com/docs/api/configuration/nuxt-config
 import { fileURLToPath } from "node:url";
 import { defineNuxtConfig } from "nuxt/config";
 
 export default defineNuxtConfig({
   future: {
     compatibilityVersion: 4,
+  },
+  app: {
+    head: {
+      link: [
+        { rel: 'manifest', href: '/manifest.json' },
+        { rel: 'apple-touch-icon', href: '/ads-platform.png' }
+      ],
+      meta: [
+        { name: 'theme-color', content: '#4f46e5' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' }
+      ]
+    }
   },
   runtimeConfig: {
     // server secrets (not available in browser or public config)
@@ -117,3 +131,4 @@ export default defineNuxtConfig({
     sitemap: "/sitemap.xml",
   },
 });
+
