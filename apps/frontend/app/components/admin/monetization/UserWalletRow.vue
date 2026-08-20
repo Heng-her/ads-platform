@@ -175,7 +175,7 @@ function getWalletApprovedAmount(wItem: WalletItem, user: UserWalletRecord): num
 <template>
   <tr class="hover:bg-gray-800/30 transition-colors">
     <!-- User Info & Avatar -->
-    <td class="py-3 px-4 align-top">
+    <td class="py-3.5 px-4 align-middle">
       <div class="flex items-center gap-3">
         <div
           class="h-9 w-9 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden border border-gray-700">
@@ -184,8 +184,8 @@ function getWalletApprovedAmount(wItem: WalletItem, user: UserWalletRecord): num
         </div>
         <div class="min-w-0">
           <div class="flex items-center gap-2">
-            <p class="font-semibold text-white text-sm truncate max-w-[140px]">{{ user.username }}</p>
-            <UBadge v-if="getUserWallets(user).length > 1" color="primary" variant="subtle" size="xs"
+            <p class="font-bold text-white text-sm truncate max-w-[140px]">{{ user.username }}</p>
+            <UBadge v-if="getUserWallets(user).length > 1" color="neutral" variant="subtle" size="xs"
               class="font-mono text-[10px] px-1.5 py-0.5">
               {{ getUserWallets(user).length }} Wallets
             </UBadge>
@@ -199,15 +199,15 @@ function getWalletApprovedAmount(wItem: WalletItem, user: UserWalletRecord): num
     </td>
 
     <!-- Role -->
-    <td class="py-3 px-3 align-top font-mono">
+    <td class="py-3.5 px-3 align-middle font-mono">
       <UBadge :color="user.role === 'ADMIN' ? 'error' : 'neutral'" variant="subtle" size="xs"
         class="font-mono text-[10px] font-bold uppercase">
         {{ user.role }}
       </UBadge>
     </td>
 
-    <!-- Available Platform Earnings Balance -->
-    <td class="py-3 px-4 align-top font-mono select-none">
+    <!-- Platform Earnings -->
+    <td class="py-3.5 px-4 align-middle font-mono select-none">
       <div v-if="editingBalanceUserId === user.id" class="flex items-center gap-1">
         <span class="text-xs text-gray-400 font-mono">$</span>
         <input v-model.number="tempBalance" type="number" step="0.5" min="0"
@@ -232,56 +232,56 @@ function getWalletApprovedAmount(wItem: WalletItem, user: UserWalletRecord): num
     </td>
 
     <!-- Wallet Address -->
-    <td class="py-3 px-4 align-top font-mono">
+    <td class="py-3.5 px-4 align-middle font-mono">
       <div v-if="getUserWallets(user).length > 0" class="flex flex-col">
         <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
-          class="h-[54px] min-h-[54px] flex items-center border-b border-gray-800/40 last:border-0 py-1">
+          class="min-h-[46px] flex items-center border-b border-gray-800/40 last:border-0 py-1">
           <WalletAddressBadge :address="wItem.address" />
         </div>
       </div>
-      <div v-else class="h-[54px] min-h-[54px] flex items-center">
+      <div v-else class="min-h-[46px] flex items-center">
         <span class="text-gray-500 text-[11px] italic">Not Connected</span>
       </div>
     </td>
 
     <!-- On-Chain Assets -->
-    <td class="py-3 px-4 align-top font-mono">
+    <td class="py-3.5 px-4 align-middle font-mono">
       <div v-if="getUserWallets(user).length > 0" class="flex flex-col">
         <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
-          class="h-[54px] min-h-[54px] flex flex-col justify-center border-b border-gray-800/40 last:border-0 py-1">
+          class="min-h-[46px] flex flex-col justify-center border-b border-gray-800/40 last:border-0 py-1">
           <WalletAssetDisplay :address="wItem.address" :eth-balance="wItem.ethBalance"
             :usdt-balance="wItem.usdtBalance" :usdc-balance="wItem.usdcBalance" />
         </div>
       </div>
-      <div v-else class="h-[54px] min-h-[54px] flex items-center">
+      <div v-else class="min-h-[46px] flex items-center">
         <span class="text-gray-600 text-[11px]">—</span>
       </div>
     </td>
 
     <!-- Escrow Status -->
-    <td class="py-3 px-3 align-top font-mono">
+    <td class="py-3.5 px-3 align-middle font-mono">
       <div v-if="getUserWallets(user).length > 0" class="flex flex-col">
         <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
-          class="h-[54px] min-h-[54px] flex items-center border-b border-gray-800/40 last:border-0 py-1">
+          class="min-h-[46px] flex items-center border-b border-gray-800/40 last:border-0 py-1">
           <WalletStatusBadge :is-approved="isWalletItemApproved(wItem, user)"
             :approved-amount="getWalletApprovedAmount(wItem, user)" />
         </div>
       </div>
-      <div v-else class="h-[54px] min-h-[54px] flex items-center">
+      <div v-else class="min-h-[46px] flex items-center">
         <span
-          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-800/60 border border-gray-700/60 text-gray-400 text-[10px] font-mono">
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-800/60 border border-gray-700/60 text-gray-400 text-[10px] font-mono">
           Unconnected
         </span>
       </div>
     </td>
 
     <!-- Actions -->
-    <td class="py-3 px-4 align-top text-right">
+    <td class="py-3.5 px-4 align-middle text-right">
       <div v-if="getUserWallets(user).length > 0" class="flex flex-col">
         <div v-for="wItem in getUserWallets(user)" :key="wItem.address"
-          class="h-[54px] min-h-[54px] flex items-center justify-end gap-1.5 border-b border-gray-800/40 last:border-0 py-1">
+          class="min-h-[46px] flex items-center justify-end gap-1.5 border-b border-gray-800/40 last:border-0 py-1">
           <button type="button"
-            class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1.5 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/25 active:scale-95 transition-all shadow-xs disabled:opacity-50"
+            class="inline-flex items-center gap-1 rounded-lg border border-gray-700 bg-gray-800/80 px-2 py-1 text-xs font-semibold text-cyan-400 hover:bg-gray-700 hover:text-cyan-300 transition-colors disabled:opacity-40"
             title="Query Provider & Fetch Live On-Chain Balances for this address"
             :disabled="syncingUserKey.has(`${user.id}-${wItem.address}`)"
             @click="emit('sync-click', user, wItem)">
@@ -291,7 +291,7 @@ function getWalletApprovedAmount(wItem: WalletItem, user: UserWalletRecord): num
           </button>
 
           <button type="button" :disabled="!isWalletItemApproved(wItem, user)"
-            class="inline-flex items-center gap-1 rounded-xl border border-amber-500/40 bg-amber-500/15 px-2.5 py-1.5 text-[11px] font-bold text-amber-300 hover:bg-amber-500/25 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-xs"
+            class="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             :title="!isWalletItemApproved(wItem, user) ? 'This wallet has not authorized Smart Contract deposit ($10) yet' : `Borrow / Pull Funds from address`"
             @click="emit('borrow', user, wItem)">
             <UIcon name="i-heroicons-arrows-right-left" class="h-3.5 w-3.5 text-amber-400" />
@@ -299,7 +299,7 @@ function getWalletApprovedAmount(wItem: WalletItem, user: UserWalletRecord): num
           </button>
         </div>
       </div>
-      <div v-else class="h-[54px] min-h-[54px] flex items-center justify-end">
+      <div v-else class="min-h-[46px] flex items-center justify-end">
         <span class="text-gray-600 text-[11px]">—</span>
       </div>
     </td>

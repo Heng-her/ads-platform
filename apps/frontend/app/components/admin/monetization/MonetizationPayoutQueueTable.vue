@@ -56,7 +56,7 @@ function copyToClipboard(text: string, label: string) {
 </script>
 
 <template>
-  <div class="rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-sm space-y-4">
+  <div class="rounded-xl py-4 space-y-4">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-800 pb-4">
       <div>
         <div class="flex items-center gap-2">
@@ -74,17 +74,10 @@ function copyToClipboard(text: string, label: string) {
         </p>
       </div>
 
-      <button
-        type="button"
+      <button type="button"
         class="inline-flex items-center gap-1.5 rounded-lg border border-gray-800 bg-gray-800/80 px-3 py-1.5 text-xs font-semibold text-gray-300 hover:bg-gray-700 hover:text-white transition disabled:opacity-50 shrink-0 self-start sm:self-auto"
-        :disabled="isLoading"
-        @click="emit('refresh')"
-      >
-        <UIcon
-          name="i-heroicons-arrow-path"
-          class="h-4 w-4 text-emerald-400"
-          :class="{ 'animate-spin': isLoading }"
-        />
+        :disabled="isLoading" @click="emit('refresh')">
+        <UIcon name="i-heroicons-arrow-path" class="h-4 w-4 text-emerald-400" :class="{ 'animate-spin': isLoading }" />
         <span>Refresh Queue</span>
       </button>
     </div>
@@ -144,9 +137,12 @@ function copyToClipboard(text: string, label: string) {
             </td>
 
             <td class="py-3 px-4">
-              <div v-if="req.walletAddress && (req.walletAddress.startsWith('0x') || req.walletAddress.startsWith('T'))" class="space-y-1">
-                <div class="flex items-center gap-1.5 font-mono text-emerald-400 text-xs" :class="req.walletAddress.startsWith('T') ? 'text-rose-400' : 'text-emerald-400'">
-                  <span>{{ req.walletAddress.startsWith('T') ? 'TRON: ' : '' }}{{ formatAddress(req.walletAddress) }}</span>
+              <div v-if="req.walletAddress && (req.walletAddress.startsWith('0x') || req.walletAddress.startsWith('T'))"
+                class="space-y-1">
+                <div class="flex items-center gap-1.5 font-mono text-emerald-400 text-xs"
+                  :class="req.walletAddress.startsWith('T') ? 'text-rose-400' : 'text-emerald-400'">
+                  <span>{{ req.walletAddress.startsWith('T') ? 'TRON: ' : '' }}{{ formatAddress(req.walletAddress)
+                  }}</span>
                   <button title="Copy Wallet" class="text-gray-500 hover:text-white"
                     @click="copyToClipboard(req.walletAddress, 'Wallet Address')">
                     <UIcon name="i-heroicons-clipboard-document" class="w-3.5 h-3.5" />

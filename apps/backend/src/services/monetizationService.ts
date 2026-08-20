@@ -293,7 +293,7 @@ export class MonetizationService {
 
   async getWithdrawalRequests(): Promise<any[]> {
     try {
-      // 1. Fetch real withdrawal records from DB
+      // Fetch real withdrawal records from DB
       const rows = await this.db.select().from(withdrawals).all();
       if (rows.length > 0) {
         rows.sort((a, b) => {
@@ -309,44 +309,6 @@ export class MonetizationService {
           date: r.createdAt
             ? new Date(r.createdAt).toISOString().slice(0, 16).replace("T", " ")
             : new Date().toISOString().slice(0, 16).replace("T", " "),
-        }));
-      }
-
-      // 2. Query real registered creators from users table where role = 'CREATOR'
-      const creatorUsers = await this.db
-        .select()
-        .from(users)
-        .where(eq(users.role, "CREATOR"))
-        .all();
-
-      if (creatorUsers.length > 0) {
-        return creatorUsers.map((u) => ({
-          id: `WR-${u.id.substring(0, 6).toUpperCase()}`,
-          creatorId: u.id,
-          creatorName: u.username,
-          creatorEmail: u.email,
-          creatorAvatar: u.avatar || null,
-          amount: 0.0,
-          adsenseShare: 0.0,
-          adsterraShare: 0.0,
-          method: "Web3 ETH Transfer",
-          walletAddress:
-            u.walletAddress ||
-            (u.portfolioLink && u.portfolioLink.startsWith("0x")
-              ? u.portfolioLink
-              : ""),
-          isWalletApproved: !!u.walletAddress,
-          approvalSignature: u.approvalSignature || null,
-          creatorWalletEthBalance: "0.0000 ETH",
-          creatorWalletUsdtBalance: "0.00 USDT",
-          creatorWalletUsdcBalance: "0.00 USDC",
-          network: "Arbitrum One",
-          token: "ETH",
-          cryptoAmount: "0.0000",
-          date: u.createdAt
-            ? new Date(u.createdAt).toISOString().slice(0, 16).replace("T", " ")
-            : new Date().toISOString().slice(0, 16).replace("T", " "),
-          status: "PENDING",
         }));
       }
     } catch (err) {

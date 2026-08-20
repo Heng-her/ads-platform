@@ -165,8 +165,7 @@ watch(campaign, (currentCampaign) => {
                 @select-category="(category) => router.push({ path: '/article', query: category ? { category } : {} })"
                 @reset-filters="router.push('/article')">
                 <template #bottom>
-                    <AdBanner provider="google" slot-type="sidebar"
-                        :campaign-id="campaign?.id"
+                    <AdBanner provider="google" slot-type="sidebar" :campaign-id="campaign?.id"
                         :creator-id="campaign?.creatorId || campaign?.userId" />
                 </template>
             </PublicFilterSidebar>
@@ -219,7 +218,7 @@ watch(campaign, (currentCampaign) => {
                             <div class="flex items-center gap-2">
                                 <UButton @click="isShareModalOpen = true" color="neutral" variant="outline" size="sm"
                                     icon="i-heroicons-share" class="font-mono font-bold cursor-pointer">
-                                    Share / Copy Link
+                                    Share
                                 </UButton>
                             </div>
                         </div>
@@ -227,8 +226,7 @@ watch(campaign, (currentCampaign) => {
 
                     <!-- Mobile-Only High-Visibility Ad Banner (Right below Hero Header) -->
                     <div class="block lg:hidden my-4">
-                        <AdBanner slot-type="in-article"
-                            :campaign-id="campaign?.id"
+                        <AdBanner slot-type="in-article" :campaign-id="campaign?.id"
                             :creator-id="campaign?.creatorId || campaign?.userId" />
                     </div>
 
@@ -262,7 +260,8 @@ watch(campaign, (currentCampaign) => {
                     </section>
 
                     <!-- Top Category Hero Sponsor Banner -->
-                    <CategoryHeroAdBanner :category="campaign?.category" :campaign-id="campaign?.id" :creator-id="campaign?.creatorId || campaign?.userId" />
+                    <CategoryHeroAdBanner :category="campaign?.category" :campaign-id="campaign?.id"
+                        :creator-id="campaign?.creatorId || campaign?.userId" />
 
                     <!-- Main Content Body -->
                     <div
@@ -325,8 +324,7 @@ watch(campaign, (currentCampaign) => {
 
                 <!-- Right Sidebar Column (Ads & Category Link) -->
                 <aside class="lg:col-span-4 space-y-6 sticky top-20">
-                    <AdBanner provider="adsterra" slot-type="sidebar"
-                        :campaign-id="campaign?.id"
+                    <AdBanner provider="adsterra" slot-type="sidebar" :campaign-id="campaign?.id"
                         :creator-id="campaign?.creatorId || campaign?.userId" />
                 </aside>
             </div>
