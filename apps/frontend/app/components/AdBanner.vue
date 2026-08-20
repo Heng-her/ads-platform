@@ -117,11 +117,11 @@ const adsterraTrackingUrl = computed(() => {
 
 const isSidebar = computed(() => props.slotType === 'sidebar' || props.slotType === 'articleSidebar')
 
-const headerTitle = computed(() => {
-  if (props.provider === 'google') return 'Featured Display Partner'
-  if (props.provider === 'adsterra') return 'Featured Sponsor Offer'
-  return isSidebar.value ? 'Sponsored Content' : 'Featured Partners & Official Sponsors'
-})
+// const headerTitle = computed(() => {
+//   if (props.provider === 'google') return 'Featured Display Partner'
+//   if (props.provider === 'adsterra') return 'Featured Sponsor Offer'
+//   return isSidebar.value ? 'Sponsored Content' : 'Featured Partners & Official Sponsors'
+// })
 
 const activeSlotId = computed(() => {
   if (!adConfig.value?.googleAdsense?.slots) return ''
@@ -197,13 +197,13 @@ watch([showGoogle, activeSlotId], () => {
 
 <template>
   <div v-if="showGoogle || showAdsterra" :class="isSidebar ? 'space-y-3' : 'my-6 space-y-3'">
-    <div
+    <!-- <div
       class="flex items-center justify-between text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-1">
       <span class="flex items-center gap-1.5 truncate">
         <UIcon name="i-heroicons-banknotes" class="w-4 h-4 text-emerald-500 shrink-0" />
         {{ headerTitle }}
       </span>
-    </div>
+    </div> -->
 
     <!-- Ad Network Grid (1-column if single provider or sidebar, 2-column if all on wide banner) -->
     <div
