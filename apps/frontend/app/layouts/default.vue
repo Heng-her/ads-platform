@@ -328,7 +328,7 @@ onUnmounted(() => {
     <MobileDrawer v-model:open="mobileMenuOpen" side="left" title="NewPlatform" icon="i-heroicons-globe-alt"
       icon-class="text-primary" :links="publicNavLinks" role="public" />
 
-    <!-- Newsletter Subscriber Modal -->
-    <NewsletterModal />
+    <!-- Google One Tap Subscribe Popup -->
+    <GoogleSubscribeOneTap />
   </div>
 </template>

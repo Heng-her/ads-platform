@@ -284,14 +284,8 @@ onUnmounted(() => {
             <template #left>
                 <div class="flex items-center gap-2">
                     <!-- Mobile Hamburger Drawer Toggle Button -->
-                    <UButton
-                        icon="i-heroicons-bars-3"
-                        color="neutral"
-                        variant="ghost"
-                        class="md:hidden"
-                        aria-label="Open mobile menu"
-                        @click="isMobileOpen = true"
-                    />
+                    <UButton icon="i-heroicons-bars-3" color="neutral" variant="ghost" class="md:hidden"
+                        aria-label="Open mobile menu" @click="isMobileOpen = true" />
 
                     <!-- Brand Logo -->
                     <NuxtLink to="/article" class="flex items-center gap-2 text-xl font-bold text-primary group">
@@ -317,14 +311,8 @@ onUnmounted(() => {
             <template #right>
                 <div class="flex items-center gap-1.5 sm:gap-2 md:gap-3">
                     <!-- Mobile Search Toggle Button -->
-                    <UButton
-                        icon="i-heroicons-magnifying-glass"
-                        color="neutral"
-                        variant="ghost"
-                        class="md:hidden"
-                        aria-label="Search"
-                        @click="showMobileSearch = !showMobileSearch"
-                    />
+                    <UButton icon="i-heroicons-magnifying-glass" color="neutral" variant="ghost" class="md:hidden"
+                        aria-label="Search" @click="showMobileSearch = !showMobileSearch" />
 
                     <!-- Desktop Search Input Wrapper -->
                     <div class="relative hidden md:block w-52 sm:w-64 lg:w-80">
@@ -439,7 +427,8 @@ onUnmounted(() => {
                     <UButton to="/login" color="neutral" variant="ghost" class="hidden sm:inline-flex text-xs">
                         Sign In
                     </UButton>
-                    <UButton to="/creator" color="primary" size="xs" class="hidden sm:inline-flex font-semibold text-xs">
+                    <UButton to="/creator" color="primary" size="xs"
+                        class="hidden sm:inline-flex font-semibold text-xs">
                         Creator Studio
                     </UButton>
                 </div>
@@ -448,17 +437,13 @@ onUnmounted(() => {
 
         <!-- Expandable Mobile Search Bar Overlay -->
         <transition name="fade-slide">
-            <div v-if="showMobileSearch" class="md:hidden sticky top-16 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 p-3 shadow-md">
+            <div v-if="showMobileSearch"
+                class="md:hidden sticky top-16 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 p-3 shadow-md">
                 <div class="relative flex items-center">
                     <UIcon name="i-heroicons-magnifying-glass" class="absolute left-3.5 h-4 w-4 text-primary" />
-                    <input
-                        v-model="searchQuery"
-                        type="text"
-                        placeholder="Search campaigns..."
+                    <input v-model="searchQuery" type="text" placeholder="Search campaigns..."
                         class="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 py-2 pl-9 pr-9 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20"
-                        @input="onSearchInput"
-                        @keydown.enter="handleSearchSubmit"
-                    />
+                        @input="onSearchInput" @keydown.enter="handleSearchSubmit" />
                     <button v-if="searchQuery" @click="clearSearch" class="absolute right-3 text-gray-400">
                         <UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
                     </button>
@@ -481,13 +466,16 @@ onUnmounted(() => {
                 class="fixed bottom-2 left-2 right-2 z-50 h-14 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 p-2 shadow-2xl shadow-amber-500/30 backdrop-blur-md border border-amber-400/40 flex items-center justify-between transition-all duration-300 active:scale-[0.98]">
                 <a :href="adsterraMobileUrl" target="_blank" rel="noopener noreferrer" @click="handleMobileSponsorClick"
                     class="flex-1 flex items-center gap-2.5 min-w-0 pr-2">
-                    <div class="h-9 w-9 rounded-xl bg-white/20 text-white flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+                    <div
+                        class="h-9 w-9 rounded-xl bg-white/20 text-white flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
                         <UIcon name="i-heroicons-bolt" class="w-5 h-5 animate-pulse text-amber-200" />
                     </div>
                     <div class="flex flex-col min-w-0">
-                        <div class="flex items-center gap-1.5 text-[11px] font-extrabold text-white leading-tight truncate">
+                        <div
+                            class="flex items-center gap-1.5 text-[11px] font-extrabold text-white leading-tight truncate">
                             <span>Special Partner Offer</span>
-                            <span class="inline-flex items-center rounded-full bg-amber-400/30 px-1.5 py-0.2 text-[9px] font-bold text-amber-100 uppercase tracking-wider">
+                            <span
+                                class="inline-flex items-center rounded-full bg-amber-400/30 px-1.5 py-0.2 text-[9px] font-bold text-amber-100 uppercase tracking-wider">
                                 Sponsor
                             </span>
                         </div>
@@ -498,7 +486,8 @@ onUnmounted(() => {
                 </a>
 
                 <div class="flex items-center gap-1.5 shrink-0">
-                    <a :href="adsterraMobileUrl" target="_blank" rel="noopener noreferrer" @click="handleMobileSponsorClick"
+                    <a :href="adsterraMobileUrl" target="_blank" rel="noopener noreferrer"
+                        @click="handleMobileSponsorClick"
                         class="rounded-xl bg-white px-3 py-1.5 text-xs font-extrabold text-amber-600 shadow-md flex items-center gap-1 hover:bg-amber-50 transition-colors">
                         <span>View Deal</span>
                         <UIcon name="i-heroicons-arrow-right" class="w-3.5 h-3.5" />
@@ -513,39 +502,42 @@ onUnmounted(() => {
         </div>
 
         <!-- Glassmorphic Sticky Mobile Bottom Navigation Bar (For Non-Article Pages) -->
-        <div v-else class="md:hidden fixed bottom-3 left-3 right-3 z-40 rounded-2xl bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border border-gray-200/80 dark:border-gray-800/80 shadow-lg px-2 py-1.5 flex items-center justify-around">
-            <NuxtLink to="/article" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" active-class="text-primary font-bold">
+        <div v-else
+            class="md:hidden fixed bottom-3 left-3 right-3 z-40 rounded-2xl bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border border-gray-200/80 dark:border-gray-800/80 shadow-lg px-2 py-1.5 flex items-center justify-around">
+            <NuxtLink to="/article"
+                class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors"
+                active-class="text-primary font-bold">
                 <UIcon name="i-heroicons-newspaper" class="w-5 h-5" />
                 <span>Articles</span>
             </NuxtLink>
-            <NuxtLink to="/explore" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" active-class="text-primary font-bold">
+            <NuxtLink to="/explore"
+                class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors"
+                active-class="text-primary font-bold">
                 <UIcon name="i-heroicons-sparkles" class="w-5 h-5" />
                 <span>Explore</span>
             </NuxtLink>
-            <NuxtLink to="/trending" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" active-class="text-primary font-bold">
+            <NuxtLink to="/trending"
+                class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors"
+                active-class="text-primary font-bold">
                 <UIcon name="i-heroicons-fire" class="w-5 h-5" />
                 <span>Trending</span>
             </NuxtLink>
-            <NuxtLink to="/pricing" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" active-class="text-primary font-bold">
+            <NuxtLink to="/pricing"
+                class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors"
+                active-class="text-primary font-bold">
                 <UIcon name="i-heroicons-banknotes" class="w-5 h-5" />
                 <span>Pricing</span>
             </NuxtLink>
-            <button @click="isMobileOpen = true" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
+            <button @click="isMobileOpen = true"
+                class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
                 <UIcon name="i-heroicons-bars-3" class="w-5 h-5" />
                 <span>Menu</span>
             </button>
         </div>
 
         <!-- Mobile Side Navigation Drawer -->
-        <MobileDrawer
-            v-model:open="isMobileOpen"
-            side="left"
-            title="Signal Ads"
-            icon="i-heroicons-globe-alt"
-            icon-class="text-primary"
-            :links="publicNavLinks"
-            role="public"
-        />
+        <MobileDrawer v-model:open="isMobileOpen" side="left" title="Signal Ads" icon="i-heroicons-globe-alt"
+            icon-class="text-primary" :links="publicNavLinks" role="public" />
 
         <!-- Desktop Footer -->
         <footer
@@ -557,19 +549,14 @@ onUnmounted(() => {
 
         <!-- Floating Scroll to Top Button (Icon Only) -->
         <transition name="fade-slide">
-            <button
-                v-if="showScrollTop"
-                @click="scrollToTop"
-                aria-label="Scroll to top"
-                title="Scroll to top"
-                class="fixed bottom-20 right-4 z-40 h-11 w-11 rounded-full bg-white/90 dark:bg-gray-900/90 border border-gray-200/80 dark:border-gray-800/80 shadow-xl flex items-center justify-center text-primary hover:scale-110 active:scale-95 transition-all duration-300 backdrop-blur-md hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-gray-950 group"
-            >
+            <button v-if="showScrollTop" @click="scrollToTop" aria-label="Scroll to top" title="Scroll to top"
+                class="fixed bottom-20 right-4 z-40 h-11 w-11 rounded-full bg-white/90 dark:bg-gray-900/90 border border-gray-200/80 dark:border-gray-800/80 shadow-xl flex items-center justify-center text-primary hover:scale-110 active:scale-95 transition-all duration-300 backdrop-blur-md hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-gray-950 group">
                 <UIcon name="i-heroicons-arrow-up" class="w-5 h-5 transition-transform group-hover:-translate-y-0.5" />
             </button>
         </transition>
 
-        <!-- Newsletter Subscriber Modal -->
-        <NewsletterModal />
+        <!-- Google One Tap Subscribe Popup -->
+        <GoogleSubscribeOneTap />
     </div>
 </template>
 

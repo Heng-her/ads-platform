@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { useNewsletterModal } from '~/composables/useNewsletterModal'
-import { useGoogleIdentity } from '~/composables/useGoogleIdentity'
+import { useGoogleSubscribe } from '~/composables/useGoogleSubscribe'
 
 defineProps<{
   feedbackGiven: boolean | null
@@ -10,13 +9,11 @@ const emit = defineEmits<{
   (e: 'give-feedback', val: boolean): void
 }>()
 
-const { openModal } = useNewsletterModal()
-const { promptOneTap } = useGoogleIdentity()
+const { triggerGoogleSubscribe } = useGoogleSubscribe()
 
 function handleYesClick() {
   emit('give-feedback', true)
-  openModal()
-  void promptOneTap(async () => {})
+  triggerGoogleSubscribe()
 }
 </script>
 
