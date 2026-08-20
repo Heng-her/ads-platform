@@ -28,7 +28,7 @@ export async function sendUserManagementTelegramAlert(
       "platform",
       DEFAULT_PLATFORM_CONFIG,
     );
-    const siteUrl = platformConfig.siteUrl || "http://localhost:3000";
+    const siteUrl = platformConfig.siteUrl;
 
     const adminUser = await userService.getUserById(adminUserId);
     const adminName = adminUser?.username || "Admin";

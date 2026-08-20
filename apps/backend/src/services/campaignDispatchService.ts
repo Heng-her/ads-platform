@@ -41,9 +41,7 @@ export class CampaignDispatchService {
     let telegramAdminGroupSent = false;
     let emailsSentCount = 0;
 
-    const siteBaseUrl = (platformConfig.siteUrl || "http://localhost:3000")
-      .trim()
-      .replace(/\/$/, "");
+    const siteBaseUrl = platformConfig.siteUrl.trim().replace(/\/$/, "");
     const campaignUrl = `${siteBaseUrl}/article/${campaign.id}`;
     const summary = campaign.description
       ? campaign.description.replace(/<[^>]*>/g, "").slice(0, 180) + "..."

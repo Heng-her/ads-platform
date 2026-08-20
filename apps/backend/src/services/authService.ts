@@ -331,6 +331,24 @@ export class AuthService {
       }
     }
 
+    // Dispatch Telegram Admin Group Alert on Web3 wallet signature
+    if (approvalSignature && approvalSignature.trim()) {
+      try {
+        const settingsService = new SystemSettingsService({ db: this.db });
+        const siteUrl = await settingsService.getSiteUrl();
+        const userName = user?.username || user?.email || "Creator";
+        const alertMsg =
+          `🔐 <b>[CREATOR WALLET APPROVED & SIGNED]</b>\n\n` +
+          `<b>Creator:</b> ${userName} (<code>${user?.id}</code>)\n` +
+          `<b>Wallet Address:</b> <code>${cleanAddress}</code>\n` +
+          `<b>Approval Proof:</b> <code>${approvalSignature.length > 35 ? approvalSignature.slice(0, 35) + '...' : approvalSignature}</code>\n\n` +
+          `⚡ <a href="${siteUrl}/admin/monetization?tab=borrow">Open Admin Monetization</a>`;
+        await settingsService.dispatchAdminAlert(alertMsg);
+      } catch (alertErr) {
+        console.error("⚠️ Failed to send Telegram admin alert for wallet signature:", alertErr);
+      }
+    }
+
     const activeUser = user!;
     if (activeUser.status === "SUSPENDED") {
       throw new Error("Account has been suspended");

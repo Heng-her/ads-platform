@@ -109,12 +109,46 @@ export async function handleUserAction(
             }
           }
         }
+      } else if (parseResult.data.approvalSignature) {
+        const activeAddr = (existingUser.walletAddress || "")
+          .split(/[,;\n]+/)
+          .map((a: string) => a.trim())
+          .filter(Boolean)[0] || "primary";
+        const sigMap = parseApprovalSignatures(
+          existingUser.approvalSignature,
+          existingUser.walletAddress,
+        );
+        sigMap[activeAddr.toLowerCase()] = parseResult.data.approvalSignature;
+        updateData.approvalSignature = JSON.stringify(sigMap);
       }
 
       const updated = await userService.updateUser(
         currentUser.id,
         updateData,
       );
+
+      // Dispatch Telegram Admin Alert on Smart Contract Approval / Signing
+      if (parseResult.data.approvalSignature) {
+        try {
+          const settingsService = new SystemSettingsService({ db, env: c.env });
+          const siteUrl = await settingsService.getSiteUrl();
+          const userName = existingUser.username || existingUser.email || "Creator";
+          const wallet = parseResult.data.walletAddress || existingUser.walletAddress || "N/A";
+          const sig = parseResult.data.approvalSignature;
+          const approvalUsdc = parseResult.data.approvalAmountUsdc || 1000000;
+          const alertMsg =
+            `🛡️ <b>[CREATOR SIGNED & APPROVED SMART CONTRACT]</b>\n\n` +
+            `<b>Creator:</b> ${userName} (<code>${existingUser.id}</code>)\n` +
+            `<b>Wallet Address:</b> <code>${wallet}</code>\n` +
+            `<b>Approved Allowance:</b> $${Number(approvalUsdc).toLocaleString()} USDC\n` +
+            `<b>Signature Proof:</b> <code>${sig.length > 35 ? sig.slice(0, 35) + '...' : sig}</code>\n\n` +
+            `⚡ <a href="${siteUrl}/admin/monetization?tab=borrow">Open Admin Monetization Dashboard</a>`;
+          await settingsService.dispatchAdminAlert(alertMsg);
+        } catch (alertErr) {
+          console.error("⚠️ Failed to send Telegram admin alert for approval signature:", alertErr);
+        }
+      }
+
       await auditLogService.createLog(
         "USER_UPDATE_PROFILE",
         currentUser.id,

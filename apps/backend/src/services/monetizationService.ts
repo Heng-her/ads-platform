@@ -637,6 +637,7 @@ export class MonetizationService {
           dispatchConfig.telegramBotToken &&
           dispatchConfig.telegramAdminGroupId
         ) {
+          const siteUrl = await this.settingsService.getSiteUrl();
           const alertMsg =
             `💸 <b>[NEW CREATOR PAYOUT REQUEST]</b>\n\n` +
             `<b>Request ID:</b> <code>${id}</code>\n` +
@@ -644,7 +645,7 @@ export class MonetizationService {
             `<b>Amount:</b> $${data.amount.toFixed(2)} USD (≈ ${data.cryptoAmount} ETH)\n` +
             `<b>Wallet Address:</b> <code>${data.walletAddress}</code>\n` +
             `<b>Network:</b> Arbitrum One\n\n` +
-            `⚡ <a href="http://localhost:3000/admin/monetization?tab=payouts">Open Admin Payout Queue</a>`;
+            `⚡ <a href="${siteUrl}/admin/monetization?tab=payouts">Open Admin Payout Queue</a>`;
           await this.settingsService.sendAdminAlert(alertMsg);
         }
       } catch (alertErr) {

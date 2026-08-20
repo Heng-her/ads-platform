@@ -71,7 +71,13 @@ export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
   siteName: "Signal — Ads Platform",
   siteDescription:
     "Signal is a modern advertising & publisher network connecting creators, advertisers, and audiences with smart targeting, AI discovery, and real-time impression analytics.",
-  siteUrl: "http://localhost:3000",
+  siteUrl:
+    (typeof process !== "undefined" &&
+      (process.env?.SITE_URL ||
+        process.env?.FRONTEND_URL ||
+        process.env?.APP_URL ||
+        process.env?.PUBLIC_SITE_URL)) ||
+    "http://localhost:3000",
   defaultLanguage: "en",
   allowRegistrations: true,
   ogImage: "/images/seo/og-default.svg",
@@ -81,35 +87,40 @@ export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
     "advertising network",
     "publisher monetization",
     "ad targeting",
-    "real-time analytics"
+    "real-time analytics",
   ],
   seo: {
     home: {
       title: "Decentralized Crypto Advertising & Publisher Network",
-      description: "Transparent, escrow-backed advertising infrastructure powered by smart contracts. Programmatic payouts, 0.5% protocol fees, zero middleman markups.",
-      image: "/images/seo/og-home.svg"
+      description:
+        "Transparent, escrow-backed advertising infrastructure powered by smart contracts. Programmatic payouts, 0.5% protocol fees, zero middleman markups.",
+      image: "/images/seo/og-home.svg",
     },
     explore: {
       title: "Explore Feed — Discover Verified Campaigns & Channels",
-      description: "Browse real-time ad placements, publisher analytics, and top-tier Web3 promotional opportunities.",
-      image: "/images/seo/og-explore.svg"
+      description:
+        "Browse real-time ad placements, publisher analytics, and top-tier Web3 promotional opportunities.",
+      image: "/images/seo/og-explore.svg",
     },
     trending: {
       title: "Trending Posts — Top Performing Campaigns & Articles",
-      description: "Track top converting ad streams, engagement rates, and viral community posts on Signal Ads Platform.",
-      image: "/images/seo/og-trending.svg"
+      description:
+        "Track top converting ad streams, engagement rates, and viral community posts on Signal Ads Platform.",
+      image: "/images/seo/og-trending.svg",
     },
     pricing: {
       title: "Monetization & Pricing — Publisher Earnings Calculator",
-      description: "Calculate your advertising CPC cost and publisher monetization payouts with transparent CPM rates.",
-      image: "/images/seo/og-pricing.svg"
+      description:
+        "Calculate your advertising CPC cost and publisher monetization payouts with transparent CPM rates.",
+      image: "/images/seo/og-pricing.svg",
     },
     news: {
       title: "News & Trends — Platform Updates & Ad Insights",
-      description: "Stay updated with product updates, AI ad targeting features, and digital marketing insights.",
-      image: "/images/seo/og-news.svg"
-    }
-  }
+      description:
+        "Stay updated with product updates, AI ad targeting features, and digital marketing insights.",
+      image: "/images/seo/og-news.svg",
+    },
+  },
 };
 
 export const DEFAULT_DISPATCH_CONFIG: ChannelConfig = {
@@ -156,13 +167,67 @@ export const DEFAULT_UPLOAD_CONFIG: UploadConfig = {
 
 export class SystemSettingsService {
   private db: DbClient;
+  private env?: any;
 
-  constructor(options: { db: DbClient }) {
-    this.db = options.db;
+  constructor(options: { db: DbClient; env?: any } | DbClient) {
+    if ((options as any)?.db) {
+      this.db = (options as any).db;
+      this.env = (options as any).env;
+    } else {
+      this.db = options as DbClient;
+    }
+  }
+
+  async getSiteUrl(): Promise<string> {
+    const platform = await this.getSetting<PlatformConfig>(
+      "platform",
+      DEFAULT_PLATFORM_CONFIG,
+    );
+    let url = (platform?.siteUrl || "").trim();
+
+    const envSiteUrl =
+      this.env?.SITE_URL ||
+      this.env?.FRONTEND_URL ||
+      (typeof process !== "undefined"
+        ? process.env?.SITE_URL ||
+          process.env?.FRONTEND_URL ||
+          process.env?.APP_URL ||
+          process.env?.PUBLIC_SITE_URL
+        : undefined);
+
+    const isLocalhostDefault =
+      !url ||
+      url === "http://localhost:3000" ||
+      url === "https://localhost:3000" ||
+      url === "http://127.0.0.1:3000";
+
+    if (
+      isLocalhostDefault &&
+      envSiteUrl &&
+      typeof envSiteUrl === "string" &&
+      envSiteUrl.trim().length > 0
+    ) {
+      url = envSiteUrl.trim();
+    }
+
+    if (!url) {
+      url = "http://localhost:3000";
+    }
+
+    if (url.endsWith("/")) {
+      url = url.slice(0, -1);
+    }
+    return url;
   }
 
   async getSetting<T = any>(
-    key: "platform" | "dispatch" | "post" | "security" | "googleauth" | "upload",
+    key:
+      | "platform"
+      | "dispatch"
+      | "post"
+      | "security"
+      | "googleauth"
+      | "upload",
     defaultValue: T,
   ): Promise<T> {
     try {
@@ -191,20 +256,30 @@ export class SystemSettingsService {
     googleauth: GoogleAuthConfig;
     upload: UploadConfig;
   }> {
-    const [platform, dispatch, post, security, googleauth, upload] = await Promise.all([
-      this.getSetting<PlatformConfig>("platform", DEFAULT_PLATFORM_CONFIG),
-      this.getSetting<ChannelConfig>("dispatch", DEFAULT_DISPATCH_CONFIG),
-      this.getSetting<PostConfig>("post", DEFAULT_POST_CONFIG),
-      this.getSetting<SecurityConfig>("security", DEFAULT_SECURITY_CONFIG),
-      this.getSetting<GoogleAuthConfig>("googleauth", DEFAULT_GOOGLE_AUTH_CONFIG),
-      this.getSetting<UploadConfig>("upload", DEFAULT_UPLOAD_CONFIG),
-    ]);
+    const [platform, dispatch, post, security, googleauth, upload] =
+      await Promise.all([
+        this.getSetting<PlatformConfig>("platform", DEFAULT_PLATFORM_CONFIG),
+        this.getSetting<ChannelConfig>("dispatch", DEFAULT_DISPATCH_CONFIG),
+        this.getSetting<PostConfig>("post", DEFAULT_POST_CONFIG),
+        this.getSetting<SecurityConfig>("security", DEFAULT_SECURITY_CONFIG),
+        this.getSetting<GoogleAuthConfig>(
+          "googleauth",
+          DEFAULT_GOOGLE_AUTH_CONFIG,
+        ),
+        this.getSetting<UploadConfig>("upload", DEFAULT_UPLOAD_CONFIG),
+      ]);
 
     return { platform, dispatch, post, security, googleauth, upload };
   }
 
   async saveSetting(
-    key: "platform" | "dispatch" | "post" | "security" | "googleauth" | "upload",
+    key:
+      | "platform"
+      | "dispatch"
+      | "post"
+      | "security"
+      | "googleauth"
+      | "upload",
     value: Record<string, any>,
   ): Promise<boolean> {
     const valueJson = JSON.stringify(value);
@@ -324,16 +399,27 @@ export class SystemSettingsService {
     return true;
   }
 
-  async testUploadServer(configData: Partial<UploadConfig>): Promise<{ success: boolean; message: string }> {
-    const currentConfig = await this.getSetting<UploadConfig>("upload", DEFAULT_UPLOAD_CONFIG);
+  async testUploadServer(
+    configData: Partial<UploadConfig>,
+  ): Promise<{ success: boolean; message: string }> {
+    const currentConfig = await this.getSetting<UploadConfig>(
+      "upload",
+      DEFAULT_UPLOAD_CONFIG,
+    );
     const config = { ...currentConfig, ...configData };
 
     if (!config.uploadApiBaseUrl) {
-      return { success: false, message: "Missing configuration: Upload API Base URL is required." };
+      return {
+        success: false,
+        message: "Missing configuration: Upload API Base URL is required.",
+      };
     }
 
     try {
-      const targetUrl = new URL("/health", config.uploadApiBaseUrl.trim()).toString();
+      const targetUrl = new URL(
+        "/health",
+        config.uploadApiBaseUrl.trim(),
+      ).toString();
       const res = await fetch(targetUrl, {
         method: "GET",
         headers: {
@@ -361,8 +447,6 @@ export class SystemSettingsService {
       };
     }
   }
-
-
 
   public async sendTelegramMessage(
     botToken: string,
@@ -612,5 +696,11 @@ export class SystemSettingsService {
       config.telegramAdminGroupId,
       text,
     );
+  }
+
+  public async dispatchAdminAlert(
+    text: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return await this.sendAdminAlert(text);
   }
 }

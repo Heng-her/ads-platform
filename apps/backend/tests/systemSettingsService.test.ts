@@ -108,4 +108,29 @@ describe("SystemSettingsService", () => {
     expect(successResult.success).toBe(true);
     expect(successResult.message).toContain("admin@test.com");
   });
+
+  it("should resolve siteUrl with environment variable fallback when default localhost", async () => {
+    const mockDb: any = {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            get: async () => null,
+          }),
+        }),
+      }),
+    };
+
+    // Default without env
+    const serviceDefault = new SystemSettingsService({ db: mockDb });
+    const defaultUrl = await serviceDefault.getSiteUrl();
+    expect(defaultUrl).toBe("http://localhost:3000");
+
+    // With env option
+    const serviceWithEnv = new SystemSettingsService({
+      db: mockDb,
+      env: { SITE_URL: "https://my-ads-platform.com/" },
+    });
+    const envUrl = await serviceWithEnv.getSiteUrl();
+    expect(envUrl).toBe("https://my-ads-platform.com");
+  });
 });
