@@ -1,11 +1,13 @@
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
 import { useGoogleIdentity } from '~/composables/useGoogleIdentity'
+import { useWebPushNotification } from '~/composables/useWebPushNotification'
 
 export function useGoogleSubscribe() {
   const api = useApi()
   const toast = useAppToast()
   const { promptOneTap } = useGoogleIdentity()
+  const { subscribeToNotifications } = useWebPushNotification()
 
   function parseEmailFromIdToken(idToken: string): string | null {
     try {
@@ -46,6 +48,10 @@ export function useGoogleSubscribe() {
         toast.success('Subscribed Successfully!', result.msg || 'Thank you for subscribing to updates.')
         if (import.meta.client) {
           localStorage.setItem('platform_subscribed', 'true')
+          // Auto-prompt for Web Push Notification permission immediately after subscribe
+          setTimeout(() => {
+            void subscribeToNotifications()
+          }, 1000)
         }
       } else {
         toast.error('Subscription Failed', result.msg || 'Could not subscribe.')
