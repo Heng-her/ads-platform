@@ -9,7 +9,6 @@ import HomeSecurity from '~/components/home/HomeSecurity.vue'
 import HomeSandbox from '~/components/home/HomeSandbox.vue'
 import HomeRoadmap from '~/components/home/HomeRoadmap.vue'
 import HomeFaq from '~/components/home/HomeFaq.vue'
-import HomeCta from '~/components/home/HomeCta.vue'
 
 useRouteSeo('home', {
   title: 'Decentralized Crypto Advertising Platform',
@@ -47,8 +46,5 @@ useRouteSeo('home', {
 
     <!-- 9. Technical & Operational FAQ -->
     <HomeFaq />
-
-    <!-- 10. Final Call to Action Banner -->
-    <HomeCta />
   </div>
 </template>
