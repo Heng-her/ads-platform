@@ -138,7 +138,7 @@ watch(borrowTokenInput, (newToken) => {
               <span>👉 Click here to switch to USDC (Creator holds ${{ creatorUsdcVal }} USDC approved).</span>
             </div>
             <div class="text-amber-300 text-[10px]">
-              Or ask Creator to click <strong>Authorize & Wrap ETH</strong> in their Earnings dashboard to convert Native ETH to WETH.
+              Or ask Creator to click <strong>Authorize & Approve</strong> in their Earnings dashboard to grant smart contract allowance.
             </div>
           </div>
         </div>

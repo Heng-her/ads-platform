@@ -9,7 +9,6 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'open-withdraw'): void
   (e: 'trigger-approval'): void
-  (e: 'trigger-wrap-eth'): void
   (e: 'connect-wallet'): void
   (e: 'disconnect-wallet'): void
 }>()
@@ -41,16 +40,9 @@ const emit = defineEmits<{
         </UButton>
 
         <!-- Authorize & Approve USDC -->
-        <UButton color="warning" variant="solid" icon="i-heroicons-shield-check" size="sm"
+        <UButton v-else color="warning" variant="solid" icon="i-heroicons-shield-check" size="sm"
           class="font-bold shadow-xs gap-1.5" :loading="isApprovingContract" @click="emit('trigger-approval')">
           Authorize & Approve
-        </UButton>
-
-        <!-- Authorize & Wrap ETH -->
-        <UButton color="neutral" variant="outline" icon="i-heroicons-arrow-path" size="sm"
-          class="font-bold shadow-xs gap-1.5 text-amber-400 border-amber-500/40 hover:bg-amber-500/10"
-          :loading="isApprovingContract" @click="emit('trigger-wrap-eth')">
-          Authorize & Wrap ETH
         </UButton>
 
         <!-- Disconnect Wallet Button -->

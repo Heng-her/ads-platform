@@ -127,36 +127,7 @@ function formatCurrency(val: number) {
           </div>
           <UInput v-model.number="amountModel" type="number" min="1" :max="stats.availableBalance"
             placeholder="Enter amount..." size="lg" color="neutral" variant="outline"
-            class="font-mono font-bold text-lg" />
-
-          <div v-if="withdrawAmount > stats.availableBalance"
-            class="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3.5 space-y-2 mt-2">
-            <div class="flex items-start gap-2.5">
-              <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-              <div class="space-y-1">
-                <p class="text-xs font-bold text-amber-300">
-                  ⚠️ Insufficient Balance! You need ${{ depositNeeded.toFixed(2) }} more to reach requested withdrawal
-                  of ${{ withdrawAmount.toFixed(2) }}
-                </p>
-                <p class="text-[11px] text-gray-300">
-                  Available Balance: <span class="font-bold text-white">${{ stats.availableBalance.toFixed(2)
-                    }}</span> | Shortfall: <span class="font-bold text-amber-400">${{ depositNeeded.toFixed(2)
-                    }}</span>. Please deposit funds to complete this payout.
-                </p>
-              </div>
-            </div>
-
-            <div class="pt-1 flex items-center gap-2">
-              <UButton color="warning" variant="solid" icon="i-heroicons-shield-check" size="xs"
-                class="font-bold shadow-xs animate-pulse" :loading="isApprovingContract"
-                @click="emit('trigger-approval', depositNeeded)">
-                Deposit ${{ depositNeeded.toFixed(2) }} USDC Funds 🔒
-              </UButton>
-            </div>
-          </div>
-          <p v-else class="text-xs text-emerald-400 font-mono font-semibold pt-1">
-            Estimated On-Chain Payout: ≈ {{ estimatedEth }} ETH (@ ${{ ethPriceUsd.toLocaleString() }}/ETH)
-          </p>
+            class="font-mono font-bold text-lg w-full" />
         </div>
 
         <!-- Submit Buttons -->
@@ -167,7 +138,7 @@ function formatCurrency(val: number) {
           <UButton color="primary" variant="solid" size="md" class="font-bold px-6" :loading="isSubmittingWithdrawal"
             :disabled="!withdrawAmount || withdrawAmount <= 0 || withdrawAmount > stats.availableBalance"
             @click="emit('submit')">
-            Confirm (${{ withdrawAmount || 0 }} / {{ estimatedEth }} ETH)
+            Confirm
           </UButton>
         </div>
       </div>
