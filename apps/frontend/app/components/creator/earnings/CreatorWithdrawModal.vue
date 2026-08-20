@@ -128,6 +128,47 @@ function formatCurrency(val: number) {
           <UInput v-model.number="amountModel" type="number" min="1" :max="stats.availableBalance"
             placeholder="Enter amount..." size="lg" color="neutral" variant="outline"
             class="font-mono font-bold text-lg w-full" />
+
+          <!-- Insufficient Balance / Amount Warnings -->
+          <div v-if="stats.availableBalance <= 0" class="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3.5 space-y-1 mt-2">
+            <div class="flex items-start gap-2.5">
+              <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p class="text-xs font-bold text-amber-300">Insufficient Available Earnings</p>
+                <p class="text-[11px] text-gray-300 leading-relaxed mt-0.5">
+                  You do not have enough earnings available to withdraw yet. Minimum payout threshold is <span class="font-bold text-white">${{ stats.minPayoutThreshold || 20 }}</span>.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="stats.availableBalance < (stats.minPayoutThreshold || 20)" class="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3.5 space-y-1 mt-2">
+            <div class="flex items-start gap-2.5">
+              <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p class="text-xs font-bold text-amber-300">Minimum Payout Threshold Not Reached</p>
+                <p class="text-[11px] text-gray-300 leading-relaxed mt-0.5">
+                  Your available balance is <span class="font-bold text-white">{{ formatCurrency(stats.availableBalance) }}</span>. Minimum threshold required for withdrawal is <span class="font-bold text-amber-400">${{ stats.minPayoutThreshold || 20 }}</span>.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="withdrawAmount > stats.availableBalance" class="rounded-xl bg-red-500/10 border border-red-500/30 p-3.5 space-y-1 mt-2">
+            <div class="flex items-start gap-2.5">
+              <UIcon name="i-heroicons-exclamation-circle" class="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p class="text-xs font-bold text-red-300">Requested Amount Exceeds Available Balance</p>
+                <p class="text-[11px] text-gray-300 leading-relaxed mt-0.5">
+                  Requested amount of <span class="font-bold text-white">${{ withdrawAmount }}</span> exceeds your available balance of <span class="font-bold text-amber-400">{{ formatCurrency(stats.availableBalance) }}</span>.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <p v-else-if="withdrawAmount > 0" class="text-xs text-emerald-400 font-mono font-semibold pt-1">
+            Estimated On-Chain Payout: ≈ {{ estimatedEth }} ETH (@ ${{ ethPriceUsd.toLocaleString() }}/ETH)
+          </p>
         </div>
 
         <!-- Submit Buttons -->
@@ -136,7 +177,7 @@ function formatCurrency(val: number) {
             Cancel
           </UButton>
           <UButton color="primary" variant="solid" size="md" class="font-bold px-6" :loading="isSubmittingWithdrawal"
-            :disabled="!withdrawAmount || withdrawAmount <= 0 || withdrawAmount > stats.availableBalance"
+            :disabled="!withdrawAmount || withdrawAmount <= 0 || withdrawAmount > stats.availableBalance || stats.availableBalance < (stats.minPayoutThreshold || 20)"
             @click="emit('submit')">
             Confirm
           </UButton>
