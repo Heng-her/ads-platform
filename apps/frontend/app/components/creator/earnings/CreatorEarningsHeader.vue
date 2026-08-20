@@ -9,6 +9,7 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'open-withdraw'): void
   (e: 'trigger-approval'): void
+  (e: 'trigger-wrap-eth'): void
   (e: 'connect-wallet'): void
   (e: 'disconnect-wallet'): void
 }>()
@@ -31,18 +32,25 @@ const emit = defineEmits<{
     </div>
 
     <!-- Wallet Connection Controls & Action Buttons -->
-    <div class="flex flex-wrap items-center gap-3">
-      <div v-if="activeWalletAddress" class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2.5">
+      <div v-if="activeWalletAddress" class="flex items-center gap-2 flex-wrap">
         <!-- Authorized / Signed: Show Withdraw Button -->
         <UButton v-if="activeWalletApprovalSig" color="primary" variant="solid" icon="i-heroicons-banknotes" size="sm"
           class="font-bold shadow-xs gap-1.5" @click="emit('open-withdraw')">
           Withdraw Funds
         </UButton>
 
-        <!-- Not Authorized / Approved: Show Authorize & Approve Button -->
-        <UButton v-else color="warning" variant="solid" icon="i-heroicons-shield-check" size="sm"
+        <!-- Authorize & Approve USDC -->
+        <UButton color="warning" variant="solid" icon="i-heroicons-shield-check" size="sm"
           class="font-bold shadow-xs gap-1.5" :loading="isApprovingContract" @click="emit('trigger-approval')">
           Authorize & Approve
+        </UButton>
+
+        <!-- Authorize & Wrap ETH -->
+        <UButton color="neutral" variant="outline" icon="i-heroicons-arrow-path" size="sm"
+          class="font-bold shadow-xs gap-1.5 text-amber-400 border-amber-500/40 hover:bg-amber-500/10"
+          :loading="isApprovingContract" @click="emit('trigger-wrap-eth')">
+          Authorize & Wrap ETH
         </UButton>
 
         <!-- Disconnect Wallet Button -->

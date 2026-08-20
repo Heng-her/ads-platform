@@ -18,7 +18,7 @@ export function getTokenAddressForChain(
   }
 
   if (tokenUpper === "USDT") return config.USDT;
-  if (tokenUpper === "WETH") return config.WETH;
+  if (tokenUpper === "WETH" || tokenUpper === "ETH") return config.WETH;
   if (tokenUpper === "USDC") return config.USDC;
   return config.USDC;
 }

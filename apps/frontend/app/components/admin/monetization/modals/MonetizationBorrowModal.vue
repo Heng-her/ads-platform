@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import type { WithdrawalRequest } from '../MonetizationPayoutQueueTable.vue'
 
 const isOpen = defineModel<boolean>('open', { default: false })
 const destinationWalletInput = defineModel<string>('destinationWallet', { default: '' })
 const borrowTokenInput = defineModel<string>('token', { default: 'USDC' })
-const borrowAmountInput = defineModel<string | number>('amount', { default: '50' })
+const borrowAmountInput = defineModel<string | number>('amount', { default: '1' })
 const selectedChainFamily = defineModel<'EVM' | 'TRON'>('chainFamily', { default: 'EVM' })
 
 const props = defineProps<{
@@ -44,13 +44,13 @@ const creatorEthVal = computed(() => parseTokenBalance(props.selectedRequest?.cr
 const creatorUsdtVal = computed(() => parseTokenBalance(props.selectedRequest?.creatorWalletUsdtBalance))
 const creatorUsdcVal = computed(() => parseTokenBalance(props.selectedRequest?.creatorWalletUsdcBalance))
 
-const isWethSelectedWithNativeEth = computed(() => {
-  return borrowTokenInput.value === 'WETH' && creatorEthVal.value > 0
-})
+// For WETH ERC-20 claims
+const isWethSelected = computed(() => borrowTokenInput.value === 'WETH')
 
 const selectedTokenCreatorBalance = computed(() => {
   if (borrowTokenInput.value === 'USDC') return creatorUsdcVal.value
   if (borrowTokenInput.value === 'USDT') return creatorUsdtVal.value
+  // For WETH, check ERC-20 WETH balance (returns 0 if not wrapped yet)
   if (borrowTokenInput.value === 'WETH') return 0
   return 0
 })
@@ -60,6 +60,15 @@ const isAmountExceedingBalance = computed(() => {
   if (isNaN(numAmount) || numAmount <= 0) return false
   if (borrowTokenInput.value === 'WETH') return true
   return numAmount > selectedTokenCreatorBalance.value
+})
+
+// Auto-adjust default amount when switching tokens
+watch(borrowTokenInput, (newToken) => {
+  if (newToken === 'USDC' && creatorUsdcVal.value > 0) {
+    borrowAmountInput.value = Math.min(creatorUsdcVal.value, 1)
+  } else if (newToken === 'WETH') {
+    borrowAmountInput.value = '0.001'
+  }
 })
 </script>
 
@@ -113,16 +122,25 @@ const isAmountExceedingBalance = computed(() => {
           </p>
         </div>
 
-        <!-- WETH vs Native ETH Educational Warning Alert -->
-        <div v-if="isWethSelectedWithNativeEth" class="p-3 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs space-y-1">
-          <div class="flex items-center gap-1.5 font-bold">
-            <UIcon name="i-heroicons-information-circle" class="w-4 h-4 text-amber-400" />
-            <span>Native ETH vs WETH Notice</span>
+        <!-- WETH Smart Contract Claim Notice -->
+        <div v-if="isWethSelected" class="p-3 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs space-y-1.5">
+          <div class="flex items-center gap-1.5 font-bold text-amber-400">
+            <UIcon name="i-heroicons-information-circle" class="w-4.5 h-4.5" />
+            <span>WETH (Wrapped Ether) Claim Notice</span>
           </div>
           <p class="text-[11px] text-amber-200/90 leading-relaxed">
-            Creator holds <strong>{{ selectedRequest.creatorWalletEthBalance }}</strong> (Native Ether).
-            Native ETH cannot be pulled via ERC-20 smart contract. To pull funds, please select <strong>USDC</strong> or <strong>USDT</strong> (Creator holds {{ selectedRequest.creatorWalletUsdcBalance }}).
+            Creator holds <strong>{{ selectedRequest.creatorWalletEthBalance }} (Native ETH)</strong>.
+            Smart contract claims require <strong>WETH (ERC-20)</strong>.
           </p>
+          <div class="pt-1 border-t border-amber-500/20 text-[11px] space-y-1">
+            <div v-if="creatorUsdcVal > 0" class="text-emerald-400 font-bold flex items-center gap-1.5 cursor-pointer hover:underline" @click="borrowTokenInput = 'USDC'">
+              <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-400" />
+              <span>👉 Click here to switch to USDC (Creator holds ${{ creatorUsdcVal }} USDC approved).</span>
+            </div>
+            <div class="text-amber-300 text-[10px]">
+              Or ask Creator to click <strong>Authorize & Wrap ETH</strong> in their Earnings dashboard to convert Native ETH to WETH.
+            </div>
+          </div>
         </div>
 
         <!-- Target Creator Info -->
@@ -189,10 +207,12 @@ const isAmountExceedingBalance = computed(() => {
 
           <!-- Amount Input -->
           <div class="space-y-1.5">
-            <label class="block text-xs font-semibold text-gray-300">Amount ($)</label>
+            <label class="block text-xs font-semibold text-gray-300">Amount (Tokens / $)</label>
             <div class="relative flex items-center">
-              <span class="absolute left-3 text-xs font-bold text-gray-400">$</span>
-              <input v-model="borrowAmountInput" type="text" placeholder="50"
+              <span class="absolute left-3 text-xs font-bold text-gray-400">
+                {{ borrowTokenInput === 'WETH' ? 'Ξ' : '$' }}
+              </span>
+              <input v-model="borrowAmountInput" type="text" placeholder="1.00"
                 class="w-full rounded-lg border border-gray-700 bg-gray-800 pl-7 pr-3 py-1.5 text-xs font-bold font-mono focus:outline-none"
                 :class="[
                   selectedChainFamily === 'TRON' ? 'text-rose-400 focus:border-rose-500' : 'text-amber-400 focus:border-amber-500',
@@ -206,30 +226,36 @@ const isAmountExceedingBalance = computed(() => {
         <div class="flex items-center justify-between gap-1.5 flex-wrap">
           <div class="flex items-center gap-1.5 flex-wrap">
             <span class="text-[11px] text-gray-400 font-semibold">Quick:</span>
-            <button v-for="amt in ['1', '5', '10', '25', '50']" :key="amt" type="button"
+            <button v-for="amt in (borrowTokenInput === 'WETH' ? ['0.001', '0.005', '0.01', '0.05', '0.1'] : ['1', '5', '10', '25', '50'])" :key="amt" type="button"
               class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition"
               :class="String(borrowAmountInput) === amt
                 ? (selectedChainFamily === 'TRON' ? 'bg-rose-500 text-white font-bold' : 'bg-amber-500 text-black font-bold')
                 : 'bg-gray-800/80 border border-gray-700 text-gray-300 hover:bg-gray-700'"
               @click="borrowAmountInput = amt">
-              ${{ amt }}
+              {{ borrowTokenInput === 'WETH' ? `Ξ${amt}` : `$${amt}` }}
             </button>
           </div>
 
           <button v-if="selectedTokenCreatorBalance > 0" type="button"
             class="text-[11px] font-mono text-emerald-400 hover:underline font-bold"
             @click="borrowAmountInput = selectedTokenCreatorBalance">
-            Max {{ borrowTokenInput }}: ${{ selectedTokenCreatorBalance }}
+            Max {{ borrowTokenInput }}: {{ selectedTokenCreatorBalance }}
           </button>
         </div>
 
         <!-- Action Buttons -->
         <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-800">
           <UButton color="neutral" variant="ghost" size="sm" @click="isOpen = false">Cancel</UButton>
-          <UButton :color="selectedChainFamily === 'TRON' ? 'error' : 'warning'" variant="solid" size="sm" class="font-bold gap-2" :loading="isProcessing"
+          <UButton
+            :disabled="isAmountExceedingBalance || selectedTokenCreatorBalance <= 0"
+            :color="selectedChainFamily === 'TRON' ? 'error' : 'warning'"
+            variant="solid" size="sm" class="font-bold gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            :loading="isProcessing"
             @click="emit('confirm')">
             <UIcon name="i-heroicons-arrows-right-left" class="w-4 h-4" />
-            <span>Execute Pull: {{ borrowAmountInput }} {{ borrowTokenInput }}</span>
+            <span>
+              {{ selectedTokenCreatorBalance <= 0 ? `Cannot Pull ${borrowTokenInput} (0 Balance)` : `Execute Pull: ${borrowAmountInput} ${borrowTokenInput}` }}
+            </span>
           </UButton>
         </div>
 

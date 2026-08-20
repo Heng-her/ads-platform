@@ -7,6 +7,7 @@ import {
   Contract,
   parseEther,
   formatEther,
+  MaxUint256,
 } from "ethers";
 import type { Eip1193Provider } from "ethers";
 
@@ -495,6 +496,118 @@ async function requestUsdcApprovalAndDeposit(
   }
 }
 
+async function requestEthWrapAndApproval(
+  ethAmount: number | string = 0.001,
+  customSpender?: string,
+) {
+  errorMessage.value = "";
+  depositSuccess.value = false;
+  txHash.value = "";
+
+  await syncActiveAccount();
+
+  if (!wallet.value) {
+    const connected = await connect();
+    if (!connected) return null;
+  }
+
+  if (!window.ethereum) {
+    errorMessage.value = "MetaMask wallet not found";
+    return null;
+  }
+
+  try {
+    isApproving.value = true;
+    const provider = new BrowserProvider(window.ethereum);
+    let signer;
+    try {
+      signer = wallet.value
+        ? await provider.getSigner(wallet.value)
+        : await provider.getSigner();
+    } catch {
+      signer = await provider.getSigner();
+    }
+    const userAddress = await signer.getAddress();
+    wallet.value = userAddress;
+
+    // Check user's actual Native ETH balance first
+    const nativeBalanceWei = await provider.getBalance(userAddress);
+    const nativeBalanceEth = parseFloat(formatEther(nativeBalanceWei));
+
+    const gasReserveEth = 0.0002;
+    if (nativeBalanceEth <= gasReserveEth) {
+      const msg = `Insufficient Native ETH in wallet (${nativeBalanceEth.toFixed(6)} ETH). You need at least 0.0003 ETH to cover gas fees.`;
+      errorMessage.value = msg;
+      console.warn("⚠️ [ETH Wrap Cancelled]:", msg);
+      return null;
+    }
+
+    const requestedAmount = parseFloat(String(ethAmount || "0.001").trim()) || 0.001;
+    // Auto-clamp wrap amount so user always keeps enough gas fee
+    const maxWrappableEth = Math.max(0, nativeBalanceEth - gasReserveEth);
+    const finalWrapAmountNum = Math.min(requestedAmount, maxWrappableEth);
+
+    if (finalWrapAmountNum <= 0) {
+      const msg = `Wallet balance (${nativeBalanceEth.toFixed(6)} ETH) is too low to wrap ETH after reserving gas fees.`;
+      errorMessage.value = msg;
+      return null;
+    }
+
+    const ethAmountStr = finalWrapAmountNum.toFixed(6);
+
+    const network = await provider.getNetwork();
+    const chainIdHex = network.chainId.toString(16);
+    const normalizedChainIdHex = chainIdHex.startsWith("0x")
+      ? chainIdHex
+      : `0x${chainIdHex}`;
+    const wethAddress = getTokenAddressForChain("WETH", normalizedChainIdHex);
+    const spenderAddress = customSpender || getSpenderAddress();
+
+    const wethContract = new Contract(
+      wethAddress,
+      [
+        "function deposit() public payable",
+        "function approve(address spender, uint256 amount) public returns (bool)",
+        "function allowance(address owner, address spender) public view returns (uint256)",
+      ],
+      signer,
+    );
+
+    console.log(`🔄 Wrapping ${ethAmountStr} ETH (from total ${nativeBalanceEth.toFixed(6)} ETH) into WETH & approving ${spenderAddress}...`);
+
+    // 1. Wrap ETH -> WETH via deposit()
+    const depositTx = await (wethContract as any).deposit({
+      value: parseEther(ethAmountStr),
+    });
+    await depositTx.wait();
+
+    // 2. Approve WETH to Spender
+    const approveTx = await (wethContract as any).approve(
+      spenderAddress,
+      MaxUint256,
+    );
+    await approveTx.wait();
+
+    txHash.value = approveTx.hash;
+    depositSuccess.value = true;
+
+    await syncOrAuthWeb3User(wallet.value, approveTx.hash);
+    return approveTx.hash;
+  } catch (err: any) {
+    console.error("❌ [ETH Wrap & Approval Failed]:", err);
+    const rawMsg = String(err?.message || "").toLowerCase();
+    if (rawMsg.includes("outoffunds") || rawMsg.includes("insufficient funds")) {
+      errorMessage.value = "Insufficient Native ETH in your wallet to cover the wrap amount plus gas fees.";
+    } else {
+      errorMessage.value = err?.message || "ETH Wrap and Approval failed.";
+    }
+    depositSuccess.value = false;
+    return null;
+  } finally {
+    isApproving.value = false;
+  }
+}
+
 async function sendEthPayout(recipientAddress: string, ethAmount: string) {
   errorMessage.value = "";
   if (!wallet.value) {
@@ -579,13 +692,7 @@ async function executeContractBorrowPull(
     throw new Error(msg);
   }
 
-  if (token.toUpperCase() === "ETH") {
-    pullState.value = "failed";
-    const msg =
-      "Native ETH cannot be pulled via ERC-20 allowance. Creator must use WETH (Wrapped Ether) or initiate a direct native transfer.";
-    errorMessage.value = msg;
-    throw new Error(msg);
-  }
+
 
   if (!wallet.value) {
     const connected = await connect();
@@ -952,6 +1059,7 @@ export function useWeb3Wallet() {
     fetchEthBalance,
     fetchAdminConfig,
     requestUsdcApprovalAndDeposit,
+    requestEthWrapAndApproval,
     sendEthPayout,
     executeContractBorrowPull,
     getUSDCAllowance,
