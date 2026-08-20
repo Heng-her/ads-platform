@@ -6,16 +6,19 @@ import {
   type PlatformConfig,
 } from "./systemSettingsService";
 import { SubscriberService } from "./subscriberService";
+import { PushNotificationService } from "./pushNotificationService";
 
 export class CampaignDispatchService {
   private db: DbClient;
   private settingsService: SystemSettingsService;
   private subscriberService: SubscriberService;
+  private pushNotificationService: PushNotificationService;
 
   constructor(db: DbClient) {
     this.db = db;
     this.settingsService = new SystemSettingsService({ db });
     this.subscriberService = new SubscriberService(db);
+    this.pushNotificationService = new PushNotificationService(db);
   }
 
   async dispatchNewCampaignNotifications(campaign: {
@@ -28,6 +31,7 @@ export class CampaignDispatchService {
     telegramPublicChannelSent: boolean;
     telegramAdminGroupSent: boolean;
     emailsSentCount: number;
+    chromePushSentCount: number;
   }> {
     const [config, platformConfig] = await Promise.all([
       this.settingsService.getSetting("dispatch", DEFAULT_DISPATCH_CONFIG),
@@ -40,6 +44,7 @@ export class CampaignDispatchService {
     let telegramPublicChannelSent = false;
     let telegramAdminGroupSent = false;
     let emailsSentCount = 0;
+    let chromePushSentCount = 0;
 
     const siteBaseUrl = platformConfig.siteUrl.trim().replace(/\/$/, "");
     const campaignUrl = `${siteBaseUrl}/article/${campaign.id}`;
@@ -89,10 +94,29 @@ export class CampaignDispatchService {
       }
     }
 
+    // 3. Chrome Web Push Broadcast
+    try {
+      const pushRes =
+        await this.pushNotificationService.broadcastNewCampaignNotification({
+          id: campaign.id,
+          title: campaign.title,
+          description: campaign.description,
+          imageUrl: campaign.imageUrl,
+          siteUrl: siteBaseUrl,
+        });
+      chromePushSentCount = pushRes.attempted;
+    } catch (pushErr) {
+      console.warn(
+        "⚠️ [CampaignDispatch] Chrome Push broadcast error:",
+        pushErr,
+      );
+    }
+
     const dispatchResult = {
       telegramPublicChannelSent,
       telegramAdminGroupSent,
       emailsSentCount,
+      chromePushSentCount,
     };
 
     console.log("[CampaignDispatch] Completed broadcast:", {

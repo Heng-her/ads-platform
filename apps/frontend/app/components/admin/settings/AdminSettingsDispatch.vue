@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
 import AdminSettingInput from './AdminSettingInput.vue'
@@ -41,6 +41,39 @@ const isResendActive = computed(() => {
 
 const isSendGridActive = computed(() => {
   return config.value.mailSmtpPassword?.trim().startsWith('SG.')
+})
+
+// Active Subscribers & Push Requests View State
+const pushSubscriptionsList = ref<any[]>([])
+const emailSubscribersList = ref<any[]>([])
+const isLoadingSubscribers = ref(false)
+
+async function fetchSubscribersAndPushRequests() {
+  isLoadingSubscribers.value = true
+  try {
+    const [pushRes, subRes] = await Promise.all([
+      api.action.$post({ json: { action: 'notifications/list', data: {} } }),
+      api.action.$post({ json: { action: 'subscribers/list', data: {} } })
+    ])
+
+    const pushData: any = await pushRes.json().catch(() => ({}))
+    const subData: any = await subRes.json().catch(() => ({}))
+
+    if (pushRes.ok && pushData.code === 1 && pushData.data?.items) {
+      pushSubscriptionsList.value = pushData.data.items
+    }
+    if (subRes.ok && subData.code === 1 && Array.isArray(subData.data)) {
+      emailSubscribersList.value = subData.data
+    }
+  } catch (err) {
+    console.warn('Could not fetch subscribers list:', err)
+  } finally {
+    isLoadingSubscribers.value = false
+  }
+}
+
+onMounted(() => {
+  fetchSubscribersAndPushRequests()
 })
 
 function applyResendPreset() {
@@ -443,6 +476,110 @@ async function testMailSend() {
             </label>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Active Chrome Push & Email Subscribers Viewer -->
+    <div class="rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-sm space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+            <UIcon name="i-heroicons-bell-alert" class="h-5 w-5 text-emerald-400" />
+            Active Subscribers &amp; Chrome Push Notification Requests
+          </h2>
+          <p class="mt-0.5 text-sm text-gray-400">View real-time user notification requests and active subscribers.</p>
+        </div>
+        <button
+          type="button"
+          class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-white transition flex items-center gap-1.5 cursor-pointer"
+          :disabled="isLoadingSubscribers"
+          @click="fetchSubscribersAndPushRequests"
+        >
+          <UIcon name="i-heroicons-arrow-path" class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoadingSubscribers }" />
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      <!-- Quick Metrics Summary -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="p-4 rounded-xl border border-gray-800 bg-gray-950/60 flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-400 font-medium">Chrome Web Push Devices</span>
+            <div class="text-2xl font-bold text-emerald-400 mt-1">{{ pushSubscriptionsList.length }}</div>
+          </div>
+          <div class="p-3 rounded-xl bg-emerald-500/10 text-emerald-400">
+            <UIcon name="i-heroicons-device-phone-mobile" class="w-6 h-6" />
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl border border-gray-800 bg-gray-950/60 flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-400 font-medium">Email Subscribers</span>
+            <div class="text-2xl font-bold text-indigo-400 mt-1">{{ emailSubscribersList.length }}</div>
+          </div>
+          <div class="p-3 rounded-xl bg-indigo-500/10 text-indigo-400">
+            <UIcon name="i-heroicons-envelope" class="w-6 h-6" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Subscriptions Table -->
+      <div v-if="pushSubscriptionsList.length > 0 || emailSubscribersList.length > 0" class="space-y-4 pt-2">
+        <div v-if="pushSubscriptionsList.length > 0" class="space-y-2">
+          <h4 class="text-xs font-bold text-gray-300 uppercase tracking-wider">Chrome Web Push Endpoints</h4>
+          <div class="overflow-x-auto rounded-xl border border-gray-800">
+            <table class="w-full text-left text-xs text-gray-300">
+              <thead class="bg-gray-950 text-gray-400 border-b border-gray-800 font-medium">
+                <tr>
+                  <th class="px-4 py-2.5">ID</th>
+                  <th class="px-4 py-2.5">Browser Push Endpoint</th>
+                  <th class="px-4 py-2.5">User ID</th>
+                  <th class="px-4 py-2.5">Date Subscribed</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-800/60">
+                <tr v-for="sub in pushSubscriptionsList" :key="sub.id" class="hover:bg-gray-800/40">
+                  <td class="px-4 py-2 font-mono text-emerald-400">{{ sub.id }}</td>
+                  <td class="px-4 py-2 max-w-xs truncate font-mono text-gray-400" :title="sub.endpoint">{{ sub.endpoint }}</td>
+                  <td class="px-4 py-2 font-mono text-stone-400">{{ sub.userId || 'Guest' }}</td>
+                  <td class="px-4 py-2 text-stone-400">{{ sub.createdAt ? new Date(sub.createdAt).toLocaleString() : 'N/A' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div v-if="emailSubscribersList.length > 0" class="space-y-2 pt-2">
+          <h4 class="text-xs font-bold text-gray-300 uppercase tracking-wider">Email Subscribers</h4>
+          <div class="overflow-x-auto rounded-xl border border-gray-800">
+            <table class="w-full text-left text-xs text-gray-300">
+              <thead class="bg-gray-950 text-gray-400 border-b border-gray-800 font-medium">
+                <tr>
+                  <th class="px-4 py-2.5">Email Address</th>
+                  <th class="px-4 py-2.5">Status</th>
+                  <th class="px-4 py-2.5">Source</th>
+                  <th class="px-4 py-2.5">Date Subscribed</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-800/60">
+                <tr v-for="sub in emailSubscribersList" :key="sub.email" class="hover:bg-gray-800/40">
+                  <td class="px-4 py-2 font-semibold text-white">{{ sub.email }}</td>
+                  <td class="px-4 py-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      {{ sub.status }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-2 text-stone-400">{{ sub.source || 'PUBLIC_MODAL' }}</td>
+                  <td class="px-4 py-2 text-stone-400">{{ sub.createdAt ? new Date(sub.createdAt).toLocaleString() : 'N/A' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="text-center py-6 text-xs text-gray-400 border border-dashed border-gray-800 rounded-xl">
+        No active notification requests or subscribers yet. Users can request notifications via the header bell or subscription prompt on the homepage!
       </div>
     </div>
   </div>

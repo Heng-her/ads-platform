@@ -10,6 +10,7 @@ import { handleDashboardAction } from "./dashboardActions";
 import { handleMonetizationAction } from "./monetizationActions";
 import { handleSettingAction } from "./settingActions";
 import { handleSubscriberAction } from "./subscriberActions";
+import { handlePushNotificationAction } from "./pushNotificationActions";
 import { sendError } from "../utils/response";
 
 export async function dispatchAction(
@@ -110,6 +111,24 @@ export async function dispatchAction(
       // Optional auth for public subscribe/unsubscribe
     }
     const result = await handleSubscriberAction({
+      c,
+      db,
+      action,
+      data: payloadData,
+      currentUser,
+    });
+    return c.json(result);
+  }
+
+  // 10. Push Notification Actions
+  if (action.startsWith("notifications/")) {
+    let currentUser: UserJwtPayload | null = null;
+    try {
+      currentUser = await authenticate(c, false);
+    } catch {
+      // Optional auth
+    }
+    const result = await handlePushNotificationAction({
       c,
       db,
       action,

@@ -10,5 +10,6 @@ export * from "./systemSettings";
 export * from "./subscribers";
 export * from "./withdrawals";
 export * from "./adClicks";
+export * from "./pushSubscriptions";
 
 
