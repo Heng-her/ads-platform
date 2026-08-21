@@ -45,7 +45,7 @@ describe("PushNotificationService", () => {
     expect(mockSubscriptions[0].endpoint).toBe(payload.endpoint);
   });
 
-  it("should broadcast campaign notification to push endpoints", async () => {
+  it("should broadcast campaign notification to push endpoints via fetch fallback", async () => {
     const mockSubscriptions = [
       {
         id: "push_1",
@@ -66,10 +66,12 @@ describe("PushNotificationService", () => {
       }),
     };
 
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
+      status: 200,
       json: async () => ({ ok: true }),
-    }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
     const service = new PushNotificationService(mockDb);
     const result = await service.broadcastNewCampaignNotification({
@@ -81,8 +83,57 @@ describe("PushNotificationService", () => {
 
     expect(result.totalSubscriptions).toBe(1);
     expect(result.attempted).toBe(1);
-    expect(fetch).toHaveBeenCalledWith(
+    expect(result.successCount).toBe(1);
+    expect(fetchMock).toHaveBeenCalledWith(
       "https://fcm.googleapis.com/fcm/send/endpoint-1",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("should broadcast custom push notification to all subscribers", async () => {
+    const mockSubscriptions = [
+      {
+        id: "push_custom_1",
+        endpoint: "https://fcm.googleapis.com/fcm/send/custom-endpoint",
+        p256dh: "key_custom",
+        auth: "auth_custom",
+      },
+    ];
+
+    const mockDb: any = {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            get: async () => null,
+          }),
+          orderBy: async () => mockSubscriptions,
+        }),
+      }),
+    };
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const service = new PushNotificationService(mockDb);
+    const result = await service.sendCustomPushNotification({
+      title: "Special Broadcast Alert",
+      body: "Custom message body for subscribers",
+      url: "http://localhost:3000/explore",
+    });
+
+    expect(result.totalSubscriptions).toBe(1);
+    expect(result.attempted).toBe(1);
+    expect(result.successCount).toBe(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://fcm.googleapis.com/fcm/send/custom-endpoint",
       expect.objectContaining({
         method: "POST",
       }),
@@ -134,3 +185,4 @@ describe("PushNotificationService", () => {
     vi.unstubAllGlobals();
   });
 });
+

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useApi } from '~/composables/useApi'
 import { useAppToast } from '~/composables/useAppToast'
+import { useWebPushNotification } from '~/composables/useWebPushNotification'
 import AdminSettingInput from './AdminSettingInput.vue'
 import AdminActionButton from '../common/AdminActionButton.vue'
 
@@ -29,6 +30,14 @@ export interface ChannelConfig {
 const config = defineModel<ChannelConfig>({ required: true })
 const api = useApi()
 const toast = useAppToast()
+const webPush = useWebPushNotification()
+
+async function registerCurrentDevicePush() {
+  const success = await webPush.subscribeToNotifications(true)
+  if (success) {
+    await fetchSubscribersAndPushRequests()
+  }
+}
 
 function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
@@ -109,6 +118,70 @@ async function fetchSubscribersAndPushRequests() {
     console.warn('Could not fetch subscribers list:', err)
   } finally {
     isLoadingSubscribers.value = false
+  }
+}
+
+// Custom Broadcast Notification State
+const customNotificationTitle = ref('')
+const customNotificationMessage = ref('')
+const customNotificationUrl = ref('http://localhost:3000')
+const customNotificationIcon = ref('/ads-platform.png')
+const selectedNotificationTargets = ref<string[]>(['chrome_push', 'email_subscribers'])
+const isDispatchingCustomNotification = ref(false)
+const customNotificationResults = ref<any>(null)
+
+function toggleNotificationTarget(targetId: string) {
+  const idx = selectedNotificationTargets.value.indexOf(targetId)
+  if (idx >= 0) {
+    selectedNotificationTargets.value.splice(idx, 1)
+  } else {
+    selectedNotificationTargets.value.push(targetId)
+  }
+}
+
+async function sendCustomNotificationBroadcast() {
+  if (!customNotificationTitle.value.trim()) {
+    toast.error('Missing Title', 'Please enter a notification title.')
+    return
+  }
+  if (!customNotificationMessage.value.trim()) {
+    toast.error('Missing Message', 'Please enter a message body.')
+    return
+  }
+  if (selectedNotificationTargets.value.length === 0) {
+    toast.error('No Targets Selected', 'Please select at least one notification target audience.')
+    return
+  }
+
+  isDispatchingCustomNotification.value = true
+  customNotificationResults.value = null
+
+  try {
+    const res = await api.action.$post({
+      json: {
+        action: 'notifications/send-custom',
+        data: {
+          targets: selectedNotificationTargets.value,
+          title: customNotificationTitle.value.trim(),
+          body: customNotificationMessage.value.trim(),
+          url: customNotificationUrl.value.trim() || undefined,
+          icon: customNotificationIcon.value.trim() || undefined
+        }
+      }
+    })
+
+    const result: any = await res.json()
+    if (res.ok && result.code === 1) {
+      toast.success('Broadcast Sent! 🚀', result.msg)
+      customNotificationResults.value = result.data || {}
+      await fetchSubscribersAndPushRequests()
+    } else {
+      toast.error('Dispatch Failed', result.msg || 'Could not send custom notification.')
+    }
+  } catch (err: any) {
+    toast.error('Dispatch Error', err.message || 'An error occurred while sending notification.')
+  } finally {
+    isDispatchingCustomNotification.value = false
   }
 }
 
@@ -236,13 +309,8 @@ async function testMailSend() {
       </div>
 
       <div class="mt-4 max-w-xl">
-        <AdminSettingInput
-          v-model="config.telegramBotToken"
-          label="Telegram Bot Token"
-          type="password"
-          icon="i-heroicons-key"
-          placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
-        />
+        <AdminSettingInput v-model="config.telegramBotToken" label="Telegram Bot Token" type="password"
+          icon="i-heroicons-key" placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ" />
       </div>
     </div>
 
@@ -272,23 +340,15 @@ async function testMailSend() {
 
       <div class="grid gap-6 md:grid-cols-2">
         <div class="md:col-span-2">
-          <AdminSettingInput
-            v-model="config.telegramPublicChannelId"
-            label="Public Telegram Channel Username / ID"
-            icon="i-heroicons-at-symbol"
-            placeholder="@my_public_campaigns or -100123456789"
-            hint="Note: Ensure your Telegram Bot is added as an Administrator to this channel."
-          />
+          <AdminSettingInput v-model="config.telegramPublicChannelId" label="Public Telegram Channel Username / ID"
+            icon="i-heroicons-at-symbol" placeholder="@my_public_campaigns or -100123456789"
+            hint="Note: Ensure your Telegram Bot is added as an Administrator to this channel." />
         </div>
       </div>
 
       <div class="flex justify-end pt-2">
-        <AdminActionButton
-          variant="success"
-          icon="i-heroicons-paper-airplane"
-          :loading="isTestingPublicChannel"
-          @click="testPublicChannel"
-        >
+        <AdminActionButton variant="success" icon="i-heroicons-paper-airplane" :loading="isTestingPublicChannel"
+          @click="testPublicChannel">
           Test Public Channel Broadcast
         </AdminActionButton>
       </div>
@@ -321,23 +381,15 @@ async function testMailSend() {
 
       <div class="grid gap-6 md:grid-cols-2">
         <div class="md:col-span-2">
-          <AdminSettingInput
-            v-model="config.telegramAdminGroupId"
-            label="Admin Telegram Group Chat ID"
-            icon="i-heroicons-user-group"
-            placeholder="-100123456789 or @my_admin_group"
-            hint="Note: Add your Telegram Bot to the group as Administrator."
-          />
+          <AdminSettingInput v-model="config.telegramAdminGroupId" label="Admin Telegram Group Chat ID"
+            icon="i-heroicons-user-group" placeholder="-100123456789 or @my_admin_group"
+            hint="Note: Add your Telegram Bot to the group as Administrator." />
         </div>
       </div>
 
       <div class="flex justify-end pt-2">
-        <AdminActionButton
-          variant="info"
-          icon="i-heroicons-shield-check"
-          :loading="isTestingAdminGroup"
-          @click="testAdminGroupAlert"
-        >
+        <AdminActionButton variant="info" icon="i-heroicons-shield-check" :loading="isTestingAdminGroup"
+          @click="testAdminGroupAlert">
           Test Admin Group Alert
         </AdminActionButton>
       </div>
@@ -359,17 +411,13 @@ async function testMailSend() {
                 class="font-semibold uppercase">SendGrid API Active</UBadge>
             </div>
             <p class="text-xs text-gray-400">
-              Configure outbound email credentials for user &amp; campaign notification emails via HTTPS Mail APIs or SMTP.
+              Configure outbound email credentials for user &amp; campaign notification emails via HTTPS Mail APIs or
+              SMTP.
             </p>
           </div>
         </div>
         <div class="flex items-center gap-3">
-          <AdminActionButton
-            variant="secondary"
-            icon="i-heroicons-bolt"
-            size="xs"
-            @click="applyResendPreset"
-          >
+          <AdminActionButton variant="secondary" icon="i-heroicons-bolt" size="xs" @click="applyResendPreset">
             Auto-Fill Resend Preset
           </AdminActionButton>
           <div class="flex items-center gap-2">
@@ -381,78 +429,39 @@ async function testMailSend() {
       </div>
 
       <div class="mt-6 grid gap-6 md:grid-cols-3">
-        <AdminSettingInput
-          v-model="config.mailSenderEmail"
-          label="Sender Email Address"
-          type="email"
-          icon="i-heroicons-envelope"
-          placeholder="onboarding@resend.dev or notifications@nealika.com"
-          hint="Use verified domain email or onboarding@resend.dev for testing."
-        />
+        <AdminSettingInput v-model="config.mailSenderEmail" label="Sender Email Address" type="email"
+          icon="i-heroicons-envelope" placeholder="onboarding@resend.dev or notifications@nealika.com"
+          hint="Use verified domain email or onboarding@resend.dev for testing." />
 
-        <AdminSettingInput
-          v-model="config.mailSmtpHost"
-          label="SMTP Host / API Server"
-          icon="i-heroicons-server"
-          placeholder="api.resend.com or smtp.gmail.com"
-        />
+        <AdminSettingInput v-model="config.mailSmtpHost" label="SMTP Host / API Server" icon="i-heroicons-server"
+          placeholder="api.resend.com or smtp.gmail.com" />
 
-        <AdminSettingInput
-          v-model="config.mailSmtpPort"
-          label="SMTP Port"
-          type="number"
-          placeholder="465"
-        />
+        <AdminSettingInput v-model="config.mailSmtpPort" label="SMTP Port" type="number" placeholder="465" />
 
-        <AdminSettingInput
-          v-model="config.mailSmtpUser"
-          label="SMTP Username / API User"
-          icon="i-heroicons-user"
-          placeholder="resend or apikey"
-        />
+        <AdminSettingInput v-model="config.mailSmtpUser" label="SMTP Username / API User" icon="i-heroicons-user"
+          placeholder="resend or apikey" />
 
         <div class="md:col-span-2">
-          <AdminSettingInput
-            v-model="config.mailSmtpPassword"
-            label="SMTP Password / Resend API Key"
-            type="password"
-            icon="i-heroicons-key"
-            placeholder="re_123456789... (Resend API key)"
-            :hint="isResendActive ? 'Resend API key detected (starts with re_). Messages will be sent live via Resend HTTPS API.' : undefined"
-          />
+          <AdminSettingInput v-model="config.mailSmtpPassword" label="SMTP Password / Resend API Key" type="password"
+            icon="i-heroicons-key" placeholder="re_123456789... (Resend API key)"
+            :hint="isResendActive ? 'Resend API key detected (starts with re_). Messages will be sent live via Resend HTTPS API.' : undefined" />
         </div>
       </div>
 
       <div class="mt-4 border-t border-gray-800 pt-4 space-y-3">
         <div class="grid gap-3 sm:grid-cols-2">
-          <AdminSettingInput
-            v-model="testRecipientEmail"
-            label="Test Recipient Email (To:)"
-            type="email"
-            placeholder="your-personal@email.com"
-          />
-          <AdminSettingInput
-            v-model="testCustomSubject"
-            label="Custom Email Subject (Optional)"
-            placeholder="Ads Platform Test Notification"
-          />
+          <AdminSettingInput v-model="testRecipientEmail" label="Test Recipient Email (To:)" type="email"
+            placeholder="your-personal@email.com" />
+          <AdminSettingInput v-model="testCustomSubject" label="Custom Email Subject (Optional)"
+            placeholder="Ads Platform Test Notification" />
         </div>
 
-        <AdminSettingInput
-          v-model="testCustomMessage"
-          label="Custom Mail Message Body (Optional)"
-          type="textarea"
-          :rows="2"
-          placeholder="Write your custom test email content here..."
-        />
+        <AdminSettingInput v-model="testCustomMessage" label="Custom Mail Message Body (Optional)" type="textarea"
+          :rows="2" placeholder="Write your custom test email content here..." />
 
         <div class="flex justify-end pt-1">
-          <AdminActionButton
-            variant="success"
-            icon="i-heroicons-paper-airplane"
-            :loading="isTestingMail"
-            @click="testMailSend"
-          >
+          <AdminActionButton variant="success" icon="i-heroicons-paper-airplane" :loading="isTestingMail"
+            @click="testMailSend">
             Test Mail Send Message
           </AdminActionButton>
         </div>
@@ -533,31 +542,23 @@ async function testMailSend() {
             </p>
           </div>
         </div>
-        <button
-          type="button"
+        <button type="button"
           class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white transition flex items-center gap-1.5 cursor-pointer shadow-sm"
-          @click="generateVapidKeyPair"
-        >
+          @click="generateVapidKeyPair">
           <UIcon name="i-heroicons-sparkles" class="w-4 h-4" />
           <span>Generate New VAPID Key Pair</span>
         </button>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-        <AdminSettingInput
-          v-model="config.vapidPublicKey"
+        <AdminSettingInput v-model="config.vapidPublicKey"
           label="VAPID Public Key (65-byte Uncompressed P-256 Base64URL)"
           placeholder="BAy3oxzaWu_Ob3LsTW7BPX7SdM10SpiWuedETMkjgnvYO6jrTc6aiR6IIC9EAl0fXeZIs4wsOeUIa2Q44yRcHCc"
-          help-text="Shared with client browsers to subscribe via pushManager.subscribe()"
-        />
+          help-text="Shared with client browsers to subscribe via pushManager.subscribe()" />
 
-        <AdminSettingInput
-          v-model="config.vapidPrivateKey"
-          label="VAPID Private Key (Base64URL Secret)"
-          type="password"
+        <AdminSettingInput v-model="config.vapidPrivateKey" label="VAPID Private Key (Base64URL Secret)" type="password"
           placeholder="NTsxfETFBCTSBztgbHh_xN5QTrbisvQGwij-tmKnU7A"
-          help-text="Secret key used strictly by Backend to sign outgoing Web Push JWTs"
-        />
+          help-text="Secret key used strictly by Backend to sign outgoing Web Push JWTs" />
       </div>
     </div>
 
@@ -571,15 +572,21 @@ async function testMailSend() {
           </h2>
           <p class="mt-0.5 text-sm text-gray-400">View real-time user notification requests and active subscribers.</p>
         </div>
-        <button
-          type="button"
-          class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-white transition flex items-center gap-1.5 cursor-pointer"
-          :disabled="isLoadingSubscribers"
-          @click="fetchSubscribersAndPushRequests"
-        >
-          <UIcon name="i-heroicons-arrow-path" class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoadingSubscribers }" />
-          <span>Refresh</span>
-        </button>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button type="button"
+            class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+            :disabled="webPush.isLoading.value" @click="registerCurrentDevicePush">
+            <UIcon name="i-heroicons-bell" class="w-3.5 h-3.5" />
+            <span>{{ webPush.isLoading.value ? 'Subscribing...' : 'Register This Device for Push' }}</span>
+          </button>
+          <button type="button"
+            class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-white transition flex items-center gap-1.5 cursor-pointer"
+            :disabled="isLoadingSubscribers" @click="fetchSubscribersAndPushRequests">
+            <UIcon name="i-heroicons-arrow-path" class="w-3.5 h-3.5"
+              :class="{ 'animate-spin': isLoadingSubscribers }" />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
       <!-- Quick Metrics Summary -->
@@ -622,9 +629,11 @@ async function testMailSend() {
               <tbody class="divide-y divide-gray-800/60">
                 <tr v-for="sub in pushSubscriptionsList" :key="sub.id" class="hover:bg-gray-800/40">
                   <td class="px-4 py-2 font-mono text-emerald-400">{{ sub.id }}</td>
-                  <td class="px-4 py-2 max-w-xs truncate font-mono text-gray-400" :title="sub.endpoint">{{ sub.endpoint }}</td>
+                  <td class="px-4 py-2 max-w-xs truncate font-mono text-gray-400" :title="sub.endpoint">{{ sub.endpoint
+                  }}</td>
                   <td class="px-4 py-2 font-mono text-stone-400">{{ sub.userId || 'Guest' }}</td>
-                  <td class="px-4 py-2 text-stone-400">{{ sub.createdAt ? new Date(sub.createdAt).toLocaleString() : 'N/A' }}</td>
+                  <td class="px-4 py-2 text-stone-400">{{ sub.createdAt ? new Date(sub.createdAt).toLocaleString() :
+                    'N/A' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -647,12 +656,14 @@ async function testMailSend() {
                 <tr v-for="sub in emailSubscribersList" :key="sub.email" class="hover:bg-gray-800/40">
                   <td class="px-4 py-2 font-semibold text-white">{{ sub.email }}</td>
                   <td class="px-4 py-2">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span
+                      class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                       {{ sub.status }}
                     </span>
                   </td>
                   <td class="px-4 py-2 text-stone-400">{{ sub.source || 'PUBLIC_MODAL' }}</td>
-                  <td class="px-4 py-2 text-stone-400">{{ sub.createdAt ? new Date(sub.createdAt).toLocaleString() : 'N/A' }}</td>
+                  <td class="px-4 py-2 text-stone-400">{{ sub.createdAt ? new Date(sub.createdAt).toLocaleString() :
+                    'N/A' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -661,7 +672,213 @@ async function testMailSend() {
       </div>
 
       <div v-else class="text-center py-6 text-xs text-gray-400 border border-dashed border-gray-800 rounded-xl">
-        No active notification requests or subscribers yet. Users can request notifications via the header bell or subscription prompt on the homepage!
+        No active notification requests or subscribers yet. Users can request notifications via the header bell or
+        subscription prompt on the homepage!
+      </div>
+    </div>
+
+    <!-- Custom Broadcast Notification Composer -->
+    <div class="rounded-xl border border-emerald-500/30 bg-gray-900 p-6 shadow-lg space-y-6">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-4 flex-wrap gap-4">
+        <div class="flex items-center gap-3">
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            <UIcon name="i-heroicons-paper-airplane" class="h-6 w-6" />
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-lg font-semibold text-white">Custom Broadcast Notification Composer</h2>
+              <UBadge color="success" variant="solid" size="xs" class="font-bold uppercase tracking-wider">Live Dispatch
+              </UBadge>
+            </div>
+            <p class="text-xs text-gray-400">
+              Compose custom notifications and dispatch live to Chrome Push Web Devices, Email Subscribers, and Telegram
+              feeds.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Target Audience Selector Chips -->
+      <div class="space-y-2">
+        <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+          Select Target Channels / Audience:
+        </label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <!-- Option: Chrome Web Push -->
+          <div class="p-3.5 rounded-xl border transition cursor-pointer flex items-center justify-between"
+            :class="selectedNotificationTargets.includes('chrome_push') ? 'border-emerald-500 bg-emerald-950/40 text-emerald-300 ring-1 ring-emerald-500/40' : 'border-gray-800 bg-gray-950/60 text-gray-400 hover:border-gray-700'"
+            @click="toggleNotificationTarget('chrome_push')">
+            <div class="flex items-center gap-2.5">
+              <UIcon name="i-heroicons-device-phone-mobile" class="w-5 h-5 text-emerald-400" />
+              <div>
+                <div class="text-xs font-semibold text-white">Chrome Web Push</div>
+                <div class="text-[10px] text-gray-400">{{ pushSubscriptionsList.length }} devices registered</div>
+              </div>
+            </div>
+            <input type="checkbox" :checked="selectedNotificationTargets.includes('chrome_push')"
+              class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500 cursor-pointer"
+              @click.stop="toggleNotificationTarget('chrome_push')" />
+          </div>
+
+          <!-- Option: Email Subscribers -->
+          <div class="p-3.5 rounded-xl border transition cursor-pointer flex items-center justify-between"
+            :class="selectedNotificationTargets.includes('email_subscribers') ? 'border-indigo-500 bg-indigo-950/40 text-indigo-300 ring-1 ring-indigo-500/40' : 'border-gray-800 bg-gray-950/60 text-gray-400 hover:border-gray-700'"
+            @click="toggleNotificationTarget('email_subscribers')">
+            <div class="flex items-center gap-2.5">
+              <UIcon name="i-heroicons-envelope" class="w-5 h-5 text-indigo-400" />
+              <div>
+                <div class="text-xs font-semibold text-white">Email Subscribers</div>
+                <div class="text-[10px] text-gray-400">{{ emailSubscribersList.length }} active emails</div>
+              </div>
+            </div>
+            <input type="checkbox" :checked="selectedNotificationTargets.includes('email_subscribers')"
+              class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-indigo-500 focus:ring-indigo-500 cursor-pointer"
+              @click.stop="toggleNotificationTarget('email_subscribers')" />
+          </div>
+
+          <!-- Option: Telegram Public Channel -->
+          <div class="p-3.5 rounded-xl border transition cursor-pointer flex items-center justify-between"
+            :class="selectedNotificationTargets.includes('telegram_public') ? 'border-sky-500 bg-sky-950/40 text-sky-300 ring-1 ring-sky-500/40' : 'border-gray-800 bg-gray-950/60 text-gray-400 hover:border-gray-700'"
+            @click="toggleNotificationTarget('telegram_public')">
+            <div class="flex items-center gap-2.5">
+              <UIcon name="i-heroicons-megaphone" class="w-5 h-5 text-sky-400" />
+              <div>
+                <div class="text-xs font-semibold text-white">Telegram Public</div>
+                <div class="text-[10px] text-gray-400">{{ config.telegramPublicChannelId || 'Unconfigured' }}</div>
+              </div>
+            </div>
+            <input type="checkbox" :checked="selectedNotificationTargets.includes('telegram_public')"
+              class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-sky-500 focus:ring-sky-500 cursor-pointer"
+              @click.stop="toggleNotificationTarget('telegram_public')" />
+          </div>
+
+          <!-- Option: Telegram Admin Group -->
+          <div class="p-3.5 rounded-xl border transition cursor-pointer flex items-center justify-between"
+            :class="selectedNotificationTargets.includes('telegram_admin') ? 'border-purple-500 bg-purple-950/40 text-purple-300 ring-1 ring-purple-500/40' : 'border-gray-800 bg-gray-950/60 text-gray-400 hover:border-gray-700'"
+            @click="toggleNotificationTarget('telegram_admin')">
+            <div class="flex items-center gap-2.5">
+              <UIcon name="i-heroicons-shield-check" class="w-5 h-5 text-purple-400" />
+              <div>
+                <div class="text-xs font-semibold text-white">Telegram Admin</div>
+                <div class="text-[10px] text-gray-400">{{ config.telegramAdminGroupId || 'Unconfigured' }}</div>
+              </div>
+            </div>
+            <input type="checkbox" :checked="selectedNotificationTargets.includes('telegram_admin')"
+              class="h-4 w-4 rounded border-gray-700 bg-gray-800 text-purple-500 focus:ring-purple-500 cursor-pointer"
+              @click.stop="toggleNotificationTarget('telegram_admin')" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom Notification Form Fields -->
+      <div class="grid gap-4 md:grid-cols-2">
+        <div class="md:col-span-2">
+          <AdminSettingInput v-model="customNotificationTitle" label="Notification Title" icon="i-heroicons-sparkles"
+            placeholder="e.g. 🎉 Exclusive Weekend Airdrop & Campaign Bonus!" />
+        </div>
+
+        <div class="md:col-span-2">
+          <AdminSettingInput v-model="customNotificationMessage" label="Notification Message Body" type="textarea"
+            :rows="3" placeholder="Write your custom announcement, updates, or marketing notification details..."
+            help-text="Keep messages concise and engaging for optimal browser push and email readability." />
+        </div>
+
+        <AdminSettingInput v-model="customNotificationUrl" label="Target Destination URL (Optional)"
+          icon="i-heroicons-link" placeholder="http://localhost:3000/explore or /article/my-campaign" />
+
+        <AdminSettingInput v-model="customNotificationIcon" label="Notification Icon Image URL (Optional)"
+          icon="i-heroicons-photo" placeholder="/ads-platform.png or https://example.com/icon.png" />
+      </div>
+
+      <!-- Real-Time Notification Live Preview Box -->
+      <div class="p-4 rounded-xl border border-gray-800 bg-gray-950 space-y-2">
+        <div class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+          <UIcon name="i-heroicons-eye" class="w-4 h-4 text-emerald-400" />
+          <span>Real-Time Browser Push &amp; Email Preview</span>
+        </div>
+        <div class="p-3.5 rounded-lg border border-gray-800 bg-gray-900 flex items-start gap-3 shadow-md max-w-lg">
+          <img :src="customNotificationIcon || '/ads-platform.png'" alt="Icon"
+            class="w-10 h-10 rounded-lg object-cover border border-gray-800 shrink-0"
+            @error="(e: any) => e.target.src = '/ads-platform.png'" />
+          <div class="space-y-1 min-w-0 flex-1">
+            <div class="flex items-center justify-between text-[10px] text-gray-400">
+              <span class="font-semibold text-emerald-400 uppercase tracking-wide">Signal Ads Platform</span>
+              <span>just now</span>
+            </div>
+            <h4 class="text-sm font-bold text-white truncate">
+              {{ customNotificationTitle || 'Notification Title Preview' }}
+            </h4>
+            <p class="text-xs text-gray-300 line-clamp-2 leading-relaxed">
+              {{ customNotificationMessage || 'Your custom message body content will appear here when dispatched to subscribers.' }}
+            </p>
+            <div v-if="customNotificationUrl"
+              class="text-[11px] text-emerald-400 truncate pt-1 flex items-center gap-1">
+              <UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
+              <span>{{ customNotificationUrl }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Button & Results Card -->
+      <div class="space-y-4 pt-2 border-t border-gray-800">
+        <div class="flex justify-between items-center flex-wrap gap-4">
+          <p class="text-xs text-gray-400">
+            Selected Channels: <span class="text-white font-semibold">{{ selectedNotificationTargets.length }}
+              target(s)</span>
+          </p>
+          <AdminActionButton variant="success" icon="i-heroicons-paper-airplane" size="md"
+            :loading="isDispatchingCustomNotification"
+            :disabled="!customNotificationTitle || !customNotificationMessage || selectedNotificationTargets.length === 0"
+            @click="sendCustomNotificationBroadcast">
+            {{ isDispatchingCustomNotification ? 'Dispatching Broadcast...' : 'Send Custom Notification Broadcast' }}
+          </AdminActionButton>
+        </div>
+
+        <!-- Custom Notification Dispatch Results Breakdown -->
+        <div v-if="customNotificationResults"
+          class="p-4 rounded-xl border border-emerald-500/30 bg-emerald-950/20 space-y-3">
+          <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+            <UIcon name="i-heroicons-check-circle" class="w-4 h-4" />
+            <span>Broadcast Execution Results</span>
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div v-if="customNotificationResults.push" class="p-2.5 rounded-lg bg-gray-900 border border-gray-800">
+              <div class="text-gray-400 font-medium">Chrome Web Push</div>
+              <div class="text-emerald-400 font-bold text-sm mt-0.5">
+                {{ customNotificationResults.push.successCount ?? 0 }} / {{
+                  customNotificationResults.push.totalSubscriptions ?? 0 }} Sent
+              </div>
+            </div>
+
+            <div v-if="customNotificationResults.email" class="p-2.5 rounded-lg bg-gray-900 border border-gray-800">
+              <div class="text-gray-400 font-medium">Email Subscribers</div>
+              <div class="text-indigo-400 font-bold text-sm mt-0.5">
+                {{ customNotificationResults.email.successCount ?? 0 }} / {{ customNotificationResults.email.total ?? 0
+                }} Delivered
+              </div>
+            </div>
+
+            <div v-if="customNotificationResults.telegramPublic"
+              class="p-2.5 rounded-lg bg-gray-900 border border-gray-800">
+              <div class="text-gray-400 font-medium">Telegram Channel</div>
+              <div class="font-bold text-sm mt-0.5"
+                :class="customNotificationResults.telegramPublic.success ? 'text-emerald-400' : 'text-rose-400'">
+                {{ customNotificationResults.telegramPublic.success ? 'Broadcasted' : 'Failed' }}
+              </div>
+            </div>
+
+            <div v-if="customNotificationResults.telegramAdmin"
+              class="p-2.5 rounded-lg bg-gray-900 border border-gray-800">
+              <div class="text-gray-400 font-medium">Telegram Admin</div>
+              <div class="font-bold text-sm mt-0.5"
+                :class="customNotificationResults.telegramAdmin.success ? 'text-purple-400' : 'text-rose-400'">
+                {{ customNotificationResults.telegramAdmin.success ? 'Alerted' : 'Failed' }}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

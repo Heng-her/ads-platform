@@ -103,7 +103,7 @@ export class PushNotificationService {
     // Load active VAPID key settings
     const dispatchConfig = await this.settingsService.getSetting("dispatch", DEFAULT_DISPATCH_CONFIG);
     const vapidPublicKey = dispatchConfig.vapidPublicKey || DEFAULT_VAPID_PUBLIC_KEY;
-    const vapidPrivateKey = dispatchConfig.vapidPrivateKey;
+    const vapidPrivateKey = dispatchConfig.vapidPrivateKey || DEFAULT_DISPATCH_CONFIG.vapidPrivateKey;
 
     if (vapidPublicKey && vapidPrivateKey) {
       try {
@@ -142,14 +142,71 @@ export class PushNotificationService {
       timestamp: Date.now()
     });
 
+    return await this.dispatchPayloadToSubscriptions(subscriptions, pushPayload, vapidPublicKey, vapidPrivateKey);
+  }
+
+  /**
+   * Broadcast a Custom Web Push Notification to all stored Web Push Endpoints
+   */
+  async sendCustomPushNotification(payload: {
+    title: string;
+    body: string;
+    url?: string;
+    icon?: string;
+  }): Promise<{ totalSubscriptions: number; attempted: number; successCount: number }> {
+    const subscriptions = await this.getAllSubscriptions();
+    if (subscriptions.length === 0) {
+      return { totalSubscriptions: 0, attempted: 0, successCount: 0 };
+    }
+
+    const dispatchConfig = await this.settingsService.getSetting("dispatch", DEFAULT_DISPATCH_CONFIG);
+    const vapidPublicKey = dispatchConfig.vapidPublicKey || DEFAULT_VAPID_PUBLIC_KEY;
+    const vapidPrivateKey = dispatchConfig.vapidPrivateKey || DEFAULT_DISPATCH_CONFIG.vapidPrivateKey;
+
+    if (vapidPublicKey && vapidPrivateKey) {
+      try {
+        webpush.setVapidDetails(
+          `mailto:${dispatchConfig.mailSenderEmail || "notifications@adsplatform.com"}`,
+          vapidPublicKey,
+          vapidPrivateKey,
+        );
+      } catch (e) {
+        console.warn("[PushNotificationService] Failed to set VAPID details:", e);
+      }
+    }
+
+    const siteUrl = await this.settingsService.getSiteUrl();
+    const notificationUrl = payload.url
+      ? (payload.url.startsWith("http") ? payload.url : `${siteUrl.replace(/\/$/, "")}${payload.url.startsWith("/") ? "" : "/"}${payload.url}`)
+      : siteUrl;
+
+    const pushPayload = JSON.stringify({
+      title: payload.title,
+      body: payload.body,
+      icon: payload.icon || "/ads-platform.png",
+      badge: "/ads-platform.png",
+      url: notificationUrl,
+      timestamp: Date.now(),
+    });
+
+    return await this.dispatchPayloadToSubscriptions(subscriptions, pushPayload, vapidPublicKey, vapidPrivateKey);
+  }
+
+  private async dispatchPayloadToSubscriptions(
+    subscriptions: any[],
+    pushPayload: string,
+    vapidPublicKey?: string,
+    vapidPrivateKey?: string,
+  ): Promise<{ totalSubscriptions: number; attempted: number; successCount: number }> {
     let attempted = 0;
     let successCount = 0;
 
     for (const sub of subscriptions) {
-      try {
-        attempted++;
+      attempted++;
+      let sent = false;
 
-        if (vapidPublicKey && vapidPrivateKey) {
+      if (vapidPublicKey && vapidPrivateKey && sub.p256dh && sub.p256dh.length >= 40) {
+        try {
           await webpush.sendNotification(
             {
               endpoint: sub.endpoint,
@@ -161,29 +218,46 @@ export class PushNotificationService {
             pushPayload,
           );
           successCount++;
-        } else {
-          // Fallback to fetch POST if VAPID keys not configured
+          sent = true;
+        } catch (err: any) {
+          const status = err?.statusCode || err?.status;
+          console.warn(`[PushNotificationService] Web Push failed for ${sub.id}: status=${status}`, err.message);
+          sent = true;
+          if (status === 404 || status === 410 || status === 400 || status === 401 || status === 403) {
+            // Subscription expired or registered with old VAPID key -> auto-clean dead endpoint
+            await this.removeSubscription(sub.endpoint).catch(() => null);
+          }
+        }
+      }
+
+      if (!sent) {
+        try {
           const headers: Record<string, string> = {
             "Content-Type": "application/json",
             "TTL": "86400",
             "Urgency": "high",
           };
-          const response = await fetch(sub.endpoint, {
+          let response = await fetch(sub.endpoint, {
             method: "POST",
             headers,
             body: pushPayload,
           });
+
+          if (!response.ok && response.status === 401) {
+            // FCM payloadless push ping fallback
+            response = await fetch(sub.endpoint, {
+              method: "POST",
+              headers: { TTL: "86400" },
+            });
+          }
+
           if (response.ok || response.status === 201 || response.status === 202) {
             successCount++;
+          } else if (response.status === 404 || response.status === 410 || response.status === 403) {
+            await this.removeSubscription(sub.endpoint).catch(() => null);
           }
-        }
-      } catch (err: any) {
-        const status = err?.statusCode || err?.status;
-        if (status === 404 || status === 410 || status === 400 || status === 401) {
-          // Endpoint expired, unsubscribed, or invalid VAPID token -> Auto-clean dead subscription
-          await this.removeSubscription(sub.endpoint).catch(() => null);
-        } else {
-          console.warn("[PushNotificationService] Error sending push notification:", err);
+        } catch (err: any) {
+          console.warn("[PushNotificationService] Error sending push notification via fallback fetch:", err);
         }
       }
     }

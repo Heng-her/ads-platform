@@ -111,15 +111,21 @@ export function useWebPushNotification() {
         );
       }
 
-      // 4. Check existing subscription or create new one with active VAPID key
+      // 4. Always re-subscribe with active VAPID key to prevent stale key mismatches
       let subscription = await activeReg.pushManager.getSubscription();
-      if (!subscription) {
-        const applicationServerKey = urlBase64ToUint8Array(activeVapidKey);
-        subscription = await activeReg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: applicationServerKey as any,
-        });
+      if (subscription) {
+        try {
+          await subscription.unsubscribe();
+        } catch (e) {
+          console.warn("[WebPush] Old subscription unsubscribe attempt:", e);
+        }
       }
+
+      const applicationServerKey = urlBase64ToUint8Array(activeVapidKey);
+      subscription = await activeReg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey as any,
+      });
 
       // 4. Send subscription keys to Backend API
       const subJson = subscription.toJSON();
