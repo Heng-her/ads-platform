@@ -58,6 +58,9 @@ describe("PushNotificationService", () => {
     const mockDb: any = {
       select: () => ({
         from: () => ({
+          where: () => ({
+            get: async () => null,
+          }),
           orderBy: async () => mockSubscriptions,
         }),
       }),
@@ -84,6 +87,49 @@ describe("PushNotificationService", () => {
         method: "POST",
       }),
     );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("should fallback to payloadless push ping when FCM rejects unencrypted JSON payload with 401", async () => {
+    const mockSubscriptions = [
+      {
+        id: "push_2",
+        endpoint: "https://fcm.googleapis.com/fcm/send/endpoint-2",
+        p256dh: "key2",
+        auth: "auth2",
+      },
+    ];
+
+    const mockDb: any = {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            get: async () => null,
+          }),
+          orderBy: async () => mockSubscriptions,
+        }),
+      }),
+    };
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 401 }) // Raw JSON body fails
+      .mockResolvedValueOnce({ ok: true, status: 201 }); // Payloadless push ping succeeds
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const service = new PushNotificationService(mockDb);
+    const result = await service.broadcastNewCampaignNotification({
+      id: "cmp_1000",
+      title: "Payloadless Fallback Campaign",
+      description: "Test description",
+      siteUrl: "https://ads-platform.com",
+    });
+
+    expect(result.totalSubscriptions).toBe(1);
+    expect(result.attempted).toBe(1);
+    expect(result.successCount).toBe(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
 
     vi.unstubAllGlobals();
   });

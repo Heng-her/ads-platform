@@ -1,10 +1,11 @@
 import { ref, onMounted } from "vue";
 import { useApi } from "~/composables/useApi";
 import { useAppToast } from "~/composables/useAppToast";
+import { useSystemSettings } from "~/composables/useSystemSettings";
 
-// Standard 65-byte Uncompressed P-256 VAPID Public Key for Web Push Protocol
-const VAPID_PUBLIC_KEY =
-  "BEtDtjo-PpkOTHtuexOEAlF5fmqRbGNPcmnQXbgi7RlFsh439wATKoKhwB9KwvTmltpe7i9awuHJMWmkyFJ10cQ";
+// Active VAPID Public Key for Web Push Protocol
+const DEFAULT_VAPID_PUBLIC_KEY =
+  "BMKHUIgMv3UqzA2igg6C0hLcsP3yaAsAObt0BA__P5dGO8mClLzR04Yt5E-6Ft233LhEgq8p13MtgjR5AVXSbj4";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -20,6 +21,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 export function useWebPushNotification() {
   const api = useApi();
   const toast = useAppToast();
+  const { fetchSettings } = useSystemSettings();
 
   const permissionState = ref<NotificationPermission | "unsupported">(
     "default",
@@ -43,21 +45,22 @@ export function useWebPushNotification() {
     if (!import.meta.client || !("serviceWorker" in navigator)) return null;
     try {
       const reg = await navigator.serviceWorker.register("/sw.js");
-      // Wait for service worker to become active
       await navigator.serviceWorker.ready;
       return reg;
     } catch (err) {
-      console.warn("⚠️ [WebPush] Service worker registration failed:", err);
+      console.warn("[WebPush] Service worker registration failed:", err);
       return null;
     }
   }
 
-  async function subscribeToNotifications() {
+  async function subscribeToNotifications(showToast = true) {
     if (!checkPermissionSupport()) {
-      toast.warning(
-        "Not Supported",
-        "Chrome Browser Notifications are not supported on this browser.",
-      );
+      if (showToast) {
+        toast.warning(
+          "Not Supported",
+          "Web Notifications are not supported on this browser.",
+        );
+      }
       return false;
     }
 
@@ -69,10 +72,12 @@ export function useWebPushNotification() {
       permissionState.value = permission;
 
       if (permission !== "granted") {
-        toast.warning(
-          "Permission Denied",
-          "Browser notification permission was not granted.",
-        );
+        if (showToast) {
+          toast.warning(
+            "Permission Denied",
+            "Browser notification permission was not granted.",
+          );
+        }
         isLoading.value = false;
         return false;
       }
@@ -82,30 +87,38 @@ export function useWebPushNotification() {
       const activeReg = await navigator.serviceWorker.ready;
 
       if (!activeReg || !activeReg.active) {
-        toast.error("Registration Error", "Service Worker is not active yet.");
+        if (showToast) {
+          toast.error(
+            "Registration Error",
+            "Service Worker is not active yet.",
+          );
+        }
         isLoading.value = false;
         return false;
       }
 
-      // 3. Subscribe with PushManager using VAPID ApplicationServerKey
+      // 3. Resolve active VAPID Public Key from System Settings (with fallback)
+      let activeVapidKey = DEFAULT_VAPID_PUBLIC_KEY;
+      try {
+        const settingsObj = await fetchSettings();
+        if (settingsObj?.dispatch?.vapidPublicKey) {
+          activeVapidKey = settingsObj.dispatch.vapidPublicKey;
+        }
+      } catch (e) {
+        console.warn(
+          "[WebPush] Could not load VAPID key from settings, using default:",
+          e,
+        );
+      }
+
+      // 4. Check existing subscription or create new one with active VAPID key
       let subscription = await activeReg.pushManager.getSubscription();
       if (!subscription) {
-        try {
-          const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-          subscription = await activeReg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: applicationServerKey as any,
-          });
-        } catch (subErr) {
-          console.warn(
-            "⚠️ [WebPush] Subscribe with applicationServerKey fallback:",
-            subErr,
-          );
-          // Fallback subscription call
-          subscription = await activeReg.pushManager.subscribe({
-            userVisibleOnly: true,
-          });
-        }
+        const applicationServerKey = urlBase64ToUint8Array(activeVapidKey);
+        subscription = await activeReg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey as any,
+        });
       }
 
       // 4. Send subscription keys to Backend API
@@ -125,26 +138,32 @@ export function useWebPushNotification() {
       });
 
       const data: any = await res.json().catch(() => ({}));
-      if (res.ok && data.code === 1) {
+      if (res.ok && (data.code === 1 || data.code === 0 || data.success)) {
         isSubscribed.value = true;
-        toast.success(
-          "Chrome Notifications Active! 🔔",
-          "You will now receive desktop alerts when new campaigns are published.",
-        );
+        if (showToast) {
+          toast.success(
+            "Notifications Active! 🎉",
+            "You will now receive alerts when new campaigns are published.",
+          );
+        }
         return true;
       } else {
-        toast.error(
-          "Subscription Error",
-          data.msg || "Could not save notification subscription.",
-        );
+        if (showToast) {
+          toast.error(
+            "Subscription Error",
+            data.msg || "Could not save notification subscription.",
+          );
+        }
         return false;
       }
     } catch (err: any) {
-      console.error("❌ [WebPush] Subscription error:", err);
-      toast.error(
-        "Notification Error",
-        err.message || "Failed to enable browser notifications.",
-      );
+      console.error("[WebPush] Subscription error:", err);
+      if (showToast) {
+        toast.error(
+          "Notification Error",
+          err.message || "Failed to enable browser notifications.",
+        );
+      }
       return false;
     } finally {
       isLoading.value = false;
@@ -175,8 +194,8 @@ export function useWebPushNotification() {
 
       isSubscribed.value = false;
       toast.info(
-        "Notifications Disabled 🔕",
-        "You will no longer receive Chrome desktop alerts.",
+        "Notifications Disabled",
+        "You will no longer receive alerts.",
       );
       return true;
     } catch (err: any) {
@@ -195,10 +214,10 @@ export function useWebPushNotification() {
     checkPermissionSupport();
     if (Notification.permission === "granted") {
       try {
-        const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.getSubscription();
-        isSubscribed.value = !!sub;
-      } catch {}
+        await subscribeToNotifications(false);
+      } catch (err) {
+        console.warn("[WebPush] Auto-sync subscription failed:", err);
+      }
     }
   }
 

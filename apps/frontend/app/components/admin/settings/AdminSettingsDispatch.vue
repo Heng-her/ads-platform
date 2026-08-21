@@ -22,11 +22,51 @@ export interface ChannelConfig {
   onPostPublishMail: boolean
   onPostPublishPublicChannel: boolean
   onPostPublishAdminGroup: boolean
+  vapidPublicKey?: string
+  vapidPrivateKey?: string
 }
 
 const config = defineModel<ChannelConfig>({ required: true })
 const api = useApi()
 const toast = useAppToast()
+
+function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte)
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+}
+
+async function generateVapidKeyPair() {
+  try {
+    const keyPair = await window.crypto.subtle.generateKey(
+      {
+        name: 'ECDSA',
+        namedCurve: 'P-256'
+      },
+      true,
+      ['sign', 'verify']
+    )
+
+    const rawPublicKey = await window.crypto.subtle.exportKey('raw', keyPair.publicKey)
+    const jwkPrivateKey = await window.crypto.subtle.exportKey('jwk', keyPair.privateKey)
+
+    const pubKeyBase64 = arrayBufferToBase64Url(rawPublicKey)
+    const privKeyBase64 = jwkPrivateKey.d || ''
+
+    config.value.vapidPublicKey = pubKeyBase64
+    config.value.vapidPrivateKey = privKeyBase64
+
+    toast.success('New VAPID Keys Generated! 🎉', 'Standard P-256 Web Push keypair generated. Click Save Settings to persist.')
+  } catch (err: any) {
+    toast.error('Generation Error', err.message || 'Could not generate VAPID keypair.')
+  }
+}
 
 const isTestingPublicChannel = ref(false)
 const isTestingAdminGroup = ref(false)
@@ -59,11 +99,11 @@ async function fetchSubscribersAndPushRequests() {
     const pushData: any = await pushRes.json().catch(() => ({}))
     const subData: any = await subRes.json().catch(() => ({}))
 
-    if (pushRes.ok && pushData.code === 1 && pushData.data?.items) {
-      pushSubscriptionsList.value = pushData.data.items
+    if (pushRes.ok && pushData.code === 1 && pushData.data) {
+      pushSubscriptionsList.value = pushData.data.items || (Array.isArray(pushData.data) ? pushData.data : [])
     }
-    if (subRes.ok && subData.code === 1 && Array.isArray(subData.data)) {
-      emailSubscribersList.value = subData.data
+    if (subRes.ok && subData.code === 1 && subData.data) {
+      emailSubscribersList.value = subData.data.items || (Array.isArray(subData.data) ? subData.data : [])
     }
   } catch (err) {
     console.warn('Could not fetch subscribers list:', err)
@@ -476,6 +516,48 @@ async function testMailSend() {
             </label>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Web Push Notification VAPID Credentials -->
+    <div class="rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-sm space-y-4">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+            <UIcon name="i-heroicons-shield-check" class="h-6 w-6" />
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-white">Web Push Notification VAPID Credentials</h2>
+            <p class="text-xs text-gray-400">
+              Configure standard VAPID P-256 Public &amp; Private Keypair required by Google FCM / Chrome Push Services.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+          @click="generateVapidKeyPair"
+        >
+          <UIcon name="i-heroicons-sparkles" class="w-4 h-4" />
+          <span>Generate New VAPID Key Pair</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <AdminSettingInput
+          v-model="config.vapidPublicKey"
+          label="VAPID Public Key (65-byte Uncompressed P-256 Base64URL)"
+          placeholder="BAy3oxzaWu_Ob3LsTW7BPX7SdM10SpiWuedETMkjgnvYO6jrTc6aiR6IIC9EAl0fXeZIs4wsOeUIa2Q44yRcHCc"
+          help-text="Shared with client browsers to subscribe via pushManager.subscribe()"
+        />
+
+        <AdminSettingInput
+          v-model="config.vapidPrivateKey"
+          label="VAPID Private Key (Base64URL Secret)"
+          type="password"
+          placeholder="NTsxfETFBCTSBztgbHh_xN5QTrbisvQGwij-tmKnU7A"
+          help-text="Secret key used strictly by Backend to sign outgoing Web Push JWTs"
+        />
       </div>
     </div>
 

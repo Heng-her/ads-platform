@@ -364,7 +364,23 @@ async function handleSubmit(saveStatus?: 'DRAFT' | 'PUBLIC') {
     if (props.isEdit && props.campaignId) {
       await updateCampaign(props.campaignId, payload)
     } else {
-      await createCampaign(payload)
+      const created = await createCampaign(payload)
+      if (payload.status === 'PUBLIC' && import.meta.client && 'serviceWorker' in navigator && Notification.permission === 'granted') {
+        try {
+          const reg = await navigator.serviceWorker.ready
+          if (reg && 'showNotification' in reg) {
+            await reg.showNotification('🚀 Campaign Created!', {
+              body: `"${payload.title}" is now published and live.`,
+              icon: payload.imageUrl || '/ads-platform.png',
+              badge: '/ads-platform.png',
+              vibrate: [200, 100, 200],
+              data: { url: created?.id ? `/article/${created.id}` : '/creator/campaigns' }
+            } as NotificationOptions & { vibrate?: number[] })
+          }
+        } catch (e) {
+          console.warn('[CampaignForm] Could not trigger local notification:', e)
+        }
+      }
     }
     hasSubmitted.value = true
     if (draftSaveTimer) clearTimeout(draftSaveTimer)
@@ -414,7 +430,8 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="flex items-center gap-3">
-        <span v-if="isMediaUploading" class="inline-flex items-center gap-1.5 text-xs text-amber-500 font-medium animate-pulse">
+        <span v-if="isMediaUploading"
+          class="inline-flex items-center gap-1.5 text-xs text-amber-500 font-medium animate-pulse">
           <UIcon name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
           Uploading media...
         </span>
@@ -423,23 +440,12 @@ onBeforeUnmount(() => {
           Deleting media...
         </span>
 
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          :loading="isLoading"
-          :disabled="isLoading || isMediaUploading || !!deletingMediaUrl"
-          @click="handleSubmit('DRAFT')"
-        >
+        <UButton color="neutral" variant="outline" size="sm" :loading="isLoading"
+          :disabled="isLoading || isMediaUploading || !!deletingMediaUrl" @click="handleSubmit('DRAFT')">
           Save Draft
         </UButton>
-        <UButton
-          color="primary"
-          size="sm"
-          :loading="isLoading"
-          :disabled="isLoading || isMediaUploading || !!deletingMediaUrl"
-          @click="handleSubmit('PUBLIC')"
-        >
+        <UButton color="primary" size="sm" :loading="isLoading"
+          :disabled="isLoading || isMediaUploading || !!deletingMediaUrl" @click="handleSubmit('PUBLIC')">
           {{ isEdit ? 'Save & Update' : 'Publish Campaign' }}
         </UButton>
       </div>
@@ -536,14 +542,8 @@ onBeforeUnmount(() => {
 
         <!-- Main Cover Image -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <AppMediaUploader
-            label="Main Cover Image"
-            accept="image"
-            folder="campaigns/covers"
-            @uploadStart="handleUploadStart"
-            @uploadEnd="handleUploadEnd"
-            @uploaded="handleCoverUploaded"
-          />
+          <AppMediaUploader label="Main Cover Image" accept="image" folder="campaigns/covers"
+            @uploadStart="handleUploadStart" @uploadEnd="handleUploadEnd" @uploaded="handleCoverUploaded" />
 
           <div v-if="form.imageUrl" class="space-y-2">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Cover Preview &amp; Metadata</p>
@@ -574,16 +574,9 @@ onBeforeUnmount(() => {
 
         <!-- Gallery Images -->
         <div class="space-y-2 pt-2">
-          <AppMediaUploader
-            label="Multi-Image Gallery"
-            accept="image"
-            folder="campaigns/gallery"
-            :multiple="true"
-            @uploadStart="handleUploadStart"
-            @uploadEnd="handleUploadEnd"
-            @multiUploaded="handleGalleryUploaded"
-            @uploaded="handleSingleGalleryUploaded"
-          />
+          <AppMediaUploader label="Multi-Image Gallery" accept="image" folder="campaigns/gallery" :multiple="true"
+            @uploadStart="handleUploadStart" @uploadEnd="handleUploadEnd" @multiUploaded="handleGalleryUploaded"
+            @uploaded="handleSingleGalleryUploaded" />
 
           <div v-if="form.images.length > 0" class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
             <div v-for="(img, idx) in form.images" :key="idx"
@@ -616,15 +609,9 @@ onBeforeUnmount(() => {
           </label>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <AppMediaUploader
-              label="Upload Video"
-              accept="video"
-              folder="campaigns/videos"
+            <AppMediaUploader label="Upload Video" accept="video" folder="campaigns/videos"
               :hint="isAdmin ? 'Admin uploads are securely proxied with no campaign video-count limit.' : 'Allowed: MP4, MOV, WEBM. (Max 50MB for creators)'"
-              @uploadStart="handleUploadStart"
-              @uploadEnd="handleUploadEnd"
-              @uploaded="handleVideoUploaded"
-            />
+              @uploadStart="handleUploadStart" @uploadEnd="handleUploadEnd" @uploaded="handleVideoUploaded" />
 
             <div class="space-y-2">
               <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Or Add YouTube, TikTok, or Direct Video

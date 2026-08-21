@@ -46,5 +46,6 @@ useRouteSeo('home', {
 
     <!-- 9. Technical & Operational FAQ -->
     <HomeFaq />
+    <NuxtLink to="/article" class="text-primary">article</NuxtLink>
   </div>
 </template>

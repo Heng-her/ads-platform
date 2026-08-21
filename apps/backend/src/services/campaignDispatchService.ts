@@ -47,7 +47,17 @@ export class CampaignDispatchService {
     let chromePushSentCount = 0;
 
     const siteBaseUrl = platformConfig.siteUrl.trim().replace(/\/$/, "");
-    const campaignUrl = `${siteBaseUrl}/article/${campaign.id}`;
+    const titleSlug = campaign.title
+      ? campaign.title
+          .normalize("NFC")
+          .toLowerCase()
+          .trim()
+          .replace(/[^\p{L}\p{M}\p{N}\s-]/gu, "")
+          .replace(/[\s_-]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+      : "";
+    const articleSlug = titleSlug ? `${titleSlug}-${campaign.id}` : campaign.id;
+    const campaignUrl = `${siteBaseUrl}/article/${articleSlug}`;
     const summary = campaign.description
       ? campaign.description.replace(/<[^>]*>/g, "").slice(0, 180) + "..."
       : "Check out this new campaign post!";

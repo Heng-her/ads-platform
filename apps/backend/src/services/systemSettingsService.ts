@@ -42,6 +42,8 @@ export interface ChannelConfig {
   onPostPublishMail: boolean;
   onPostPublishPublicChannel: boolean;
   onPostPublishAdminGroup: boolean;
+  vapidPublicKey?: string;
+  vapidPrivateKey?: string;
 }
 
 export interface PostConfig {
@@ -140,6 +142,8 @@ export const DEFAULT_DISPATCH_CONFIG: ChannelConfig = {
   onPostPublishMail: true,
   onPostPublishPublicChannel: true,
   onPostPublishAdminGroup: false,
+  vapidPublicKey: "BMKHUIgMv3UqzA2igg6C0hLcsP3yaAsAObt0BA__P5dGO8mClLzR04Yt5E-6Ft233LhEgq8p13MtgjR5AVXSbj4",
+  vapidPrivateKey: "xS68RR9OfCZBB32OrUqjnGPSdAZ3jxSteFN9YLyX3-E",
 };
 
 export const DEFAULT_POST_CONFIG: PostConfig = {

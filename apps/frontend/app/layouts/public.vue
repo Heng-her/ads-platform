@@ -419,7 +419,8 @@ onUnmounted(() => {
                         </transition>
                     </div>
 
-                    <!-- Language Selector & Color Mode Toggle -->
+                    <!-- Notification Bell, Language Selector & Color Mode Toggle -->
+                    <PublicNotificationBell />
                     <LanguageSwitcher />
                     <UColorModeButton />
 

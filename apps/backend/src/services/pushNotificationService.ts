@@ -1,6 +1,8 @@
-﻿import { eq, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
+import webpush from "web-push";
 import type { DbClient } from "../db/index";
 import { pushSubscriptions } from "../db/schema/pushSubscriptions";
+import { SystemSettingsService, DEFAULT_DISPATCH_CONFIG } from "./systemSettingsService";
 
 export interface PushSubscriptionPayload {
   endpoint: string;
@@ -10,12 +12,16 @@ export interface PushSubscriptionPayload {
   };
 }
 
-// Default VAPID Public Key for Web Push (can be overridden via ENV)
+// Default VAPID Public Key for Web Push (can be overridden via system settings / ENV)
 export const DEFAULT_VAPID_PUBLIC_KEY =
-  "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-Skv6b135n6-xR155eZ65eR65-vR65eR65eR65eR65eR65eR65eR65eR6=";
+  "BMKHUIgMv3UqzA2igg6C0hLcsP3yaAsAObt0BA__P5dGO8mClLzR04Yt5E-6Ft233LhEgq8p13MtgjR5AVXSbj4";
 
 export class PushNotificationService {
-  constructor(private db: DbClient) {}
+  private settingsService: SystemSettingsService;
+
+  constructor(private db: DbClient) {
+    this.settingsService = new SystemSettingsService({ db });
+  }
 
   /**
    * Save or update a Web Push Subscription endpoint
@@ -94,10 +100,37 @@ export class PushNotificationService {
       return { totalSubscriptions: 0, attempted: 0, successCount: 0 };
     }
 
+    // Load active VAPID key settings
+    const dispatchConfig = await this.settingsService.getSetting("dispatch", DEFAULT_DISPATCH_CONFIG);
+    const vapidPublicKey = dispatchConfig.vapidPublicKey || DEFAULT_VAPID_PUBLIC_KEY;
+    const vapidPrivateKey = dispatchConfig.vapidPrivateKey;
+
+    if (vapidPublicKey && vapidPrivateKey) {
+      try {
+        webpush.setVapidDetails(
+          `mailto:${dispatchConfig.mailSenderEmail || "notifications@adsplatform.com"}`,
+          vapidPublicKey,
+          vapidPrivateKey,
+        );
+      } catch (e) {
+        console.warn("[PushNotificationService] Failed to set VAPID details:", e);
+      }
+    }
+
     const summary = campaign.description
       ? campaign.description.replace(/<[^>]*>/g, "").slice(0, 120) + "..."
       : "Check out this new campaign post!";
-    const campaignUrl = `${campaign.siteUrl.replace(/\/$/, "")}/article/${campaign.id}`;
+    const titleSlug = campaign.title
+      ? campaign.title
+          .normalize("NFC")
+          .toLowerCase()
+          .trim()
+          .replace(/[^\p{L}\p{M}\p{N}\s-]/gu, "")
+          .replace(/[\s_-]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+      : "";
+    const articleSlug = titleSlug ? `${titleSlug}-${campaign.id}` : campaign.id;
+    const campaignUrl = `${campaign.siteUrl.replace(/\/$/, "")}/article/${articleSlug}`;
 
     const pushPayload = JSON.stringify({
       title: `🚀 New Campaign: ${campaign.title}`,
@@ -116,25 +149,42 @@ export class PushNotificationService {
       try {
         attempted++;
 
-        // Send HTTP POST payload directly to Push Service Endpoint (FCM/APNs/Mozilla)
-        const response = await fetch(sub.endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "TTL": "86400", // Keep notification alive for 24 hours if device is offline
-            "Urgency": "high"
-          },
-          body: pushPayload,
-        });
-
-        if (response.ok || response.status === 201 || response.status === 202) {
+        if (vapidPublicKey && vapidPrivateKey) {
+          await webpush.sendNotification(
+            {
+              endpoint: sub.endpoint,
+              keys: {
+                p256dh: sub.p256dh,
+                auth: sub.auth,
+              },
+            },
+            pushPayload,
+          );
           successCount++;
-        } else if (response.status === 404 || response.status === 410) {
-          // Endpoint expired or unsubscribed -> Auto-clean dead subscription
-          await this.removeSubscription(sub.endpoint).catch(() => null);
+        } else {
+          // Fallback to fetch POST if VAPID keys not configured
+          const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+            "TTL": "86400",
+            "Urgency": "high",
+          };
+          const response = await fetch(sub.endpoint, {
+            method: "POST",
+            headers,
+            body: pushPayload,
+          });
+          if (response.ok || response.status === 201 || response.status === 202) {
+            successCount++;
+          }
         }
-      } catch (err) {
-        console.warn("[PushNotificationService] Error sending push notification:", err);
+      } catch (err: any) {
+        const status = err?.statusCode || err?.status;
+        if (status === 404 || status === 410 || status === 400 || status === 401) {
+          // Endpoint expired, unsubscribed, or invalid VAPID token -> Auto-clean dead subscription
+          await this.removeSubscription(sub.endpoint).catch(() => null);
+        } else {
+          console.warn("[PushNotificationService] Error sending push notification:", err);
+        }
       }
     }
 
