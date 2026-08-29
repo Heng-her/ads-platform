@@ -1,4 +1,4 @@
-﻿// https://nuxt.com/docs/api/configuration/nuxt-config
+// https://nuxt.com/docs/api/configuration/nuxt-config
 import { fileURLToPath } from "node:url";
 import { defineNuxtConfig } from "nuxt/config";
 
@@ -16,7 +16,8 @@ export default defineNuxtConfig({
         { name: 'theme-color', content: '#4f46e5' },
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
-        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' }
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+        { name: 'google-site-verification', content: 'QXb7kpfY3LB59LMNF32p2mzYo20JCvsArwVBH1aR4wg' }
       ]
     }
   },
@@ -108,6 +109,7 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
 
   site: {
+    url: "https://ads-platform.mk-search.xyz",
     name: "New Platform",
     description:
       "New Platform is a modern advertising network connecting advertisers and publishers with smart targeting and real-time analytics.",

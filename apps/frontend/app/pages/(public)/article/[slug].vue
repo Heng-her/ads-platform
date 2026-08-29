@@ -7,6 +7,7 @@ import { useCustomSeoMeta, useArticleSeo } from '~/lib/seo/metadata'
 import { getVideoEmbedUrl } from '~/lib/videoEmbed'
 import { useClipboard } from '~/composables/useClipboard'
 import { extractIdFromSlug, getArticleUrl, timeAgo, formatDate, initials } from '~/lib/utils'
+import { sanitizeArticleContent } from '~/lib/sanitizer'
 import type { CampaignItem } from '~/types/campaign'
 
 definePageMeta({
@@ -24,7 +25,8 @@ const { isCopied: copied, copy } = useClipboard()
 const slug = computed(() => (route.params.slug as string) || '')
 
 const renderedContent = computed(() => {
-    return campaign.value?.content || campaign.value?.description || ''
+    const rawContent = campaign.value?.content || campaign.value?.description || ''
+    return sanitizeArticleContent(rawContent)
 })
 
 const { data: campaign, pending: isLoading, error: asyncError } = await useAsyncData(
@@ -68,12 +70,6 @@ watchEffect(() => {
         })
     }
 })
-
-function copyLink() {
-    if (!campaign.value || typeof window === 'undefined') return
-    const fullUrl = `${window.location.origin}${getArticleUrl(campaign.value)}`
-    copy(fullUrl)
-}
 
 function giveFeedback(val: boolean) {
     feedbackGiven.value = val

@@ -27,7 +27,8 @@ export const corsMiddleware = () =>
       if (
         origin.startsWith("http://localhost:") ||
         origin.endsWith(".pages.dev") ||
-        origin.endsWith(".workers.dev")
+        origin.endsWith(".workers.dev") ||
+        origin.endsWith(".mk-search.xyz")
       ) {
         return origin;
       }
