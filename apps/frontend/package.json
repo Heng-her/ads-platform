@@ -3,9 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "nuxt build",
+    "build": "node scripts/generate-sitemap.js && nuxt build",
     "deploy": "wrangler deploy .output/server/index.mjs --assets .output/public --name ads-platform --compatibility-date 2026-08-03",
     "dev": "nuxt dev",
+    "generate:sitemap": "node scripts/generate-sitemap.js",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",

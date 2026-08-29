@@ -122,6 +122,11 @@ export default defineNuxtConfig({
     defaultLocale: "en",
   },
 
+  sitemap: {
+    sources: ["/sitemap.xml"],
+    exclude: ["/admin/**", "/creator/**"],
+  },
+
   compatibilityDate: "2026-06-30",
 
   eslint: {
