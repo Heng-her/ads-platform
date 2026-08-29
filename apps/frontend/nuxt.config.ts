@@ -9,17 +9,23 @@ export default defineNuxtConfig({
   app: {
     head: {
       link: [
-        { rel: 'manifest', href: '/manifest.json' },
-        { rel: 'apple-touch-icon', href: '/ads-platform.png' }
+        { rel: "manifest", href: "/manifest.json" },
+        { rel: "apple-touch-icon", href: "/ads-platform.png" },
       ],
       meta: [
-        { name: 'theme-color', content: '#4f46e5' },
-        { name: 'mobile-web-app-capable', content: 'yes' },
-        { name: 'apple-mobile-web-app-capable', content: 'yes' },
-        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
-        { name: 'google-site-verification', content: 'QXb7kpfY3LB59LMNF32p2mzYo20JCvsArwVBH1aR4wg' }
-      ]
-    }
+        { name: "theme-color", content: "#4f46e5" },
+        { name: "mobile-web-app-capable", content: "yes" },
+        { name: "apple-mobile-web-app-capable", content: "yes" },
+        {
+          name: "apple-mobile-web-app-status-bar-style",
+          content: "black-translucent",
+        },
+        {
+          name: "google-site-verification",
+          content: "QXb7kpfY3LB59LMNF32p2mzYo20JCvsArwVBH1aR4wg",
+        },
+      ],
+    },
   },
   runtimeConfig: {
     // server secrets (not available in browser or public config)
@@ -109,7 +115,7 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
 
   site: {
-    url: "https://ads-platform.mk-search.xyz",
+    url: "https://ads-platform.crypten.workers.dev",
     name: "New Platform",
     description:
       "New Platform is a modern advertising network connecting advertisers and publishers with smart targeting and real-time analytics.",
@@ -133,4 +139,3 @@ export default defineNuxtConfig({
     sitemap: "/sitemap.xml",
   },
 });
-
