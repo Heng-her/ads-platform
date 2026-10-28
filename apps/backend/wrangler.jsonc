@@ -8,8 +8,9 @@
     "port": 8787,
   },
   "vars": {
-    // "ENVIRONMENT": "development",
-    "ENVIRONMENT": "production",
+    "ENVIRONMENT": "development",
+    "JWT_SECRET": "dev_secure_jwt_secret_key_min_32_characters_long",
+    "ADMIN_SECRET": "Admin@123456",
     "UPLOAD_API_BASE_URL": "https://api-upload-image-8ym9.onrender.com",
     "UPLOAD_API_KEY": "crypten-api-key",
     "UPLOAD_API_BYPASS_SECRET": "crypten-bypass-secret",

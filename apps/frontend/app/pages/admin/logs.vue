@@ -64,9 +64,9 @@ async function loadLogs(page = currentPage.value) {
     })
     const body = await response.json()
     if (!response.ok || body.code !== 1) throw new Error(body.msg || 'Failed to load logs')
-    logs.value = body.data.items || []
-    totalPages.value = body.data.pagination?.totalPages || 1
-    totalLogs.value = body.data.pagination?.total || 0
+    logs.value = body.data?.items || []
+    totalPages.value = body.data?.pagination?.totalPages || 1
+    totalLogs.value = body.data?.pagination?.total || 0
   } catch (error: any) {
     errorMessage.value = error.message || 'Failed to load logs'
     logs.value = []

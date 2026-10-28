@@ -27,3 +27,12 @@ INSERT OR IGNORE INTO users (
   cast(strftime('%s', 'now') as integer) * 1000,
   cast(strftime('%s', 'now') as integer) * 1000
 );
+
+-- Seed default system settings for Admin Control Panel
+INSERT OR IGNORE INTO system_settings (key, value_json, updated_at) VALUES 
+('platform', '{"siteName":"New Platform","siteDescription":"Multi-role New Platform supporting Public browsing, Creator Studio, and Admin Control.","siteUrl":"http://localhost:3000","defaultLanguage":"en","allowRegistrations":true}', cast(strftime('%s', 'now') as integer) * 1000),
+('dispatch', '{"telegramBotToken":"","telegramPublicChannelId":"","enablePublicChannel":true,"telegramAdminGroupId":"","enableAdminGroupAlerts":true,"mailSenderEmail":"notifications@adsplatform.com","mailSmtpHost":"smtp.gmail.com","mailSmtpPort":587,"mailSmtpUser":"","mailSmtpPassword":"","enableMail":true,"onUserSubmitMail":true,"onUserSubmitAdminGroup":true,"onPostPublishMail":true,"onPostPublishPublicChannel":true,"onPostPublishAdminGroup":true}', cast(strftime('%s', 'now') as integer) * 1000),
+('post', '{"maxPostPerDay":5,"maxUploadImage":10,"maxUploadVideo":2,"maxRegisterPerDay":5}', cast(strftime('%s', 'now') as integer) * 1000),
+('security', '{"creatorDeletionPassword":"admin"}', cast(strftime('%s', 'now') as integer) * 1000),
+('googleauth', '{"googleClientId":"","googleClientSecret":"","enableGoogleAuth":false}', cast(strftime('%s', 'now') as integer) * 1000),
+('upload', '{"uploadApiBaseUrl":"https://api-upload-image-8ym9.onrender.com","uploadApiKey":"crypten-api-key","uploadApiBypassSecret":"crypten-bypass-secret"}', cast(strftime('%s', 'now') as integer) * 1000);

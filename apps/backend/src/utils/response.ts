@@ -1,12 +1,17 @@
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
-export interface ApiResponseEnvelope<T = any> {
+/**
+ * Standard Unified API Response Envelope shared across Backend and Frontend
+ */
+export interface ApiResponseEnvelope<T = unknown> {
   code: 1 | 0;
   msg: string;
   time: number;
   data: T;
 }
+
+export type ApiResponse<T = unknown> = ApiResponseEnvelope<T>;
 
 export function sendResponse<T>(
   c: Context,
@@ -19,19 +24,23 @@ export function sendResponse<T>(
     code,
     msg,
     time: Math.floor(Date.now() / 1000),
-    data
+    data,
   };
   return c.json(envelope, httpStatus);
 }
 
-export function sendSuccess<T>(c: Context, data: T = {} as T, msg: string = "success") {
+export function sendSuccess<T>(
+  c: Context,
+  data: T = null as T,
+  msg: string = "success"
+) {
   return sendResponse(c, 1, msg, data, 200);
 }
 
-export function sendError(
+export function sendError<T = null>(
   c: Context,
   msg: string = "failed",
-  data: any = null,
+  data: T = null as T,
   httpStatus: ContentfulStatusCode = 400
 ) {
   return sendResponse(c, 0, msg, data, httpStatus);

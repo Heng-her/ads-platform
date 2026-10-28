@@ -3,6 +3,7 @@ packages:
   - packages/*
 
 ignoredBuiltDependencies:
+  - better-sqlite3
   - vue-demi
   - workerd
 

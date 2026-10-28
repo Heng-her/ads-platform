@@ -7,7 +7,7 @@ import type { HonoEnv } from "../types/env";
 export function getJwtSecret(c: { env: HonoEnv["Bindings"] }): string {
   const secret = c.env?.JWT_SECRET;
   if (!secret) {
-    if (c.env?.ENVIRONMENT === "development") {
+    if (c.env?.ENVIRONMENT === "development" || !c.env?.ENVIRONMENT) {
       return "dev_secure_jwt_secret_key_min_32_characters_long";
     }
     throw new Error("FATAL SECURITY ERROR: JWT_SECRET environment variable is missing in production!");
