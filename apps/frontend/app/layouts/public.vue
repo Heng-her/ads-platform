@@ -14,6 +14,14 @@ useHead({
             href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'
         }
     ],
+    script: [
+        {
+            src: 'https://bauval.org/14/0ca7d05b463f1373f684e2dc8f5e148b',
+            'data-cfasync': 'false',
+            async: true,
+            tagPosition: 'bodyClose'
+        }
+    ]
 })
 
 const route = useRoute()

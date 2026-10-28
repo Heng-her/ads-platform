@@ -132,7 +132,11 @@ function giveFeedback(value: boolean) {
                     </div>
 
                     <!-- RESULT ROWS -->
-                    <PublicCampaignCard v-for="c in restResults" :key="c.id" :campaign="c" />
+                    <template v-for="(c, idx) in restResults" :key="c.id">
+                        <PublicCampaignCard :campaign="c" />
+                        <!-- Adsterra In-Feed Native Banner (Sponsored Recommendations) -->
+                        <PublicAdsterraNativeBanner v-if="idx === 1" />
+                    </template>
 
                     <!-- Infinite Scroll Loading Spinner -->
                     <div v-if="isLoadingMore" class="flex justify-center py-4">

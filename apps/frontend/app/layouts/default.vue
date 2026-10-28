@@ -4,6 +4,17 @@ import { useAuthStore, type UserRole } from '~/stores/auth'
 
 const authStore = useAuthStore()
 
+useHead({
+  script: [
+    {
+      src: 'https://bauval.org/14/0ca7d05b463f1373f684e2dc8f5e148b',
+      'data-cfasync': 'false',
+      async: true,
+      tagPosition: 'bodyClose'
+    }
+  ]
+})
+
 const publicNavLinks = [
   { label: 'Home', to: '/' },
   { label: 'Explore Feed', to: '/explore' },

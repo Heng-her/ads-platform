@@ -286,11 +286,6 @@ watch(campaign, (currentCampaign) => {
                 <!-- Main Content Body -->
                 <div
                     class="rounded-2xl p-6 sm:p-8 shadow-xs leading-relaxed text-gray-800 dark:text-gray-200 font-body space-y-4 bg-white dark:bg-gray-900">
-
-                    <h3 class="font-display font-bold text-sm uppercase tracking-wider text-primary mb-2">
-                        Campaign Overview
-                    </h3>
-
                     <!-- Render Content / Description -->
                     <div v-if="renderedContent" v-html="renderedContent"
                         class="article-content prose dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed font-medium text-gray-700 dark:text-gray-200">
@@ -299,6 +294,9 @@ watch(campaign, (currentCampaign) => {
                         No detailed content provided for this campaign.
                     </div>
                 </div>
+
+                <!-- Adsterra Native Banner (Under Article Content) -->
+                <PublicAdsterraNativeBanner />
 
                 <!-- Interactive Feedback Widget -->
                 <PublicFeedbackWidget :feedback-given="feedbackGiven" @give-feedback="giveFeedback" />

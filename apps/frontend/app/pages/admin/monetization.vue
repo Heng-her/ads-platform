@@ -141,11 +141,11 @@ const adNetworkConfig = ref<AdNetworkConfig>({
   adsterraPublisherKey: 'adsterra_pub_889214',
   adsterraDirectLinkUrl: 'https://www.highperformancecpmgate.com/direct-link-hash',
   adsterraBanner728x90Key: '10928374',
-  adsterraNativeBannerKey: '56473829',
+  adsterraNativeBannerKey: 'fcf4cfcdbc9a35848cba6acdca43054b',
   adsterraPopunderEnabled: true,
 
-  customHeaderScript: '<!-- Google AdSense Auto Ads Script -->\n<' + 'script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9876543210987654" crossorigin="anonymous"></' + 'script>',
-  customArticleAdScript: '<!-- Adsterra Banner Script -->\n<' + 'script type="text/javascript" src="https://www.highperformancecpmgate.com/10928374/invoke.js"></' + 'script>'
+  customHeaderScript: '<script data-cfasync="false" src="https://bauval.org/14/0ca7d05b463f1373f684e2dc8f5e148b"></' + 'script>',
+  customArticleAdScript: '<script async="async" data-cfasync="false" src="https://bauval.org/21/fcf4cfcdbc9a35848cba6acdca43054b"></' + 'script>\n<div id="container-fcf4cfcdbc9a35848cba6acdca43054b"></div>'
 })
 
 // Multi-Ad Network Revenue Dashboard State
