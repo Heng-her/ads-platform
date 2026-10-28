@@ -140,7 +140,7 @@ const adNetworkConfig = ref<AdNetworkConfig>({
   enableAdsterra: true,
   adsterraPublisherKey: 'adsterra_pub_889214',
   adsterraDirectLinkUrl: 'https://www.highperformancecpmgate.com/direct-link-hash',
-  adsterraBanner728x90Key: '10928374',
+  adsterraBanner728x90Key: '20ecae93ef2233796f8c362e36dabba5',
   adsterraNativeBannerKey: 'fcf4cfcdbc9a35848cba6acdca43054b',
   adsterraPopunderEnabled: true,
 

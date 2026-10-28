@@ -20,6 +20,7 @@ import {
   type NewCampaign,
 } from "../db/schema/index";
 import { parsePagination, buildPaginationMeta } from "../utils/pagination";
+import { buildSafeLikePattern } from "../utils/sql";
 
 type CampaignCursor = {
   createdAt: string;
@@ -219,7 +220,7 @@ export class CampaignService {
       conditions.push(eq(campaigns.contentType, options.contentType));
     }
     if (options.search) {
-      conditions.push(like(campaigns.title, `%${options.search}%`));
+      conditions.push(like(campaigns.title, buildSafeLikePattern(options.search)));
     }
     if (options.customCategoryId !== undefined) {
       if (!options.user) return null;
@@ -376,7 +377,7 @@ export class CampaignService {
 
     // Search filter (matches title)
     if (options.search) {
-      conditions.push(like(campaigns.title, `%${options.search}%`));
+      conditions.push(like(campaigns.title, buildSafeLikePattern(options.search)));
     }
 
     // Auth & Status filter logic:
@@ -471,7 +472,7 @@ export class CampaignService {
       conditions.push(eq(campaigns.category, options.category));
     }
     if (options.search) {
-      conditions.push(like(campaigns.title, `%${options.search}%`));
+      conditions.push(like(campaigns.title, buildSafeLikePattern(options.search)));
     }
 
     const whereClause = and(...conditions);
@@ -578,8 +579,9 @@ export class CampaignService {
    */
   async getAdminCampaignUsers(options: { page?: number; limit?: number; search?: string } = {}) {
     const { page, limit, offset } = parsePagination(options.page, options.limit);
+    const safePattern = buildSafeLikePattern(options.search);
     const conditions = options.search
-      ? [or(like(users.username, `%${options.search}%`), like(users.email, `%${options.search}%`))]
+      ? [or(like(users.username, safePattern), like(users.email, safePattern))]
       : [];
     const whereClause = conditions.length ? and(...conditions) : undefined;
 

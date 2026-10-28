@@ -76,10 +76,6 @@ function setQuery(patch: Record<string, string | undefined>) {
 function clearAllFilters() {
     router.push({ path: route.path, query: {} })
 }
-
-function giveFeedback(value: boolean) {
-    feedbackGiven.value = value
-}
 </script>
 
 <template>
@@ -155,7 +151,6 @@ function giveFeedback(value: boolean) {
 
                 <PublicTrendingWidget :item="trendingItem" />
                 <PublicRelatedTopics :topics="relatedTopics" @select-topic="(t) => setQuery({ category: t })" />
-                <PublicFeedbackWidget :feedback-given="feedbackGiven" @give-feedback="giveFeedback" />
             </aside>
         </div>
     </div>

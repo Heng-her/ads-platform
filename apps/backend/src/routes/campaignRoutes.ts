@@ -19,6 +19,7 @@ import { getClientIp } from "../utils/ip";
 import { getJwtSecret } from "../utils/env";
 import { extractBearerToken, verifyToken } from "../utils/jwt";
 import { zodErrorHandler } from "../utils/validation";
+import { buildSafeLikePattern } from "../utils/sql";
 import { createCampaignRateLimiter } from "../middlewares/rateLimiter";
 import {
   createCampaignSchema,
@@ -240,7 +241,7 @@ export const campaignRoutes = new Hono<HonoEnv>()
     const categoryService = new CategoryService(db);
     const user = await getOptionalUser(c);
 
-    const pattern = `%${q}%`;
+    const pattern = buildSafeLikePattern(q);
 
     // Run all queries in parallel
     const [systemCats, allContentTypes, titleMatches] = await Promise.all([

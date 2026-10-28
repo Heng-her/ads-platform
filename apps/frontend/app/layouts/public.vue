@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCategories } from '~/composables/useCategories'
 import { useApi } from '~/composables/useApi'
+import { getArticleUrl } from '~/lib/utils'
 
 useHead({
     title: 'Signal — Ads Platform Search & Discover',
@@ -152,6 +153,13 @@ function handleSearchSubmit() {
 function selectSuggestion(item: SuggestionItem) {
     isSearchFocused.value = false
     showMobileSearch.value = false
+
+    if (item.type === 'title' && item.campaignId) {
+        searchQuery.value = ''
+        router.push(getArticleUrl({ id: item.campaignId, title: item.label }))
+        return
+    }
+
     searchQuery.value = item.type === 'title' ? item.label : searchQuery.value
 
     const [key, val] = item.filter.split('=')
@@ -564,9 +572,6 @@ onUnmounted(() => {
                 © {{ new Date().getFullYear() }} Signal Ads Platform. All rights reserved.
             </div>
         </footer>
-
-        <!-- Newsletter Subscriber Modal -->
-        <NewsletterModal />
     </div>
 </template>
 

@@ -206,6 +206,9 @@ watch(campaign, (currentCampaign) => {
             <!-- Center Main Column (Details & Article Content) -->
             <article class="min-w-0 flex-1 space-y-6">
 
+                <!-- Top Adsterra Leaderboard Banner (728x90) -->
+                <PublicAdsterraLeaderboard />
+
                 <!-- Hero Header Card -->
                 <header class="rounded-2xl p-6 sm:p-8 shadow-xs relative overflow-hidden bg-white dark:bg-gray-900">
 
@@ -297,9 +300,6 @@ watch(campaign, (currentCampaign) => {
 
                 <!-- Adsterra Native Banner (Under Article Content) -->
                 <PublicAdsterraNativeBanner />
-
-                <!-- Interactive Feedback Widget -->
-                <PublicFeedbackWidget :feedback-given="feedbackGiven" @give-feedback="giveFeedback" />
 
 
                 <section v-if="campaign.category" class="rounded-2xl shadow-xs bg-white p-5 dark:bg-gray-900">

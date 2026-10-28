@@ -1,6 +1,7 @@
 import { and, count, desc, gte, like, lt, lte } from "drizzle-orm";
 import type { DbClient } from "../db/index";
 import { auditLogs } from "../db/schema/index";
+import { buildSafeLikePattern } from "../utils/sql";
 
 export class AuditLogService {
   constructor(private db: DbClient) {}
@@ -17,8 +18,8 @@ export class AuditLogService {
     const limit = Math.min(100, Math.max(1, options.limit ?? 25));
     const conditions = [];
 
-    if (options.ipAddress) conditions.push(like(auditLogs.ipAddress, `%${options.ipAddress}%`));
-    if (options.device) conditions.push(like(auditLogs.details, `%${options.device}%`));
+    if (options.ipAddress) conditions.push(like(auditLogs.ipAddress, buildSafeLikePattern(options.ipAddress)));
+    if (options.device) conditions.push(like(auditLogs.details, buildSafeLikePattern(options.device)));
     if (options.from) conditions.push(gte(auditLogs.createdAt, options.from));
     if (options.to) conditions.push(lte(auditLogs.createdAt, options.to));
     const whereClause = conditions.length ? and(...conditions) : undefined;

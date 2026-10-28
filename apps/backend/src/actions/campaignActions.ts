@@ -20,6 +20,7 @@ import { sendSuccess, sendError } from "../utils/response";
 import { getClientIp } from "../utils/ip";
 import { checkRateLimit } from "../middlewares/rateLimiter";
 import { ImpressionService } from "../services/impressionService";
+import { buildSafeLikePattern } from "../utils/sql";
 
 function validateVideoLimit(videoUrls: string[] | undefined, isAdmin: boolean, maxVideos: number = 2) {
   return isAdmin || !videoUrls || videoUrls.length <= maxVideos;
@@ -52,7 +53,7 @@ export async function handleCampaignAction(
       }
 
       const categoryService = new CategoryService(db);
-      const pattern = `%${q}%`;
+      const pattern = buildSafeLikePattern(q);
 
       const [systemCats, allContentTypes, titleMatches, customCats] = await Promise.all([
         categoryService.getAllSystemCategories(),
