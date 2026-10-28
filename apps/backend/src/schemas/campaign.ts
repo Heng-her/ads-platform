@@ -35,8 +35,6 @@ export const createCampaignSchema = z.object({
     .optional()
     .or(z.null())
     .transform((arr) => arr?.filter((item): item is string => typeof item === "string" && item.length > 0) ?? undefined),
-  adNetwork: optionalStringSchema,
-  adUnitCode: optionalStringSchema,
   status: z.enum(["DRAFT", "PUBLIC"]).optional().default("PUBLIC"),
 });
 
@@ -55,8 +53,6 @@ export const updateCampaignSchema = z.object({
     .optional()
     .or(z.null())
     .transform((arr) => arr?.filter((item): item is string => typeof item === "string" && item.length > 0) ?? undefined),
-  adNetwork: optionalStringSchema,
-  adUnitCode: optionalStringSchema,
   status: z.enum(["DRAFT", "PUBLIC"]).optional(),
 });
 

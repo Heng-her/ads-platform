@@ -11,8 +11,6 @@ export interface CampaignDraftForm {
   imageDescription: string
   images: CampaignImageItem[]
   videoUrls: string[]
-  adNetwork: string
-  adUnitCode: string
   status: 'DRAFT' | 'PUBLIC'
 }
 

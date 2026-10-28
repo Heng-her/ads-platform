@@ -100,9 +100,7 @@ export function getSponsoredCampaigns(
 ): CampaignItem[] {
   return campaigns.filter(
     (campaign) =>
-      campaign.contentType === "SPONSORED" ||
-      campaign.adNetwork ||
-      campaign.adUnitCode,
+      campaign.contentType === "SPONSORED",
   );
 }
 

@@ -61,8 +61,6 @@ const campaignSelectShape = {
   imageDescription: campaigns.imageDescription,
   images: campaigns.images,
   videoUrls: campaigns.videoUrls,
-  adNetwork: campaigns.adNetwork,
-  adUnitCode: campaigns.adUnitCode,
   status: campaigns.status,
   isDeleted: campaigns.isDeleted,
   deletedAt: campaigns.deletedAt,
@@ -86,8 +84,6 @@ export class CampaignService {
       imageDescription?: string;
       images?: Array<{ url: string; title?: string; description?: string }>;
       videoUrls?: string[];
-      adNetwork?: string;
-      adUnitCode?: string;
       status?: "DRAFT" | "PUBLIC";
     },
     allowUnlimitedVideos = false,
@@ -108,8 +104,6 @@ export class CampaignService {
       videoUrls: data.videoUrls
         ? (allowUnlimitedVideos ? data.videoUrls : data.videoUrls.slice(0, 2))
         : undefined,
-      adNetwork: data.adNetwork,
-      adUnitCode: data.adUnitCode,
       status: data.status || "PUBLIC",
     };
 
@@ -130,8 +124,6 @@ export class CampaignService {
       imageDescription?: string;
       images?: Array<{ url: string; title?: string; description?: string }>;
       videoUrls?: string[];
-      adNetwork?: string;
-      adUnitCode?: string;
       status?: "DRAFT" | "PUBLIC";
     },
     allowUnlimitedVideos = false,
@@ -154,8 +146,6 @@ export class CampaignService {
     if (data.images !== undefined) updateData.images = data.images;
     if (data.videoUrls !== undefined)
       updateData.videoUrls = allowUnlimitedVideos ? data.videoUrls : data.videoUrls.slice(0, 2);
-    if (data.adNetwork !== undefined) updateData.adNetwork = data.adNetwork;
-    if (data.adUnitCode !== undefined) updateData.adUnitCode = data.adUnitCode;
     if (data.status !== undefined) updateData.status = data.status;
 
     await this.db.update(campaigns).set(updateData).where(eq(campaigns.id, id));

@@ -26,10 +26,6 @@ export const campaigns = sqliteTable("campaigns", {
   >(), // Multi-images array [{ url: "...", title: "...", description: "..." }]
   videoUrls: text("video_urls", { mode: "json" }).$type<string[]>(), // Up to 2 optional video URLs ["https://...", "https://..."]
 
-  // Monetization & Ad Network Integration (Adsterra, Google Ads / AdSense)
-  adNetwork: text("ad_network"), // e.g. "GOOGLE_ADSENSE", "ADSTERRA", "CUSTOM"
-  adUnitCode: text("ad_unit_code"), // Ad slot / zone code snippet for ads placement
-
   // Status (Simplified to DRAFT or PUBLIC) & Timestamps
   status: text("status", {
     enum: ["DRAFT", "PUBLIC"],

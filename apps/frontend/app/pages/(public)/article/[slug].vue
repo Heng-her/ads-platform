@@ -163,16 +163,9 @@ watch(campaign, (currentCampaign) => {
             <PublicFilterSidebar width-class="w-86" :categories="categories"
                 :selected-category="campaign.category || ''" :active-filter-count="campaign.category ? 1 : 0"
                 @select-category="(category) => router.push({ path: '/article', query: category ? { category } : {} })"
-                @reset-filters="router.push('/article')">
-                <template #bottom>
-                    <AdBanner provider="google" slot-type="sidebar"
-                        :creator-id="campaign?.creatorId || campaign?.userId" />
-                </template>
-            </PublicFilterSidebar>
-            <div class="min-w-0 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-                <!-- Center Main Column (Details & Article Content) -->
-                <article class="lg:col-span-8 space-y-6">
+                @reset-filters="router.push('/article')" />
+            <!-- Center Main Column (Details & Article Content) -->
+            <article class="min-w-0 flex-1 space-y-6">
 
                     <!-- Hero Header Card -->
                     <header
@@ -311,13 +304,6 @@ watch(campaign, (currentCampaign) => {
                         </div>
                     </section>
                 </article>
-
-                <!-- Right Sidebar Column (Ads & Category Link) -->
-                <aside class="lg:col-span-4 space-y-6 sticky top-20">
-                    <AdBanner provider="adsterra" slot-type="sidebar"
-                        :creator-id="campaign?.creatorId || campaign?.userId" />
-                </aside>
-            </div>
         </div>
 
         <!-- Social Share Modal -->

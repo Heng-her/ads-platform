@@ -20,8 +20,6 @@ export interface CampaignData {
   imageDescription?: string | null;
   images?: CampaignImageItem[] | null;
   videoUrls?: string[] | null;
-  adNetwork?: string | null;
-  adUnitCode?: string | null;
   status: "DRAFT" | "PUBLIC";
   isDeleted?: boolean;
   totalImpressions?: number;
@@ -56,8 +54,6 @@ export interface CampaignFormInput {
   imageDescription?: string;
   images?: CampaignImageItem[];
   videoUrls?: string[];
-  adNetwork?: string;
-  adUnitCode?: string;
   status?: "DRAFT" | "PUBLIC";
 }
 
