@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, watchEffect } from 'vue'
+import { ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useApi } from '~/composables/useApi'
 import { useCategories } from '~/composables/useCategories'
@@ -103,10 +103,59 @@ async function loadRelatedCampaigns(targetPage = 1, append = false) {
     }
 }
 
+// Infinite Scroll Sentinel for Related Campaigns (similar to /article feed)
+const relatedSentinel = ref<HTMLElement | null>(null)
+const relatedSentinelIsVisible = ref(false)
+const userScrolledSinceLastPage = ref(false)
+let relatedObserver: IntersectionObserver | null = null
+
+function loadNextRelatedPage() {
+    if (!userScrolledSinceLastPage.value || isLoadingRelated.value || !relatedHasMore.value) return
+    userScrolledSinceLastPage.value = false
+    loadRelatedCampaigns(relatedPage.value + 1, true)
+}
+
+function handleWindowScroll() {
+    userScrolledSinceLastPage.value = true
+    if (relatedSentinelIsVisible.value) loadNextRelatedPage()
+}
+
+watch(relatedSentinel, (el) => {
+    if (relatedObserver) {
+        relatedObserver.disconnect()
+        relatedObserver = null
+    }
+    if (el && typeof IntersectionObserver !== 'undefined') {
+        relatedObserver = new IntersectionObserver((entries) => {
+            relatedSentinelIsVisible.value = Boolean(entries[0]?.isIntersecting)
+            if (relatedSentinelIsVisible.value) loadNextRelatedPage()
+        })
+        relatedObserver.observe(el)
+    }
+})
+
+watch([isLoadingRelated, relatedSentinelIsVisible, relatedHasMore], ([loading, isVisible, more]) => {
+    if (!loading && isVisible && more && userScrolledSinceLastPage.value) {
+        loadNextRelatedPage()
+    }
+})
+
+onMounted(() => {
+    window.addEventListener('scroll', handleWindowScroll, { passive: true })
+})
+
+onUnmounted(() => {
+    if (typeof window !== 'undefined') {
+        window.removeEventListener('scroll', handleWindowScroll)
+    }
+    relatedObserver?.disconnect()
+})
+
 watch(campaign, (currentCampaign) => {
     relatedCampaigns.value = []
     relatedPage.value = 1
     relatedHasMore.value = false
+    userScrolledSinceLastPage.value = false
     if (currentCampaign) loadRelatedCampaigns()
 }, { immediate: true })
 
@@ -125,8 +174,7 @@ watch(campaign, (currentCampaign) => {
 
         <!-- Loading Skeleton -->
         <div v-if="isLoading" class="space-y-6">
-            <div
-                class="rounded-2xl p-8 shadow-xs animate-pulse space-y-4 bg-white dark:bg-gray-900">
+            <div class="rounded-2xl p-8 shadow-xs animate-pulse space-y-4 bg-white dark:bg-gray-900">
                 <div class="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800"></div>
                 <div class="h-8 w-3/4 rounded bg-gray-200 dark:bg-gray-800"></div>
                 <div class="h-4 w-48 rounded bg-gray-200 dark:bg-gray-800"></div>
@@ -159,8 +207,7 @@ watch(campaign, (currentCampaign) => {
             <article class="min-w-0 flex-1 space-y-6">
 
                 <!-- Hero Header Card -->
-                <header
-                    class="rounded-2xl p-6 sm:p-8 shadow-xs relative overflow-hidden bg-white dark:bg-gray-900">
+                <header class="rounded-2xl p-6 sm:p-8 shadow-xs relative overflow-hidden bg-white dark:bg-gray-900">
 
                     <!-- Glow decoration -->
                     <div
@@ -201,7 +248,7 @@ watch(campaign, (currentCampaign) => {
                         <div class="flex items-center gap-2">
                             <UButton @click="isShareModalOpen = true" color="neutral" variant="outline" size="sm"
                                 icon="i-heroicons-share" class="font-mono font-bold cursor-pointer">
-                                Share / Copy Link
+                                Share
                             </UButton>
                         </div>
                     </div>
@@ -257,8 +304,7 @@ watch(campaign, (currentCampaign) => {
                 <PublicFeedbackWidget :feedback-given="feedbackGiven" @give-feedback="giveFeedback" />
 
 
-                <section v-if="campaign.category"
-                    class="rounded-2xl shadow-xs bg-white p-5 dark:bg-gray-900">
+                <section v-if="campaign.category" class="rounded-2xl shadow-xs bg-white p-5 dark:bg-gray-900">
                     <div class="mb-4 flex items-center justify-between gap-3">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wider text-primary">More to explore
@@ -287,10 +333,13 @@ watch(campaign, (currentCampaign) => {
                     </div>
                     <p v-else-if="!isLoadingRelated" class="text-sm text-gray-500">No other campaigns in this
                         category yet.</p>
-                    <div v-if="relatedHasMore" class="mt-4 text-center">
-                        <UButton color="neutral" variant="outline" size="sm" :loading="isLoadingRelated"
-                            @click="loadRelatedCampaigns(relatedPage + 1, true)">Load more {{ campaign.category }}
-                            campaigns</UButton>
+                    <!-- Infinite Scroll Sentinel & Loading Indicator -->
+                    <div v-if="relatedHasMore" ref="relatedSentinel" class="py-4 flex justify-center items-center">
+                        <div v-if="isLoadingRelated"
+                            class="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                            <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin text-primary" />
+                            <span>Loading more {{ campaign.category }} campaigns...</span>
+                        </div>
                     </div>
                 </section>
             </article>
