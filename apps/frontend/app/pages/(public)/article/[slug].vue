@@ -11,7 +11,8 @@ import type { CampaignItem } from '~/types/campaign'
 
 definePageMeta({
     layout: 'public',
-    fullWidth: true
+    fullWidth: true,
+    colorMode: 'light'
 })
 
 const route = useRoute()

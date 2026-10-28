@@ -365,9 +365,8 @@ onUnmounted(() => {
                         </transition>
                     </div>
 
-                    <!-- Language Selector & Color Mode Toggle -->
+                    <!-- Language Selector -->
                     <LanguageSwitcher />
-                    <UColorModeButton />
 
                     <!-- Action Buttons (Desktop) -->
                     <UButton to="/login" color="neutral" variant="ghost" class="hidden sm:inline-flex text-xs">

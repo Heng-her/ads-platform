@@ -18,6 +18,18 @@ const { isCopied: copied, copy } = useClipboard()
 
 const articleTitle = computed(() => props.article?.title || props.title || 'Share Article')
 
+const articleImage = computed(() => {
+  if (!props.article) return ''
+  if (props.article.imageUrl && props.article.imageUrl.trim()) {
+    return props.article.imageUrl.trim()
+  }
+  if (props.article.images && props.article.images.length > 0) {
+    const first = props.article.images.find(img => img && img.url && img.url.trim())
+    if (first?.url) return first.url.trim()
+  }
+  return ''
+})
+
 const fullUrl = computed(() => {
   if (typeof window === 'undefined') return ''
   if (props.article) {
@@ -88,13 +100,19 @@ async function triggerNativeShare() {
 
           <div class="mt-6 rounded-2xl border border-gray-200/80 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
             <div class="flex items-start gap-3">
-              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                <UIcon name="i-heroicons-document-text" class="h-4 w-4" />
+              <div v-if="articleImage" class="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-white/10 dark:bg-white/5 shadow-xs">
+                <img :src="articleImage" :alt="articleTitle" class="h-full w-full object-cover" />
               </div>
-              <div class="min-w-0">
+              <div v-else class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                <UIcon name="i-heroicons-document-text" class="h-5 w-5" />
+              </div>
+              <div class="min-w-0 flex-1">
                 <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">You’re sharing</p>
                 <p class="mt-1 line-clamp-2 text-sm font-bold leading-5 text-gray-800 dark:text-gray-100">{{
                   articleTitle }}</p>
+                <p v-if="props.article?.description" class="mt-0.5 line-clamp-1 text-xs text-gray-500 dark:text-gray-400">
+                  {{ props.article.description }}
+                </p>
               </div>
             </div>
           </div>

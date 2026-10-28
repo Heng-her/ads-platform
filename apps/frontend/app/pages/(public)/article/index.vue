@@ -10,7 +10,8 @@ import type { CampaignItem } from '~/types/campaign'
 
 definePageMeta({
     layout: 'public',
-    fullWidth: true
+    fullWidth: true,
+    colorMode: 'light'
 })
 
 useCustomSeoMeta({

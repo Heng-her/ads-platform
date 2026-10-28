@@ -234,7 +234,7 @@ watch(() => route.fullPath, () => {
 
           <div class="flex items-center gap-2">
             <LanguageSwitcher />
-            <UColorModeButton />
+            <UColorModeButton v-if="role !== 'public'" />
           </div>
         </div>
       </div>

@@ -30,6 +30,10 @@ export default defineNuxtConfig({
     "@nuxt/scripts",
     "@nuxtjs/seo",
   ],
+  colorMode: {
+    preference: "light",
+    fallback: "light",
+  },
   routeRules: {
     "/": { prerender: false },
   },

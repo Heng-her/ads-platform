@@ -162,7 +162,7 @@ export function getSocialShareLinks(title: string, url: string) {
     {
       name: "WhatsApp",
       iconImg: "/icon/whatapp.png",
-      shareUrl: `https://api.whatsapp.com/send?text=${encodedTitle}%20${encodedUrl}`,
+      shareUrl: `https://api.whatsapp.com/send?text=${encodedTitle}%0A%0A${encodedUrl}`,
     },
   ];
 }

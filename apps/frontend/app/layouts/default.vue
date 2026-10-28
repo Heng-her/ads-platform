@@ -212,7 +212,6 @@ onUnmounted(() => {
             aria-label="Search" @click="showMobileSearch = true" />
 
           <LanguageSwitcher />
-          <UColorModeButton />
 
           <!-- Logged In User Controls: Show Avatar popup on mobile & desktop -->
           <template v-if="authStore.isAuthenticated && authStore.user">
