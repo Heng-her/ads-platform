@@ -10,7 +10,7 @@ type TranslateRequestBody = {
   target?: unknown;
 };
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event: any) => {
   let body: TranslateRequestBody;
 
   try {
