@@ -6,7 +6,7 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="rounded-2xl p-12 flex flex-col items-center text-center gap-3 border border-dashed bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800"
+    class="rounded-2xl p-12 flex flex-col items-center text-center gap-3 shadow-xs bg-white dark:bg-gray-900"
   >
     <div
       class="h-12 w-12 rounded-2xl flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-500"

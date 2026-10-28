@@ -18,7 +18,7 @@ const galleryImages = computed(() => [...new Set([
 <template>
   <div class="block">
     <article
-      class="bg-white dark:bg-[#122131] rounded-2xl p-4 sm:p-5 border border-gray-200 dark:border-[#273647] hover:border-primary/50 transition-all duration-200 shadow-sm hover:shadow-md group flex flex-col gap-3">
+      class="bg-white dark:bg-[#122131] rounded-2xl p-4 sm:p-5 shadow-xs transition-all duration-200 group flex flex-col gap-3">
       <!-- Top Content & Details Section -->
       <div class="flex flex-col gap-2.5">
         <NuxtLink :to="getArticleUrl(campaign)">
@@ -60,7 +60,7 @@ const galleryImages = computed(() => [...new Set([
       <!-- Full-Width Media Image Banner Container -->
       <NuxtLink :to="getArticleUrl(campaign)" class="block w-full">
         <div
-          class="w-full h-56 sm:h-72 bg-gray-100 dark:bg-[#0d1c2d] rounded-xl overflow-hidden shrink-0 border border-gray-200 dark:border-[#273647] flex items-center justify-center shadow-inner relative group/img">
+          class="w-full h-56 sm:h-72 bg-gray-100 dark:bg-[#0d1c2d] rounded-xl overflow-hidden shrink-0 flex items-center justify-center relative group/img">
           <NuxtImg v-if="galleryImages[0]" :src="galleryImages[0]" :alt="campaign.imageTitle || campaign.title"
             loading="lazy"
             class="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300" />

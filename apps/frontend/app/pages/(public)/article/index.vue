@@ -52,6 +52,7 @@ const {
     relatedTopics,
     isLoading,
     isLoadingMore,
+    isInitialLoaded,
     totalCount,
     errorMessage,
     newCampaignCount,
@@ -103,7 +104,7 @@ function giveFeedback(value: boolean) {
 
                 <!-- Error State -->
                 <div v-if="errorMessage && !campaigns.length"
-                    class="rounded-2xl p-8 flex flex-col items-center text-center gap-3 border shadow-xl bg-white dark:bg-gray-900 border-red-200 dark:border-red-900/50">
+                    class="rounded-2xl p-8 flex flex-col items-center text-center gap-3 shadow-xs bg-white dark:bg-gray-900">
                     <p class="text-sm text-red-500 font-medium">{{ errorMessage }}</p>
                     <UButton @click="retry" color="primary" size="xs" font-semibold>
                         Try again
@@ -111,7 +112,7 @@ function giveFeedback(value: boolean) {
                 </div>
 
                 <!-- Initial Loading Skeletons -->
-                <ArticleFeedSkeleton v-else-if="isLoading && !campaigns.length" :count="3" />
+                <ArticleFeedSkeleton v-else-if="(!isInitialLoaded || isLoading) && !campaigns.length" :count="3" />
 
                 <!-- Empty State -->
                 <ArticleEmptyFeed v-else-if="!campaigns.length" @clear-all="clearAllFilters" />

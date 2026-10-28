@@ -13,6 +13,10 @@
     "db:migrate:prod": "wrangler d1 migrations apply ads_platform_db --remote",
     "db:seed:local": "wrangler d1 execute ads_platform_db --local --file=seeds/seed.sql",
     "db:seed:prod": "wrangler d1 execute ads_platform_db --remote --file=seeds/seed.sql",
+    "db:seed:articles:local": "wrangler d1 execute ads_platform_db --local --file=seeds/seed_articles_100.sql",
+    "db:seed:articles:prod": "wrangler d1 execute ads_platform_db --remote --file=seeds/seed_articles_100.sql",
+    "db:clean:articles:local": "wrangler d1 execute ads_platform_db --local --file=seeds/clean_seed_articles.sql",
+    "db:clean:articles:prod": "wrangler d1 execute ads_platform_db --remote --file=seeds/clean_seed_articles.sql",
     "db:setup": "wrangler d1 migrations apply ads_platform_db --local && wrangler d1 execute ads_platform_db --local --file=seeds/seed.sql",
     "test": "vitest run",
     "test:watch": "vitest"

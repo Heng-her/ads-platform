@@ -38,7 +38,8 @@ export function useArticleFeed(options: UseArticleFeedOptions) {
   // State
   const sortBy = ref<CampaignSort>('newest')
   const campaigns = ref<CampaignItem[]>([])
-  const isLoading = ref(false)
+  const isLoading = ref(true)
+  const isInitialLoaded = ref(false)
   const isLoadingMore = ref(false)
   const hasMore = ref(true)
   const totalCount = ref(0)
@@ -111,7 +112,8 @@ export function useArticleFeed(options: UseArticleFeedOptions) {
       if (
         !state.snapshotAt ||
         JSON.stringify(state.filters) !== JSON.stringify(filters.value) ||
-        !Array.isArray(state.items)
+        !Array.isArray(state.items) ||
+        state.items.length === 0
       ) {
         return false
       }
@@ -121,6 +123,8 @@ export function useArticleFeed(options: UseArticleFeedOptions) {
       snapshotAt.value = state.snapshotAt
       hasMore.value = Boolean(state.hasMore)
       totalCount.value = campaigns.value.length
+      isLoading.value = false
+      isInitialLoaded.value = true
       return true
     } catch {
       window.sessionStorage.removeItem(storageKey.value)
@@ -136,6 +140,8 @@ export function useArticleFeed(options: UseArticleFeedOptions) {
     hasMore.value = true
     totalCount.value = 0
     newCampaignCount.value = 0
+    isLoading.value = true
+    isInitialLoaded.value = false
   }
 
   async function fetchCampaigns(isAppend = false) {
@@ -164,6 +170,8 @@ export function useArticleFeed(options: UseArticleFeedOptions) {
       snapshotAt.value = json.data?.snapshotAt || snapshotAt.value
       hasMore.value = Boolean(json.data?.hasMore)
       totalCount.value = campaigns.value.length
+      isLoading.value = false
+      isInitialLoaded.value = true
       persistFeed()
       checkNewCampaigns()
     } catch (error: unknown) {
@@ -179,6 +187,7 @@ export function useArticleFeed(options: UseArticleFeedOptions) {
       if (myGeneration === fetchGeneration) {
         isLoading.value = false
         isLoadingMore.value = false
+        isInitialLoaded.value = true
       }
     }
   }
@@ -260,6 +269,7 @@ export function useArticleFeed(options: UseArticleFeedOptions) {
     relatedTopics,
     isLoading,
     isLoadingMore,
+    isInitialLoaded,
     hasMore,
     totalCount,
     errorMessage,

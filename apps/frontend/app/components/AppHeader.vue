@@ -1,5 +1,5 @@
 <template>
-  <header class="sticky top-0 z-40 border-b border-gray-200 dark:border-gray-800 bg-background/80 backdrop-blur shrink-0">
+  <header class="sticky top-0 z-40 border-b border-gray-200 dark:border-gray-800 bg-background/80 backdrop-blur shrink-0 relative">
     <div class="w-full flex h-16 items-center justify-between px-4 sm:px-6">
       <!-- Left section -->
       <div class="flex items-center gap-3">
@@ -16,5 +16,6 @@
         <slot name="right" />
       </div>
     </div>
+    <slot />
   </header>
 </template>

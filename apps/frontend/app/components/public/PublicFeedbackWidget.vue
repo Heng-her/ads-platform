@@ -21,7 +21,7 @@ function handleYesClick() {
 </script>
 
 <template>
-  <div class="w-full max-w-sm rounded-xl p-4 border shadow-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 transition-colors duration-200">
+  <div class="w-full max-w-sm rounded-xl p-4 shadow-xs bg-white dark:bg-slate-900 transition-colors duration-200">
     <!-- Header -->
     <h4 class="text-[10px] font-mono uppercase tracking-widest font-bold mb-1 text-slate-400 dark:text-slate-500">
       Help Us Improve

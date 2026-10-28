@@ -9,7 +9,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div v-if="topics.length" class="rounded-2xl p-4 border shadow-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+  <div v-if="topics.length" class="rounded-2xl p-4 shadow-xs bg-white dark:bg-gray-900">
     <h4 class="text-xs font-mono uppercase tracking-wider mb-3 font-extrabold text-gray-900 dark:text-white flex items-center justify-between">
       <span>Related Topics</span>
       <UIcon name="i-heroicons-arrow-trending-up" class="w-4 h-4 text-gray-900 dark:text-white" />

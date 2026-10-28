@@ -30,7 +30,7 @@ function formatText(val?: string) {
   <aside :class="['hidden lg:flex lg:flex-col shrink-0 gap-6 sticky top-20', widthClass || 'lg:w-[280px]']">
     <!-- Main Filter Box Container -->
     <div
-      class="rounded-2xl p-5 border shadow-sm bg-white dark:bg-[#122131] border-gray-200 dark:border-[#273647] space-y-6">
+      class="rounded-2xl p-5 shadow-xs bg-white dark:bg-[#122131] space-y-6">
 
       <!-- Category Filters Section -->
       <div>

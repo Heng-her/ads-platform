@@ -18,6 +18,10 @@
     "db:migrate:prod": "pnpm --filter backend db:migrate:prod",
     "db:seed:local": "pnpm --filter backend db:seed:local",
     "db:seed:prod": "pnpm --filter backend db:seed:prod",
+    "db:seed:articles": "pnpm --filter backend db:seed:articles:local",
+    "db:clean:articles": "pnpm --filter backend db:clean:articles:local",
+    "db:seed:articles:prod": "pnpm --filter backend db:seed:articles:prod",
+    "db:clean:articles:prod": "pnpm --filter backend db:clean:articles:prod",
     "db:setup": "pnpm --filter backend db:migrate:local && pnpm --filter backend db:seed:local"
   },
   "pnpm": {

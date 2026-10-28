@@ -9,7 +9,7 @@ const props = defineProps<{
 
 <template>
   <div v-if="item"
-    class="rounded-2xl overflow-hidden border shadow-sm transition-all bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-900 dark:hover:border-white">
+    class="rounded-2xl overflow-hidden shadow-xs transition-all bg-white dark:bg-gray-900">
     <NuxtLink :to="getArticleUrl(item)">
       <div class="relative h-28 w-full bg-gray-900 cursor-pointer">
         <NuxtImg v-if="item.imageUrl" :src="item.imageUrl" :alt="item.title" loading="lazy"

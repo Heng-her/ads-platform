@@ -36,7 +36,7 @@ const emit = defineEmits<{
 
     <!-- Active Filter Tags Bar -->
     <div v-if="activeFilterCount > 0"
-      class="flex flex-wrap items-center gap-2 p-3 rounded-2xl border bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-sm">
+      class="flex flex-wrap items-center gap-2 p-3 rounded-2xl bg-white dark:bg-gray-900 shadow-xs">
       <span class="text-[11px] text-gray-500 dark:text-gray-400 font-semibold">Active Filters:</span>
 
       <UBadge v-if="searchQuery" color="neutral" variant="outline" size="sm" class="gap-1.5 px-3 py-1 font-semibold">

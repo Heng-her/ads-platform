@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCategories } from '~/composables/useCategories'
 import { useApi } from '~/composables/useApi'
@@ -40,6 +40,7 @@ const publicNavLinks = [
 const searchQuery = ref((route.query.search as string) || '')
 const isSearchFocused = ref(false)
 const searchInputRef = ref<HTMLInputElement | null>(null)
+const mobileSearchInputRef = ref<HTMLInputElement | null>(null)
 const isHeaderHidden = ref(false)
 let lastScrollY = 0
 
@@ -154,6 +155,19 @@ function selectSuggestion(item: SuggestionItem) {
     }
 }
 
+function openMobileSearch() {
+    showMobileSearch.value = true
+    isSearchFocused.value = true
+    nextTick(() => {
+        mobileSearchInputRef.value?.focus()
+    })
+}
+
+function closeMobileSearch() {
+    showMobileSearch.value = false
+    isSearchFocused.value = false
+}
+
 function onSearchBlur() {
     setTimeout(() => {
         isSearchFocused.value = false
@@ -164,7 +178,11 @@ function clearSearch() {
     searchQuery.value = ''
     suggestions.value = []
     pushQuery({ search: undefined })
-    if (searchInputRef.value) searchInputRef.value.focus()
+    if (showMobileSearch.value) {
+        mobileSearchInputRef.value?.focus()
+    } else if (searchInputRef.value) {
+        searchInputRef.value.focus()
+    }
 }
 
 // Global keydown shortcut '/' to focus search input
@@ -173,12 +191,17 @@ function onKeyDown(e: KeyboardEvent) {
         e.preventDefault()
         searchInputRef.value?.focus()
     }
-    if (e.key === 'Escape' && isSearchFocused.value) {
+    if (e.key === 'Escape') {
+        if (showMobileSearch.value) closeMobileSearch()
         isSearchFocused.value = false
     }
 }
 
 function onWindowScroll() {
+    if (showMobileSearch.value) {
+        isHeaderHidden.value = false
+        return
+    }
     const currentScrollY = window.scrollY
 
     if (currentScrollY <= 12) {
@@ -212,50 +235,14 @@ onUnmounted(() => {
             'will-change-transform transition-transform duration-300 ease-out',
             isHeaderHidden ? '-translate-y-full' : 'translate-y-0'
         ]">
-            <template #left>
-                <div class="flex items-center gap-2">
-                    <!-- Mobile Hamburger Drawer Toggle Button -->
-                    <UButton
-                        icon="i-heroicons-bars-3"
-                        color="neutral"
-                        variant="ghost"
-                        class="md:hidden"
-                        aria-label="Open mobile menu"
-                        @click="isMobileOpen = true"
-                    />
 
-                    <!-- Brand Logo -->
-                    <NuxtLink to="/article" class="flex items-center gap-2 text-xl font-bold text-primary group">
-                        <div
-                            class="h-9 w-9 rounded-xl flex items-center justify-center bg-primary-500/10 text-primary border border-primary/20 transition-transform group-hover:scale-105 shrink-0">
-                            <img src="/article.webp" alt="Article" class="h-full w-full rounded-xl object-cover" />
-                        </div>
-                        <div class="flex flex-col">
-                            <span
-                                class="font-display font-bold text-base tracking-tight text-gray-900 dark:text-white group-hover:text-primary transition-colors">
-                                SIGNAL
-                            </span>
-                            <span
-                                class="text-[9px] sm:text-[10px] font-mono tracking-wider text-gray-500 dark:text-gray-400 uppercase -mt-1">
-                                Ads Platform
-                            </span>
-                        </div>
-                    </NuxtLink>
-                </div>
-            </template>
 
             <!-- Right: Search Box, Color Mode Toggle & Actions -->
             <template #right>
                 <div class="flex items-center gap-1.5 sm:gap-2 md:gap-3">
                     <!-- Mobile Search Toggle Button -->
-                    <UButton
-                        icon="i-heroicons-magnifying-glass"
-                        color="neutral"
-                        variant="ghost"
-                        class="md:hidden"
-                        aria-label="Search"
-                        @click="showMobileSearch = !showMobileSearch"
-                    />
+                    <UButton icon="i-heroicons-magnifying-glass" color="neutral" variant="ghost" class="md:hidden"
+                        aria-label="Search" @click="openMobileSearch" />
 
                     <!-- Desktop Search Input Wrapper -->
                     <div class="relative hidden md:block w-52 sm:w-64 lg:w-80">
@@ -370,75 +357,197 @@ onUnmounted(() => {
                     <UButton to="/login" color="neutral" variant="ghost" class="hidden sm:inline-flex text-xs">
                         Sign In
                     </UButton>
-                    <UButton to="/creator" color="primary" size="xs" class="hidden sm:inline-flex font-semibold text-xs">
+                    <UButton to="/creator" color="primary" size="xs"
+                        class="hidden sm:inline-flex font-semibold text-xs">
                         Creator Studio
                     </UButton>
                 </div>
             </template>
+            <!-- Mobile Header Search (Displayed directly in header when active) -->
+            <transition name="fade-slide">
+                <div v-if="showMobileSearch"
+                    class="md:hidden absolute inset-0 z-50 flex items-center gap-2 px-3 sm:px-4 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md">
+
+                    <!-- Search Input Field -->
+                    <div class="relative flex-1 flex items-center">
+                        <UIcon name="i-heroicons-magnifying-glass"
+                            class="absolute left-3.5 h-4 w-4 text-primary pointer-events-none" />
+                        <input ref="mobileSearchInputRef" v-model="searchQuery" type="text"
+                            placeholder="Search campaigns..."
+                            class="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 py-2 pl-9 pr-9 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 font-body placeholder:text-gray-400"
+                            @input="onSearchInput" @focus="isSearchFocused = true"
+                            @keydown.enter="handleSearchSubmit" />
+                        <button v-if="searchQuery" type="button" @click="clearSearch"
+                            class="absolute right-3 flex h-5 w-5 items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                            title="Clear search">
+                            <UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
+                        </button>
+                    </div>
+
+                    <!-- Search / Cancel Button -->
+                    <UButton v-if="searchQuery.trim()" size="xs" color="primary" class="font-semibold text-xs shrink-0"
+                        @click="handleSearchSubmit">
+                        Search
+                    </UButton>
+                    <UButton v-else size="xs" color="neutral" variant="ghost" class="text-xs shrink-0 text-gray-500"
+                        @click="closeMobileSearch">
+                        Close
+                    </UButton>
+                </div>
+            </transition>
         </AppHeader>
 
-        <!-- Expandable Mobile Search Bar Overlay -->
+        <!-- Mobile Autocomplete Suggestions Dropdown -->
         <transition name="fade-slide">
-            <div v-if="showMobileSearch" class="md:hidden sticky top-16 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 p-3 shadow-md">
-                <div class="relative flex items-center">
-                    <UIcon name="i-heroicons-magnifying-glass" class="absolute left-3.5 h-4 w-4 text-primary" />
-                    <input
-                        v-model="searchQuery"
-                        type="text"
-                        placeholder="Search campaigns..."
-                        class="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 py-2 pl-9 pr-9 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20"
-                        @input="onSearchInput"
-                        @keydown.enter="handleSearchSubmit"
-                    />
-                    <button v-if="searchQuery" @click="clearSearch" class="absolute right-3 text-gray-400">
-                        <UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-                    </button>
+            <div v-if="showMobileSearch && isSearchFocused && (hasSuggestions || isLoadingSuggestions)"
+                class="md:hidden fixed top-16 left-0 right-0 max-h-[60vh] overflow-y-auto bg-white dark:bg-gray-900 shadow-xl border-b border-gray-200 dark:border-gray-800 z-50 divide-y divide-gray-100 dark:divide-gray-800 p-2">
+                <div v-if="isLoadingSuggestions"
+                    class="p-3 text-center text-xs font-mono text-gray-400 flex items-center justify-center gap-2">
+                    <UIcon name="i-lucide-loader-2" class="h-4 w-4 text-primary animate-spin" />
+                    Searching suggestions...
+                </div>
+
+                <div v-else class="space-y-1">
+                    <!-- Category Suggestions -->
+                    <div v-if="groupedSuggestions.category?.length" class="py-1">
+                        <div
+                            class="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-primary font-semibold flex items-center gap-1.5">
+                            <UIcon name="i-heroicons-tag" class="w-3.5 h-3.5" /> Categories
+                        </div>
+                        <button v-for="s in groupedSuggestions.category" :key="s.filter"
+                            class="w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-primary-50 dark:hover:bg-primary-950/30 text-gray-700 dark:text-gray-200 transition-all"
+                            @mousedown.prevent="selectSuggestion(s)">
+                            <span>{{ s.label }}</span>
+                            <CategoryBadge :name="s.label" size="sm" />
+                        </button>
+                    </div>
+
+                    <!-- Custom Category Suggestions -->
+                    <div v-if="groupedSuggestions.customCategory?.length" class="py-1">
+                        <div
+                            class="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-500 font-semibold flex items-center gap-1.5">
+                            <UIcon name="i-heroicons-folder" class="w-3.5 h-3.5" /> Custom Categories
+                        </div>
+                        <button v-for="s in groupedSuggestions.customCategory" :key="s.filter"
+                            class="w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-amber-50 dark:hover:bg-amber-950/30 text-gray-700 dark:text-gray-200 transition-all"
+                            @mousedown.prevent="selectSuggestion(s)">
+                            <span>{{ s.label }}</span>
+                            <CategoryBadge :name="s.label" size="sm" />
+                        </button>
+                    </div>
+
+                    <!-- Content Type Suggestions -->
+                    <div v-if="groupedSuggestions.contentType?.length" class="py-1">
+                        <div
+                            class="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-sky-500 font-semibold flex items-center gap-1.5">
+                            <UIcon name="i-heroicons-document-text" class="w-3.5 h-3.5" /> Content Types
+                        </div>
+                        <button v-for="s in groupedSuggestions.contentType" :key="s.filter"
+                            class="w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-sky-50 dark:hover:bg-sky-950/30 text-gray-700 dark:text-gray-200 transition-all"
+                            @mousedown.prevent="selectSuggestion(s)">
+                            <span>{{ s.label }}</span>
+                            <CategoryBadge :contentType="s.label" size="sm" />
+                        </button>
+                    </div>
+
+                    <!-- Campaign Title Matches -->
+                    <div v-if="groupedSuggestions.title?.length" class="py-1">
+                        <div
+                            class="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-purple-500 font-semibold flex items-center gap-1.5">
+                            <UIcon name="i-heroicons-magnifying-glass" class="w-3.5 h-3.5" /> Campaign Titles
+                        </div>
+                        <button v-for="s in groupedSuggestions.title" :key="s.filter"
+                            class="w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-purple-50 dark:hover:bg-purple-950/30 text-gray-700 dark:text-gray-200 transition-all"
+                            @mousedown.prevent="selectSuggestion(s)">
+                            <span class="truncate font-medium">{{ s.label }}</span>
+                            <span class="text-[10px] font-mono text-purple-500 shrink-0 ml-2">Match</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- Mobile Autocomplete Suggestions Dropdown -->
+        <transition name="fade-slide">
+            <div v-if="showMobileSearch && isSearchFocused && (hasSuggestions || isLoadingSuggestions)"
+                class="md:hidden fixed top-16 left-0 right-0 max-h-[60vh] overflow-y-auto bg-white dark:bg-gray-900 shadow-xl border-b border-gray-200 dark:border-gray-800 z-50 divide-y divide-gray-100 dark:divide-gray-800 p-2">
+                <div v-if="isLoadingSuggestions"
+                    class="p-3 text-center text-xs font-mono text-gray-400 flex items-center justify-center gap-2">
+                    <UIcon name="i-lucide-loader-2" class="h-4 w-4 text-primary animate-spin" />
+                    Searching suggestions...
+                </div>
+
+                <div v-else class="space-y-1">
+                    <!-- Category Suggestions -->
+                    <div v-if="groupedSuggestions.category?.length" class="py-1">
+                        <div
+                            class="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-primary font-semibold flex items-center gap-1.5">
+                            <UIcon name="i-heroicons-tag" class="w-3.5 h-3.5" /> Categories
+                        </div>
+                        <button v-for="s in groupedSuggestions.category" :key="s.filter"
+                            class="w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-primary-50 dark:hover:bg-primary-950/30 text-gray-700 dark:text-gray-200 transition-all"
+                            @mousedown.prevent="selectSuggestion(s)">
+                            <span>{{ s.label }}</span>
+                            <CategoryBadge :name="s.label" size="sm" />
+                        </button>
+                    </div>
+
+                    <!-- Custom Category Suggestions -->
+                    <div v-if="groupedSuggestions.customCategory?.length" class="py-1">
+                        <div
+                            class="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-500 font-semibold flex items-center gap-1.5">
+                            <UIcon name="i-heroicons-folder" class="w-3.5 h-3.5" /> Custom Categories
+                        </div>
+                        <button v-for="s in groupedSuggestions.customCategory" :key="s.filter"
+                            class="w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-amber-50 dark:hover:bg-amber-950/30 text-gray-700 dark:text-gray-200 transition-all"
+                            @mousedown.prevent="selectSuggestion(s)">
+                            <span>{{ s.label }}</span>
+                            <CategoryBadge :name="s.label" size="sm" />
+                        </button>
+                    </div>
+
+                    <!-- Content Type Suggestions -->
+                    <div v-if="groupedSuggestions.contentType?.length" class="py-1">
+                        <div
+                            class="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-sky-500 font-semibold flex items-center gap-1.5">
+                            <UIcon name="i-heroicons-document-text" class="w-3.5 h-3.5" /> Content Types
+                        </div>
+                        <button v-for="s in groupedSuggestions.contentType" :key="s.filter"
+                            class="w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-sky-50 dark:hover:bg-sky-950/30 text-gray-700 dark:text-gray-200 transition-all"
+                            @mousedown.prevent="selectSuggestion(s)">
+                            <span>{{ s.label }}</span>
+                            <CategoryBadge :contentType="s.label" size="sm" />
+                        </button>
+                    </div>
+
+                    <!-- Campaign Title Matches -->
+                    <div v-if="groupedSuggestions.title?.length" class="py-1">
+                        <div
+                            class="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-purple-500 font-semibold flex items-center gap-1.5">
+                            <UIcon name="i-heroicons-magnifying-glass" class="w-3.5 h-3.5" /> Campaign Titles
+                        </div>
+                        <button v-for="s in groupedSuggestions.title" :key="s.filter"
+                            class="w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between hover:bg-purple-50 dark:hover:bg-purple-950/30 text-gray-700 dark:text-gray-200 transition-all"
+                            @mousedown.prevent="selectSuggestion(s)">
+                            <span class="truncate font-medium">{{ s.label }}</span>
+                            <span class="text-[10px] font-mono text-purple-500 shrink-0 ml-2">Match</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </transition>
 
         <!-- Main Body Container -->
         <main :class="[
-            'mx-auto px-4 sm:px-6 flex-1 w-full py-6',
+            'mx-auto px-4 sm:px-6 flex-1 w-full py-4',
             route.meta.fullWidth ? 'max-w-none' : 'max-w-[1400px]'
         ]">
             <slot />
         </main>
 
-        <!-- Glassmorphic Sticky Mobile Bottom Navigation Bar -->
-        <div class="md:hidden fixed bottom-3 left-3 right-3 z-40 rounded-2xl bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border border-gray-200/80 dark:border-gray-800/80 shadow-lg px-2 py-1.5 flex items-center justify-around">
-            <NuxtLink to="/article" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" active-class="text-primary font-bold">
-                <UIcon name="i-heroicons-newspaper" class="w-5 h-5" />
-                <span>Articles</span>
-            </NuxtLink>
-            <NuxtLink to="/explore" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" active-class="text-primary font-bold">
-                <UIcon name="i-heroicons-sparkles" class="w-5 h-5" />
-                <span>Explore</span>
-            </NuxtLink>
-            <NuxtLink to="/trending" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" active-class="text-primary font-bold">
-                <UIcon name="i-heroicons-fire" class="w-5 h-5" />
-                <span>Trending</span>
-            </NuxtLink>
-            <NuxtLink to="/pricing" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" active-class="text-primary font-bold">
-                <UIcon name="i-heroicons-banknotes" class="w-5 h-5" />
-                <span>Pricing</span>
-            </NuxtLink>
-            <button @click="isMobileOpen = true" class="flex flex-col items-center gap-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
-                <UIcon name="i-heroicons-bars-3" class="w-5 h-5" />
-                <span>Menu</span>
-            </button>
-        </div>
-
         <!-- Mobile Side Navigation Drawer -->
-        <MobileDrawer
-            v-model:open="isMobileOpen"
-            side="left"
-            title="Signal Ads"
-            icon="i-heroicons-globe-alt"
-            icon-class="text-primary"
-            :links="publicNavLinks"
-            role="public"
-        />
+        <MobileDrawer v-model:open="isMobileOpen" side="left" title="Signal Ads" icon="i-heroicons-globe-alt"
+            icon-class="text-primary" :links="publicNavLinks" role="public" />
 
         <!-- Desktop Footer -->
         <footer

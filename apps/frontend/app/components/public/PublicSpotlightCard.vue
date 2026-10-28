@@ -18,28 +18,10 @@ const emit = defineEmits<{
 
 <template>
   <div v-if="campaign"
-    class="rounded-2xl p-5 sm:p-6 border shadow-lg relative overflow-hidden transition-all duration-300 bg-white dark:bg-[#122131] border-gray-200 dark:border-[#273647] hover:border-primary/60">
+    class="rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden transition-all duration-300 bg-white dark:bg-[#122131]">
 
     <!-- Top Accent Glow -->
     <div class="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
-
-    <!-- Card Header -->
-    <div class="flex items-center justify-between gap-3 mb-4">
-      <div class="flex items-center gap-2.5">
-        <div
-          class="h-8 w-8 rounded-xl flex items-center justify-center font-bold text-sm bg-primary/10 text-primary border border-primary/20 shadow-sm">
-          <UIcon name="i-heroicons-bolt" class="w-4 h-4 text-primary" />
-        </div>
-        <div>
-          <h3 class="font-display font-bold text-sm tracking-tight text-primary">
-            Signal Spotlight
-          </h3>
-          <span class="text-[10px] font-mono font-medium text-gray-500 dark:text-gray-400">
-            Featured Campaign Result
-          </span>
-        </div>
-      </div>
-    </div>
 
     <!-- Title & Content -->
     <NuxtLink :to="getArticleUrl(campaign)">
@@ -57,7 +39,7 @@ const emit = defineEmits<{
     <div class="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
       <div class="flex items-center gap-4 shrink-0">
         <div
-          class="flex items-center gap-3 font-mono text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800/80 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700">
+          class="flex items-center gap-3 font-mono text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800/80 px-3 py-1.5 rounded-xl">
           <span title="Total Impressions" class="flex items-center gap-1">
             <UIcon name="i-heroicons-eye" class="w-3.5 h-3.5 text-primary shrink-0" />
             <span>{{ (campaign.totalImpressions ?? 0).toLocaleString() }}</span>
